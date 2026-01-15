@@ -30,12 +30,12 @@ export default function InstallPrompt() {
     <div className="fixed bottom-0 left-0 right-0 bg-slate-900 text-white p-4 shadow-2xl z-50 border-t-4 border-green-500 animate-slide-up">
       <div className="max-w-md mx-auto">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="font-bold text-lg text-green-400">⚡ Instala la App</h3>
+          <h3 className="font-bold text-lg text-green-400">Instala la App</h3>
           <button onClick={() => setIsVisible(false)} className="text-gray-400 hover:text-white">✕</button>
         </div>
         
         <p className="text-sm text-gray-300 mb-4">
-          Para una experiencia completa y sin bordes, agrega esta web a tu inicio.
+          Para una experiencia completa e inmersiva, agrega esta web a tu inicio.
         </p>
 
         <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
