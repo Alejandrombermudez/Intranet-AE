@@ -11,6 +11,7 @@ interface Reservation {
   user_email: string
   start_date: string
   end_date: string
+  purpose: string // El campo propósito
   created_at: string
 }
 
@@ -25,7 +26,7 @@ interface Vehicle {
 // Configuración de vehículos
 const VEHICLES: Vehicle[] = [
   { id: 'camioneta1', name: 'Chevrolet - Samurai', type: 'camioneta1', color: '#3b82f6', icon: '🚙' },
-  { id: 'camioneta2', name: 'Camioneta Fotón', type: 'camioneta2', color: '#10b981', icon: '🚐' },
+  { id: 'camioneta2', name: 'Camioneta Foton', type: 'camioneta2', color: '#10b981', icon: '🚐' },
   { id: 'moto', name: 'Susuki DR 150', type: 'moto', color: '#f59e0b', icon: '🏍️' }
 ]
 
@@ -239,7 +240,7 @@ export default function VehicleCalendar() {
                         return (
                           <div
                             key={vehicle.id}
-                            className={`text-xs p-1.5 rounded transition-all ${
+                            className={`text-xs p-1.5 rounded transition-all cursor-help ${
                               reservation 
                                 ? 'font-bold text-white shadow-md' 
                                 : 'bg-slate-100 text-slate-400'
@@ -247,8 +248,9 @@ export default function VehicleCalendar() {
                             style={{
                               backgroundColor: reservation ? vehicle.color : undefined,
                             }}
+                            // 👉 AQUÍ ESTÁ EL CAMBIO (PASO B): Tooltip con propósito
                             title={reservation 
-                              ? `${vehicle.name} - ${reservation.user_name}` 
+                              ? `${vehicle.name}\n👤 ${reservation.user_name}\n📌 ${reservation.purpose || 'Sin concepto'}` 
                               : `${vehicle.name} disponible`
                             }
                           >
@@ -309,6 +311,12 @@ export default function VehicleCalendar() {
                     <span className="text-4xl">{vehicle.icon}</span>
                     <div className="flex-1">
                       <p className="font-bold text-slate-900">{vehicle.name}</p>
+                      
+                      {/* 👉 AQUÍ ESTÁ EL CAMBIO (PASO C): Mostrar Propósito */}
+                      <div className="inline-block px-2 py-0.5 bg-slate-100 rounded text-xs font-bold text-slate-700 my-1">
+                         📌 {reservation.purpose || 'Sin concepto'}
+                      </div>
+
                       <p className="text-sm text-slate-600">
                         {reservation.user_name} • {startDate} - {endDate}
                       </p>

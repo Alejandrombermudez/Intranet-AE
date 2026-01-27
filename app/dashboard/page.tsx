@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import VehicleCalendar from '../components/VehicleCalendar'
 import ReservationModal from '../components/ReservationModal'
+import SessionDebug from '../components/SessionDebug'
 
 interface Reservation {
   id: string

@@ -36,6 +36,7 @@ export default function ReservationModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [conflictDates, setConflictDates] = useState<string[]>([])
+  const [purpose, setPurpose] = useState<string>('')
 
   // Resetear formulario al abrir/cerrar
   useEffect(() => {
@@ -45,6 +46,7 @@ export default function ReservationModal({
       setEndDate('')
       setError('')
       setConflictDates([])
+      setPurpose('')
     }
   }, [isOpen])
 
@@ -97,7 +99,7 @@ export default function ReservationModal({
     setLoading(true)
 
     // Validaciones
-    if (!selectedVehicle || !startDate || !endDate) {
+    if (!selectedVehicle || !startDate || !endDate || !purpose.trim()) {
       setError('Por favor completa todos los campos')
       setLoading(false)
       return
@@ -128,7 +130,8 @@ export default function ReservationModal({
             user_name: userName,
             user_email: userEmail,
             start_date: startDate,
-            end_date: endDate
+            end_date: endDate,
+            purpose: purpose.trim()
           }
         ])
 
@@ -167,11 +170,11 @@ export default function ReservationModal({
           </p>
         </div>
 
-        {/* Form */}
+        {/* Form con texto NEGRO y negrita */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Selector de vehículo */}
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-3">
+            <label className="block text-sm font-black text-black mb-3 uppercase tracking-wide">
               Selecciona un Vehículo *
             </label>
             <div className="grid grid-cols-1 gap-3">
@@ -183,20 +186,20 @@ export default function ReservationModal({
                   className={`p-4 rounded-xl border-2 transition-all text-left ${
                     selectedVehicle === vehicle.id
                       ? 'border-blue-600 bg-blue-50 shadow-lg scale-[1.02]'
-                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-3xl">{vehicle.icon}</span>
                     <div className="flex-1">
-                      <p className="font-bold text-slate-900">{vehicle.name}</p>
+                      <p className="font-black text-black text-lg">{vehicle.name}</p>
                       <div 
                         className="w-20 h-1.5 rounded-full mt-1"
                         style={{ backgroundColor: vehicle.color }}
                       ></div>
                     </div>
                     {selectedVehicle === vehicle.id && (
-                      <span className="text-blue-600 text-xl">✓</span>
+                      <span className="text-blue-600 text-xl font-bold">✓</span>
                     )}
                   </div>
                 </button>
@@ -204,34 +207,54 @@ export default function ReservationModal({
             </div>
           </div>
 
-          {/* Fecha de inicio */}
+          {/* Propósito/Concepto */}
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">
-              Fecha de Inicio *
+            <label className="block text-sm font-black text-black mb-2 uppercase tracking-wide">
+              Propósito / Concepto *
             </label>
             <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              min={today}
+              type="text"
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              placeholder="Ej: Campamento Biodiversidad, Proyecto FAO..."
+              maxLength={100}
               required
-              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none transition-all font-semibold"
+              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none transition-all font-bold text-black placeholder:text-slate-400"
             />
+            <p className="text-xs text-slate-600 font-semibold mt-1">
+              {purpose.length}/100 caracteres
+            </p>
           </div>
 
-          {/* Fecha de fin */}
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">
-              Fecha de Fin *
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              min={startDate || today}
-              required
-              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none transition-all font-semibold"
-            />
+          {/* Fechas */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-black text-black mb-2 uppercase tracking-wide">
+                Fecha de Inicio *
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                min={today}
+                required
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none transition-all font-bold text-black"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-black text-black mb-2 uppercase tracking-wide">
+                Fecha de Fin *
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || today}
+                required
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-600 focus:outline-none transition-all font-bold text-black"
+              />
+            </div>
           </div>
 
           {/* Advertencia de conflicto */}
@@ -243,9 +266,9 @@ export default function ReservationModal({
                   <p className="font-bold text-red-900 mb-1">
                     Conflicto de Reserva
                   </p>
-                  <p className="text-sm text-red-700">
+                  <p className="text-sm text-red-800 font-medium">
                     Este vehículo ya está reservado en {conflictDates.length} día(s) 
-                    del rango seleccionado. Por favor elige otras fechas.
+                    del rango seleccionado.
                   </p>
                 </div>
               </div>
@@ -255,16 +278,16 @@ export default function ReservationModal({
           {/* Error general */}
           {error && (
             <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 text-center">
-              <p className="text-red-700 font-semibold">{error}</p>
+              <p className="text-red-700 font-bold">{error}</p>
             </div>
           )}
 
           {/* Botones */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-4 border-t border-slate-200">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 border-2 border-slate-300 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-all"
+              className="flex-1 px-6 py-3 border-2 border-slate-300 text-black rounded-xl font-bold hover:bg-slate-100 transition-all"
             >
               Cancelar
             </button>
