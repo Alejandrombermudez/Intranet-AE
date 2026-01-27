@@ -1,17 +1,17 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react' // 1. Importar Suspense
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-export default function AuthCallbackPage() {
+// 2. Componente interno con la lógica (extraído del original)
+function AuthCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar si hay errores REALES en la URL (no vacíos)
+    // Verificar si hay errores REALES en la URL
     const errorParam = searchParams.get('error')
     const errorDescription = searchParams.get('error_description')
     const errorCode = searchParams.get('error_code')
@@ -24,7 +24,6 @@ export default function AuthCallbackPage() {
         code: errorCode
       })
 
-      // Mapear errores comunes a mensajes amigables
       let errorMessage = 'Error al iniciar sesión con Microsoft'
       
       if (errorDescription?.includes('Database error saving new user')) {
@@ -38,7 +37,6 @@ export default function AuthCallbackPage() {
       }
 
       setError(errorMessage)
-      setLoading(false)
       return
     }
 
@@ -47,32 +45,24 @@ export default function AuthCallbackPage() {
       async (event, session) => {
         console.log('🔐 Auth Event:', event)
         
-        if (session?.user) {
-          console.log('✅ Usuario autenticado:', session.user.email)
-        }
-
         if (event === 'SIGNED_IN' && session) {
           console.log('✅ Redirigiendo al dashboard...')
-          
-          // Pequeño delay para asegurar que la sesión se guarde
           setTimeout(() => {
             router.push('/dashboard')
           }, 500)
         } else if (event === 'SIGNED_OUT') {
           console.log('⚠️ Usuario deslogueado')
           setError('La sesión ha expirado')
-          setLoading(false)
         }
       }
     )
 
-    // Timeout de seguridad: si después de 10 segundos no hay sesión, mostrar error
+    // Timeout de seguridad
     const timeout = setTimeout(() => {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (!session) {
           console.error('⏱️ Timeout: No se pudo establecer la sesión')
           setError('La autenticación tardó demasiado. Por favor intenta de nuevo.')
-          setLoading(false)
         }
       })
     }, 10000)
@@ -82,6 +72,8 @@ export default function AuthCallbackPage() {
       clearTimeout(timeout)
     }
   }, [router, searchParams])
+
+  // --- Renderizado del Componente Interno ---
 
   // Pantalla de error
   if (error) {
@@ -115,45 +107,48 @@ export default function AuthCallbackPage() {
               🔄 Intentar de Nuevo
             </button>
           </div>
-
-          <div className="mt-6 text-center">
-            <p className="text-xs text-slate-500">
-              Si el problema persiste, contacta al administrador del sistema
-            </p>
-          </div>
         </div>
       </div>
     )
   }
 
-  // Pantalla de carga
+  // Pantalla de carga (Predeterminada del componente interno)
+  return <LoadingUI />
+}
+
+// 3. UI de Carga Reutilizable (para evitar duplicar código)
+function LoadingUI() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
       <div className="text-center max-w-md px-4">
-        {/* Spinner animado */}
         <div className="relative mb-8">
           <div className="w-20 h-20 mx-auto">
             <div className="absolute inset-0 rounded-full border-4 border-blue-200 opacity-25"></div>
             <div className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"></div>
           </div>
         </div>
-
         <h2 className="text-2xl font-black text-white mb-3">
           Validando Credenciales
         </h2>
         <p className="text-blue-200 mb-6">
           Estamos confirmando tu acceso con Microsoft 365
         </p>
-
-        {/* Indicador de progreso */}
         <div className="bg-slate-800/50 rounded-full p-1 backdrop-blur-sm">
           <div className="bg-gradient-to-r from-blue-500 to-green-500 rounded-full h-2 animate-pulse"></div>
         </div>
-
         <p className="text-slate-400 text-xs mt-6">
           Este proceso puede tardar unos segundos...
         </p>
       </div>
     </div>
+  )
+}
+
+// 4. Componente Principal (Page) que envuelve con Suspense
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<LoadingUI />}>
+      <AuthCallbackContent />
+    </Suspense>
   )
 }
