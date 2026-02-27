@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Intranet AE",
-  description: "Plataforma de gestión",
-  manifest: "/manifest.json", // Conectamos el manifiesto
+  description: "Plataforma de gestion operativa",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -25,11 +25,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#15803d", // Color verde de la barra de estado en Android
+  themeColor: "#0d7377",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false, // Evita que hagan zoom y se sienta como app nativa
 };
 
 export default function RootLayout({
@@ -38,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

@@ -1,11 +1,11 @@
 {
   "name": "Intranet Amazonia Emprende",
   "short_name": "Intranet AE",
-  "description": "Gestión Operativa y Técnica",
+  "description": "Gestion Operativa y Tecnica",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#15803d",
+  "theme_color": "#0d7377",
   "icons": [
     {
       "src": "/icon-192.png",
