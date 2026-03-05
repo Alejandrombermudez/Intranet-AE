@@ -40,8 +40,17 @@ function AuthCallbackContent() {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
+          // Registrar / actualizar perfil en user_profiles
+          await fetch('/api/users/sync-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email:     session.user.email,
+              full_name: session.user.user_metadata?.full_name ?? null,
+            }),
+          })
           setTimeout(() => {
-            router.push('/dashboard')
+            router.push('/')
           }, 500)
         } else if (event === 'SIGNED_OUT') {
           setError('La sesion ha expirado')

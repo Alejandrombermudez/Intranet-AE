@@ -77,7 +77,7 @@ export default function VehicleCalendar() {
       const start = new Date(res.start_date).toISOString().split('T')[0]
       const end = new Date(res.end_date).toISOString().split('T')[0]
 
-      return res.vehicle_id === vehicleId && dateStr >= start && dateStr <= end
+      return res.vehicle_id === vehicleId && dateStr >= start && (dateStr < end || dateStr === start)
     })
   }
 

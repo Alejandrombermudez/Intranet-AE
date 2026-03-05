@@ -60,7 +60,7 @@ export default function ReservationModal({
         .from('vehicle_reservations')
         .select('start_date, end_date')
         .eq('vehicle_id', selectedVehicle)
-        .or(`and(start_date.lte.${endDate},end_date.gte.${startDate})`)
+        .or(`and(start_date.lte.${endDate},end_date.gt.${startDate})`)
 
       if (error) throw error
 

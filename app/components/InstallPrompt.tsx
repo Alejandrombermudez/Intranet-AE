@@ -19,8 +19,9 @@ function getDeviceSnapshot(): DeviceInfo {
   }
 }
 
+const SERVER_SNAPSHOT: DeviceInfo = { isMobile: false, isIOS: false, isStandalone: false }
 function getServerSnapshot(): DeviceInfo {
-  return { isMobile: false, isIOS: false, isStandalone: false }
+  return SERVER_SNAPSHOT
 }
 
 let cachedSnapshot: DeviceInfo | null = null

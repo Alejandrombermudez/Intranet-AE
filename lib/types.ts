@@ -1,3 +1,14 @@
+export interface UserProfile {
+  id: string
+  email: string
+  full_name: string | null
+  role: string | null
+  department: string | null
+  is_admin: boolean
+  last_login: string
+  created_at: string
+}
+
 export interface Reservation {
   id: string
   vehicle_id: string
@@ -8,6 +19,30 @@ export interface Reservation {
   end_date: string
   purpose: string
   created_at: string
+  validation_code?: string
+}
+
+// ─── Inspección vehicular ────────────────────────────────────────────────────
+
+export interface VehicleInspection {
+  id: string
+  reservation_id: string
+  inspection_type: 'recepcion' | 'devolucion'
+  step_completed: number
+  submitted_at: string | null
+  cat1_status: string; cat1_issues: string[]; cat1_other: string | null
+  cat2_status: string; cat2_issues: string[]; cat2_other: string | null
+  cat3_status: string; cat3_issues: string[]; cat3_other: string | null
+  cat4_status: string; cat4_issues: string[]; cat4_other: string | null
+  cat5_status: string; cat5_issues: string[]; cat5_other: string | null
+  cat6_status: string; cat6_issues: string[]; cat6_other: string | null
+  photo_frontal: string | null
+  photo_posterior: string | null
+  photo_lateral_izq: string | null
+  photo_lateral_der: string | null
+  photo_tablero: string | null
+  created_at: string
+  updated_at: string
 }
 
 export const AUTH_TIMEOUT_MS = 10_000
