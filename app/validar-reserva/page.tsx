@@ -63,9 +63,9 @@ interface TodayOption {
 }
 
 // ─── Barra de progreso (pasos 1–7) ──────────────────────────────────────────
-function ProgressBar({ step }: { step: number }) {
-  if (step < 1 || step > 7) return null
-  const pct = Math.round((step / 7) * 100)
+function ProgressBar({ step, total = 7 }: { step: number; total?: number }) {
+  if (step < 1 || step > total) return null
+  const pct = Math.round((step / total) * 100)
   return (
     <div className="w-full bg-stone-200 rounded-full h-1.5 mb-2">
       <div
@@ -216,6 +216,8 @@ function ScreenSelection({
 // ═══════════════════════════════════════════════════════════════════════════
 function StepCategory({
   catIndex,
+  displayStep,
+  displayTotal,
   categories,
   onChange,
   onNext,
@@ -224,6 +226,8 @@ function StepCategory({
   inspectionType,
 }: {
   catIndex: number
+  displayStep: number
+  displayTotal: number
   categories: InspectionCategories
   onChange: (key: CategoryKey, data: Partial<InspectionCategories[CategoryKey]>) => void
   onNext: () => void
@@ -251,7 +255,7 @@ function StepCategory({
     <div className="max-w-lg mx-auto">
       <div className="flex items-center gap-3 mb-1">
         <InspectionBadge type={inspectionType} />
-        <span className="text-xs text-stone-400 font-medium">Paso {catIndex} de 6</span>
+        <span className="text-xs text-stone-400 font-medium">Paso {displayStep} de {displayTotal - 1}</span>
       </div>
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -635,7 +639,7 @@ const TERMINOS_VEHICULO = [
 ]
 
 const TERMINOS_MOTO = [
-  'Acepto utilizar el casco certificado y todos los elementos de protección personal (chaqueta, guantes, rodilleras y botas) durante toda la operación, sin excepción.',
+  'Acepto utilizar el casco certificado durante toda la operación, sin excepción.',
   'Acepto respetar todas las normas de tránsito, señales viales y velocidades reglamentarias para circulación en motocicleta.',
   'Acepto no realizar maniobras peligrosas, mantener distancias seguras y no operar la motocicleta bajo efectos de ninguna sustancia.',
   'Acepto ser responsable de la integridad de la motocicleta y notificar inmediatamente a la empresa sobre cualquier novedad, daño o incidente.',
@@ -917,9 +921,36 @@ export default function ValidarReservaPage() {
     }
   }
 
+  // Mapea el step real → step de display y total según tipo de inspección
+  // Recepción muestra cat1, cat3, cat5, cat6, fotos (5 pasos); devolución muestra todos (7 pasos)
+  const RECEPCION_MAP: Record<number, number> = { 1: 1, 3: 2, 5: 3, 6: 4, 7: 5 }
+  const getDisplayStep = (s: number) => {
+    if (inspectionType === 'recepcion') return { display: RECEPCION_MAP[s] ?? s, total: 5 }
+    return { display: s, total: 7 }
+  }
+
   const handleCategoryNext = async (catIndex: number) => {
     const ok = await saveStep(catIndex)
-    if (ok) setStep(catIndex + 1)
+    if (!ok) return
+    if (inspectionType === 'recepcion') {
+      if (catIndex === 1) setStep(3)       // saltar cat2
+      else if (catIndex === 3) setStep(5)  // saltar cat4
+      else setStep(catIndex + 1)
+    } else {
+      setStep(catIndex + 1)
+    }
+  }
+
+  const handleCategoryBack = (catIndex: number) => {
+    if (inspectionType === 'recepcion') {
+      if (catIndex === 1) setShowTerms(true)  // volver a términos
+      else if (catIndex === 3) setStep(1)     // saltar cat2 hacia atrás
+      else if (catIndex === 5) setStep(3)     // saltar cat4 hacia atrás
+      else setStep(catIndex - 1)
+    } else {
+      // devolución: cat1 vuelve a la selección
+      setStep(catIndex - 1)
+    }
   }
 
   const handlePhotosFinish = async (photoUrls: Record<string, string>) => {
@@ -1000,12 +1031,15 @@ export default function ValidarReservaPage() {
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         {/* Barra de progreso */}
-        {step >= 1 && step <= 7 && (
-          <div className="mb-4">
-            <ProgressBar step={step} />
-            <p className="text-xs text-stone-400 text-right">{step} de 7 pasos</p>
-          </div>
-        )}
+        {step >= 1 && step <= 7 && (() => {
+          const { display, total } = getDisplayStep(step)
+          return (
+            <div className="mb-4">
+              <ProgressBar step={display} total={total} />
+              <p className="text-xs text-stone-400 text-right">{display} de {total} pasos</p>
+            </div>
+          )
+        })()}
 
         {/* Error global */}
         {error && (
@@ -1036,17 +1070,22 @@ export default function ValidarReservaPage() {
           />
         )}
 
-        {step >= 1 && step <= 6 && reservation && inspectionType && (
-          <StepCategory
-            catIndex={step}
-            categories={categories}
-            onChange={updateCategory}
-            onNext={() => handleCategoryNext(step)}
-            onBack={() => setStep(step - 1)}
-            saving={saving}
-            inspectionType={inspectionType}
-          />
-        )}
+        {step >= 1 && step <= 6 && reservation && inspectionType && (() => {
+          const { display, total } = getDisplayStep(step)
+          return (
+            <StepCategory
+              catIndex={step}
+              displayStep={display}
+              displayTotal={total}
+              categories={categories}
+              onChange={updateCategory}
+              onNext={() => handleCategoryNext(step)}
+              onBack={() => handleCategoryBack(step)}
+              saving={saving}
+              inspectionType={inspectionType}
+            />
+          )
+        })()}
 
         {step === 7 && reservation && inspectionType && (
           <Step7Photos

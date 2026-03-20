@@ -8,7 +8,8 @@ import type { User } from '@supabase/supabase-js'
 import { VEHICLES } from '@/lib/vehicles'
 import {
   ArrowLeft, ShieldCheck, Shield, Pencil, Check, X,
-  Users, Loader2, AlertCircle, BarChart2, ImageOff,
+  Users, Loader2, AlertCircle, BarChart2, ImageOff, Construction,
+  Leaf, ArrowRight, Filter, CalendarDays, ChevronDown,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -77,6 +78,8 @@ function hasIssues(insp: InspectionStat): boolean {
   )
 }
 
+const DEPARTMENTS = ['Financiero', 'Ejecutivo', 'RAS', 'Siembra', 'Tecnología']
+
 // ─── EditRow (tabla usuarios) ─────────────────────────────────────────────────
 
 interface EditRowProps {
@@ -109,8 +112,11 @@ function EditRow({ profile, onSave, onCancel }: EditRowProps) {
         <p className="text-xs text-stone-400 truncate max-w-[200px]">{profile.email}</p>
       </td>
       <td className="px-4 py-3">
-        <input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="Departamento"
-          className="w-full px-2 py-1.5 text-sm border-2 border-primary/40 rounded-lg focus:outline-none focus:border-primary bg-white" />
+        <select value={department} onChange={(e) => setDepartment(e.target.value)}
+          className="w-full px-2 py-1.5 text-sm border-2 border-primary/40 rounded-lg focus:outline-none focus:border-primary bg-white">
+          <option value="">— Sin departamento —</option>
+          {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
       </td>
       <td className="px-4 py-3">
         <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Rol"
@@ -248,13 +254,19 @@ function PhotoGrid({ insp }: { insp: InspectionStat | undefined }) {
 // ─── Tab Estadísticas ─────────────────────────────────────────────────────────
 
 function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat[]; loading: boolean }) {
-  const stats = useMemo(() => {
-    if (!inspections.length) return null
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all')
 
-    const total = inspections.length
-    const withIssuesCount = inspections.filter(hasIssues).length
-    const recepciones = inspections.filter((i) => i.inspection_type === 'recepcion').length
-    const devoluciones = inspections.filter((i) => i.inspection_type === 'devolucion').length
+  const filtered = selectedVehicleId === 'all'
+    ? inspections
+    : inspections.filter((i) => i.vehicle_reservations?.vehicle_id === selectedVehicleId)
+
+  const stats = useMemo(() => {
+    if (!filtered.length) return null
+
+    const total = filtered.length
+    const withIssuesCount = filtered.filter(hasIssues).length
+    const recepciones = filtered.filter((i) => i.inspection_type === 'recepcion').length
+    const devoluciones = filtered.filter((i) => i.inspection_type === 'devolucion').length
 
     const pieData = [
       { name: 'Con problemas', value: withIssuesCount, color: '#ef4444' },
@@ -263,12 +275,12 @@ function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat
 
     const catBarData = CAT_NAMES.map((name, i) => ({
       name,
-      Problemas: inspections.filter((ins) => ins[`cat${i + 1}_status` as keyof InspectionStat] === 'issues').length,
+      Problemas: filtered.filter((ins) => ins[`cat${i + 1}_status` as keyof InspectionStat] === 'issues').length,
     }))
 
     // Top 10 issues frecuentes
     const issueCount: Record<string, number> = {}
-    for (const insp of inspections)
+    for (const insp of filtered)
       for (let c = 1; c <= 6; c++)
         for (const iss of ((insp[`cat${c}_issues` as keyof InspectionStat] as string[]) ?? []))
           issueCount[iss] = (issueCount[iss] ?? 0) + 1
@@ -279,7 +291,7 @@ function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat
 
     // Última recepción / devolución por vehículo
     const latestByVehicle: Record<string, { recepcion?: InspectionStat; devolucion?: InspectionStat }> = {}
-    for (const insp of inspections) {
+    for (const insp of filtered) {
       const vId = insp.vehicle_reservations?.vehicle_id
       if (!vId) continue
       if (!latestByVehicle[vId]) latestByVehicle[vId] = {}
@@ -288,7 +300,7 @@ function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat
     }
 
     return { total, withIssuesCount, recepciones, devoluciones, pieData, catBarData, topIssues, latestByVehicle }
-  }, [inspections])
+  }, [filtered])
 
   if (loading) {
     return (
@@ -311,12 +323,46 @@ function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat
     )
   }
 
+  const selectedVehicleName = VEHICLES.find((v) => v.id === selectedVehicleId)?.name ?? 'Todos los vehículos'
+
   if (!stats) return null
 
   const pct = stats.total > 0 ? Math.round((stats.withIssuesCount / stats.total) * 100) : 0
 
   return (
     <div className="space-y-8">
+
+      {/* ── Selector de vehículo ── */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 text-stone-500">
+          <Filter size={15} />
+          <span className="text-sm font-bold">Filtrar por vehículo:</span>
+        </div>
+        <div className="relative">
+          <select
+            value={selectedVehicleId}
+            onChange={(e) => setSelectedVehicleId(e.target.value)}
+            className="appearance-none pl-3 pr-8 py-2 text-sm font-semibold border-2 border-stone-200 rounded-xl focus:outline-none focus:border-primary bg-white text-stone-800 transition-colors cursor-pointer"
+          >
+            <option value="all">Todos los vehículos ({inspections.length})</option>
+            {VEHICLES.map((v) => {
+              const count = inspections.filter((i) => i.vehicle_reservations?.vehicle_id === v.id).length
+              return (
+                <option key={v.id} value={v.id}>{v.name} ({count})</option>
+              )
+            })}
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+        </div>
+        {selectedVehicleId !== 'all' && (
+          <button
+            onClick={() => setSelectedVehicleId('all')}
+            className="text-xs font-bold text-stone-400 hover:text-red-500 transition-colors flex items-center gap-1"
+          >
+            <X size={12} /> Quitar filtro
+          </button>
+        )}
+      </div>
 
       {/* ── Cards resumen ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -385,6 +431,84 @@ function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat
         </div>
       )}
 
+      {/* ── Historial de formularios ── */}
+      <div>
+        <h3 className="text-lg font-black text-stone-900 mb-4 flex items-center gap-2">
+          <CalendarDays size={18} className="text-primary" />
+          Historial de formularios
+          <span className="text-xs font-medium text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
+            {selectedVehicleId === 'all' ? `Todos · ${filtered.length}` : `${selectedVehicleName} · ${filtered.length}`}
+          </span>
+        </h3>
+
+        {filtered.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-stone-200 p-8 text-center text-stone-400">
+            <BarChart2 size={32} className="mx-auto mb-2 opacity-40" />
+            <p className="text-sm font-semibold">Sin formularios para este vehículo.</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="bg-stone-50 border-b border-stone-200">
+                    {['Vehículo', 'Tipo', 'Fecha', 'Categorías con problemas'].map((h) => (
+                      <th key={h} className="px-4 py-3 text-[11px] font-bold text-stone-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.slice(0, 50).map((insp) => {
+                    const issuesCats = CAT_NAMES.filter((_, i) =>
+                      insp[`cat${i + 1}_status` as keyof InspectionStat] === 'issues'
+                    )
+                    return (
+                      <tr key={insp.id} className="border-b border-stone-100 hover:bg-stone-50 transition-colors">
+                        <td className="px-4 py-3 font-semibold text-stone-800 whitespace-nowrap">
+                          {insp.vehicle_reservations?.vehicle_name ?? <span className="text-stone-300">—</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                            insp.inspection_type === 'recepcion'
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-blue-50 text-blue-700'
+                          }`}>
+                            {insp.inspection_type === 'recepcion' ? 'Recepción' : 'Devolución'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-stone-500 whitespace-nowrap text-xs">
+                          {new Date(insp.submitted_at).toLocaleDateString('es-CO', {
+                            day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                          })}
+                        </td>
+                        <td className="px-4 py-3">
+                          {issuesCats.length === 0 ? (
+                            <span className="text-xs text-emerald-600 font-semibold">Sin novedades</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {issuesCats.map((cat) => (
+                                <span key={cat} className="inline-flex px-2 py-0.5 bg-red-50 text-red-700 rounded-full text-[10px] font-bold whitespace-nowrap">
+                                  {cat}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {filtered.length > 50 && (
+              <p className="text-xs text-stone-400 text-center py-3 border-t border-stone-100">
+                Mostrando los primeros 50 de {filtered.length} registros
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* ── Comparación fotográfica por vehículo ── */}
       <div>
         <h3 className="text-lg font-black text-stone-900 mb-4 flex items-center gap-2">
@@ -437,16 +561,58 @@ function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat
   )
 }
 
+// ─── ModuloEnConstruccion ─────────────────────────────────────────────────────
+
+// ─── ModuloRAS: acceso directo desde el tab de admin ──────────────────────────
+
+function ModuloRAS() {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-6">
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-lg p-8 max-w-md w-full text-center">
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <Leaf size={32} className="text-primary" />
+        </div>
+        <h2 className="text-2xl font-black text-stone-900 mb-2">Módulo RAS</h2>
+        <p className="text-stone-500 text-sm mb-6">
+          Gestión de <strong>Familias en Restauración</strong>. Carga y consulta los datos que alimentan el geovisor ambiental.
+        </p>
+        <Link href="/intranet/ras"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white shadow-md hover:shadow-lg transition-all"
+          style={{ backgroundColor: PRIMARY }}>
+          Abrir módulo <ArrowRight size={15} />
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// ─── ModuloEnConstruccion ─────────────────────────────────────────────────────
+
+function ModuloEnConstruccion({ department }: { department: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-28 text-stone-400 gap-4">
+      <div className="w-20 h-20 rounded-3xl bg-stone-100 flex items-center justify-center mb-2">
+        <Construction size={40} className="text-stone-300" />
+      </div>
+      <p className="text-xl font-black text-stone-600">Módulo {department}</p>
+      <p className="text-sm text-stone-400 text-center max-w-xs">
+        Este módulo está en construcción. Pronto tendrás acceso a las herramientas de tu departamento.
+      </p>
+    </div>
+  )
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function IntranetPage() {
   const router = useRouter()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [myProfile, setMyProfile] = useState<{ is_admin: boolean; department: string | null } | null>(null)
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [editingEmail, setEditingEmail] = useState<string | null>(null)
   const [toast, setToast] = useState<{ type: 'ok' | 'error'; msg: string } | null>(null)
-  const [activeTab, setActiveTab] = useState<'usuarios' | 'estadisticas'>('usuarios')
+  const [activeTab, setActiveTab] = useState<'usuarios' | 'modulo'>('usuarios')
   const [inspections, setInspections] = useState<InspectionStat[]>([])
   const [statsLoading, setStatsLoading] = useState(false)
   const [statsLoaded, setStatsLoaded] = useState(false)
@@ -457,22 +623,31 @@ export default function IntranetPage() {
       if (!user) { router.push('/'); return }
 
       const { data: profile } = await supabase
-        .from('user_profiles').select('is_admin').eq('email', user.email).single()
-      if (!profile?.is_admin) { router.push('/'); return }
+        .from('user_profiles').select('is_admin, department').eq('email', user.email).single()
+
+      if (!profile?.is_admin && !profile?.department) { router.push('/'); return }
+
+      setMyProfile({ is_admin: profile.is_admin, department: profile.department ?? null })
+
+      // No-admin: redirigir si tiene módulo propio con página dedicada
+      if (!profile.is_admin) {
+        if (profile.department === 'RAS') { router.push('/intranet/ras'); return }
+        setActiveTab('modulo')
+      }
 
       setCurrentUser(user)
-      await loadUsers()
+      if (profile.is_admin) await loadUsers()
       setLoading(false)
     }
     init()
   }, [router])
 
-  // Carga perezosa: solo cuando se activa el tab de estadísticas
+  // Carga perezosa de stats: solo para el módulo Financiero
   useEffect(() => {
-    if (activeTab === 'estadisticas' && !statsLoaded && currentUser?.email) {
+    if (activeTab === 'modulo' && myProfile?.department === 'Financiero' && !statsLoaded && currentUser?.email) {
       loadStats()
     }
-  }, [activeTab, currentUser])
+  }, [activeTab, currentUser, myProfile])
 
   const loadUsers = async () => {
     const { data } = await supabase.from('user_profiles').select('*').order('last_login', { ascending: false })
@@ -557,37 +732,39 @@ export default function IntranetPage() {
                 <h1 className="text-2xl font-black text-stone-900 tracking-tight">Intranet</h1>
               </div>
               <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">
-                Panel de Administración
+                {myProfile?.is_admin ? 'Panel de Administración' : `Módulo ${myProfile?.department ?? ''}`}
               </p>
             </div>
 
             <div className="shrink-0 w-[80px]" />
           </div>
 
-          {/* Tabs */}
-          <div className="flex items-center gap-1 mt-4 border-t border-stone-100 pt-4">
-            {([
-              { key: 'usuarios', label: 'Usuarios', icon: <Users size={14} /> },
-              { key: 'estadisticas', label: 'Estadísticas', icon: <BarChart2 size={14} /> },
-            ] as const).map((tab) => (
-              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === tab.key
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
-                }`}>
-                {tab.icon} {tab.label}
-              </button>
-            ))}
-          </div>
+          {/* Tabs — solo para admins */}
+          {myProfile?.is_admin && (
+            <div className="flex items-center gap-1 mt-4 border-t border-stone-100 pt-4">
+              {[
+                { key: 'usuarios' as const, label: 'Usuarios', icon: <Users size={14} /> },
+                ...(myProfile.department ? [{ key: 'modulo' as const, label: myProfile.department, icon: <BarChart2 size={14} /> }] : []),
+              ].map((tab) => (
+                <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                    activeTab === tab.key
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+                  }`}>
+                  {tab.icon} {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </header>
 
       {/* ── Main ── */}
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
 
-        {/* ── Tab: Usuarios ── */}
-        {activeTab === 'usuarios' && (
+        {/* ── Admin: Tab Usuarios ── */}
+        {myProfile?.is_admin && activeTab === 'usuarios' && (
           <>
             <div className="bg-primary text-white rounded-2xl p-6 mb-8 shadow-xl">
               <div className="flex items-start gap-4">
@@ -630,9 +807,16 @@ export default function IntranetPage() {
           </>
         )}
 
-        {/* ── Tab: Estadísticas ── */}
-        {activeTab === 'estadisticas' && (
+        {/* ── Tab módulo: contenido según departamento ── */}
+        {activeTab === 'modulo' && myProfile?.department === 'Financiero' && (
           <EstadisticasTab inspections={inspections} loading={statsLoading} />
+        )}
+        {activeTab === 'modulo' && myProfile?.department === 'RAS' && (
+          <ModuloRAS />
+        )}
+        {activeTab === 'modulo' && myProfile?.department &&
+          myProfile.department !== 'Financiero' && myProfile.department !== 'RAS' && (
+          <ModuloEnConstruccion department={myProfile.department} />
         )}
 
       </main>

@@ -27,6 +27,7 @@ export default function CalendarPage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState('')
+  const [reservasTab, setReservasTab] = useState<'activas' | 'finalizadas'>('activas')
 
   // Verificar sesión al montar
   useEffect(() => {
@@ -247,8 +248,10 @@ export default function CalendarPage() {
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-xs text-stone-400 uppercase tracking-wider font-bold">Mis Reservas</p>
-                  <p className="text-3xl font-black text-primary">{myReservations.length}</p>
+                  <p className="text-xs text-stone-400 uppercase tracking-wider font-bold">Reservas activas</p>
+                  <p className="text-3xl font-black text-primary">
+                    {myReservations.filter((r) => new Date(r.end_date + 'T23:59:59') >= new Date()).length}
+                  </p>
                 </div>
               </div>
             </div>
@@ -260,103 +263,159 @@ export default function CalendarPage() {
               </div>
             )}
 
-            {/* Mis Reservas Activas */}
-            {myReservations.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-stone-200">
-                <h3 className="text-xl font-black text-stone-900 mb-4 flex items-center gap-2">
-                  <ClipboardList size={20} className="text-primary" />
-                  Mis Reservas Activas
-                </h3>
+            {/* Mis Reservas — pestañas Activas / Finalizadas */}
+            {myReservations.length > 0 && (() => {
+              const activas = myReservations.filter(
+                (r) => new Date(r.end_date + 'T23:59:59') >= new Date()
+              )
+              const finalizadas = myReservations.filter(
+                (r) => new Date(r.end_date + 'T23:59:59') < new Date()
+              )
+              const lista = reservasTab === 'activas' ? activas : finalizadas
 
-                <div className="space-y-3">
-                  {myReservations.map((reservation) => {
-                    const vehicle = VEHICLE_MAP[reservation.vehicle_id]
-                    const { project, activity } = parsePurpose(reservation.purpose || '')
-                    const startDate = new Date(reservation.start_date + 'T12:00:00').toLocaleDateString('es-ES', {
-                      day: 'numeric', month: 'long', year: 'numeric',
-                    })
-                    const endDate = new Date(reservation.end_date + 'T12:00:00').toLocaleDateString('es-ES', {
-                      day: 'numeric', month: 'long', year: 'numeric',
-                    })
-                    const isPast = new Date(reservation.end_date + 'T23:59:59') < new Date()
-                    const IconComponent = vehicle?.icon
-
-                    return (
-                      <div
-                        key={reservation.id}
-                        className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
-                          isPast
-                            ? 'border-stone-200 bg-stone-50 opacity-60'
-                            : 'hover:shadow-md'
+              return (
+                <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-stone-200">
+                  {/* Header con tabs */}
+                  <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                    <h3 className="text-xl font-black text-stone-900 flex items-center gap-2">
+                      <ClipboardList size={20} className="text-primary" />
+                      Mis Reservas
+                    </h3>
+                    <div className="flex rounded-xl border-2 border-stone-200 overflow-hidden">
+                      <button
+                        onClick={() => setReservasTab('activas')}
+                        className={`px-4 py-1.5 text-sm font-bold transition-colors ${
+                          reservasTab === 'activas'
+                            ? 'bg-primary text-white'
+                            : 'text-stone-500 hover:bg-stone-50'
                         }`}
-                        style={{ borderColor: isPast ? undefined : vehicle?.color }}
                       >
-                        {IconComponent && (
-                          <IconComponent size={26} style={{ color: vehicle?.color }} className="shrink-0" />
+                        Activas
+                        {activas.length > 0 && (
+                          <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                            reservasTab === 'activas' ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-600'
+                          }`}>{activas.length}</span>
                         )}
+                      </button>
+                      <button
+                        onClick={() => setReservasTab('finalizadas')}
+                        className={`px-4 py-1.5 text-sm font-bold transition-colors border-l-2 border-stone-200 ${
+                          reservasTab === 'finalizadas'
+                            ? 'bg-stone-700 text-white'
+                            : 'text-stone-500 hover:bg-stone-50'
+                        }`}
+                      >
+                        Finalizadas
+                        {finalizadas.length > 0 && (
+                          <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                            reservasTab === 'finalizadas' ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-600'
+                          }`}>{finalizadas.length}</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
 
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-stone-900">
-                            {reservation.vehicle_name}
-                            {isPast && (
-                              <span className="ml-2 text-xs bg-stone-200 text-stone-600 px-2 py-0.5 rounded-full">
-                                Finalizada
-                              </span>
+                  {/* Lista */}
+                  {lista.length === 0 ? (
+                    <div className="py-8 text-center text-stone-400">
+                      <ClipboardList size={32} className="mx-auto mb-2 opacity-30" />
+                      <p className="text-sm font-semibold">
+                        {reservasTab === 'activas'
+                          ? 'No tienes reservas activas.'
+                          : 'No hay reservas finalizadas.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {lista.map((reservation) => {
+                        const vehicle = VEHICLE_MAP[reservation.vehicle_id]
+                        const { project, activity } = parsePurpose(reservation.purpose || '')
+                        const startDate = new Date(reservation.start_date + 'T12:00:00').toLocaleDateString('es-ES', {
+                          day: 'numeric', month: 'long', year: 'numeric',
+                        })
+                        const endDate = new Date(reservation.end_date + 'T12:00:00').toLocaleDateString('es-ES', {
+                          day: 'numeric', month: 'long', year: 'numeric',
+                        })
+                        const IconComponent = vehicle?.icon
+                        const isPast = reservasTab === 'finalizadas'
+
+                        return (
+                          <div
+                            key={reservation.id}
+                            className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
+                              isPast
+                                ? 'border-stone-200 bg-stone-50'
+                                : 'hover:shadow-md'
+                            }`}
+                            style={{ borderColor: isPast ? undefined : vehicle?.color }}
+                          >
+                            {IconComponent && (
+                              <IconComponent
+                                size={26}
+                                style={{ color: isPast ? '#a8a29e' : vehicle?.color }}
+                                className="shrink-0"
+                              />
                             )}
-                          </p>
-                          {(activity || project) && (
-                            <div className="flex items-center gap-1.5 my-0.5 flex-wrap">
-                              <Tag size={12} className="text-stone-400" />
-                              <span className="text-xs font-medium text-stone-600">
-                                {activity || 'Sin detalle'}
-                              </span>
-                              {project && (
-                                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-                                  {project}
-                                </span>
+
+                            <div className="flex-1 min-w-0">
+                              <p className={`font-bold ${isPast ? 'text-stone-500' : 'text-stone-900'}`}>
+                                {reservation.vehicle_name}
+                              </p>
+                              {(activity || project) && (
+                                <div className="flex items-center gap-1.5 my-0.5 flex-wrap">
+                                  <Tag size={12} className="text-stone-400" />
+                                  <span className="text-xs font-medium text-stone-600">
+                                    {activity || 'Sin detalle'}
+                                  </span>
+                                  {project && (
+                                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                                      {project}
+                                    </span>
+                                  )}
+                                </div>
                               )}
+                              <p className={`text-sm ${isPast ? 'text-stone-400' : 'text-stone-500'}`}>
+                                {startDate} → {endDate}
+                              </p>
                             </div>
-                          )}
-                          <p className="text-sm text-stone-500">
-                            {startDate} → {endDate}
-                          </p>
-                        </div>
 
-                        {!isPast && (
-                          <>
-                            {deleteTarget === reservation.id ? (
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className="text-xs text-stone-500 font-medium">¿Eliminar?</span>
-                                <button
-                                  onClick={() => confirmDelete(reservation.id)}
-                                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 transition-all"
-                                >
-                                  Sí
-                                </button>
-                                <button
-                                  onClick={() => setDeleteTarget(null)}
-                                  className="px-3 py-1.5 border border-stone-300 text-stone-600 rounded-lg font-bold text-sm hover:bg-stone-100 transition-all"
-                                >
-                                  No
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => setDeleteTarget(reservation.id)}
-                                className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 border-2 border-red-200 rounded-lg font-bold text-sm hover:bg-red-100 transition-all shrink-0"
-                              >
-                                <Trash2 size={14} />
-                                <span className="hidden sm:block">Eliminar</span>
-                              </button>
+                            {!isPast && (
+                              <>
+                                {deleteTarget === reservation.id ? (
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-xs text-stone-500 font-medium">¿Eliminar?</span>
+                                    <button
+                                      onClick={() => confirmDelete(reservation.id)}
+                                      className="px-3 py-1.5 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 transition-all"
+                                    >
+                                      Sí
+                                    </button>
+                                    <button
+                                      onClick={() => setDeleteTarget(null)}
+                                      className="px-3 py-1.5 border border-stone-300 text-stone-600 rounded-lg font-bold text-sm hover:bg-stone-100 transition-all"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setDeleteTarget(reservation.id)}
+                                    className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 border-2 border-red-200 rounded-lg font-bold text-sm hover:bg-red-100 transition-all shrink-0"
+                                  >
+                                    <Trash2 size={14} />
+                                    <span className="hidden sm:block">Eliminar</span>
+                                  </button>
+                                )}
+                              </>
                             )}
-                          </>
-                        )}
-                      </div>
-                    )
-                  })}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              )
+            })()}
           </>
         )}
 

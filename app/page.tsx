@@ -12,6 +12,7 @@ export default function LandingPage() {
   const [authLoading, setAuthLoading] = useState(true)
   const [validarMsg, setValidarMsg] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [department, setDepartment] = useState<string | null>(null)
 
   // Verificar sesión al montar
   useEffect(() => {
@@ -20,10 +21,11 @@ export default function LandingPage() {
       if (u?.email) {
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('is_admin')
+          .select('is_admin, department')
           .eq('email', u.email)
           .single()
         setIsAdmin(profile?.is_admin ?? false)
+        setDepartment(profile?.department ?? null)
       }
       setAuthLoading(false)
     })
@@ -313,8 +315,8 @@ export default function LandingPage() {
               )
             )}
 
-          {/* Intranet — solo admins */}
-          {!authLoading && isAdmin && (
+          {/* Intranet — admins y usuarios con departamento */}
+          {!authLoading && user && (isAdmin || !!department) && (
             <Link
               href="/intranet"
               className="group flex items-center gap-4 w-full p-4 rounded-xl border-2 border-primary/30 bg-primary/5 hover:border-primary hover:bg-primary/10 transition-all duration-200 shadow-sm hover:shadow-md"
@@ -327,7 +329,7 @@ export default function LandingPage() {
                   Intranet
                 </p>
                 <p className="text-xs text-stone-400 mt-0.5">
-                  Panel de administración
+                  {isAdmin ? 'Panel de administración' : `Módulo ${department}`}
                 </p>
               </div>
               <ArrowRight size={15} className="text-primary/50 group-hover:text-primary transition-colors shrink-0" />
