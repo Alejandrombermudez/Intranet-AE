@@ -1,65 +1,50 @@
-# Recomendación de Schemas en Supabase
+# Schemas en Supabase
 
-## Schemas propuestos
-
-### `auth` *(gestionado por Supabase — no modificar)*
-Tablas internas de autenticación de Supabase.
+> **Última actualización:** Marzo 2026
+> Para seguimiento de migraciones SQL ver `docs/sql/`
 
 ---
 
-### `people` — Gestión de usuarios
+## Estado actual de schemas
+
+| Schema | Módulo | Estado |
+|--------|--------|--------|
+| `auth` | Autenticación *(Supabase managed)* | ✅ Gestionado por Supabase |
+| `public` | Tablas legacy (`user_profiles`, etc.) | ✅ En uso — migración a schemas propios pendiente/opcional |
+| `people` | Gestión de usuarios | ⚠️ Pendiente — ver `docs/sql/pending.sql` |
+| `fleet` | Flota vehicular | ⚠️ Pendiente — ver `docs/sql/pending.sql` |
+| `siembra` | Módulo Restauración / Siembra | ✅ Ejecutado en producción |
+| `ras` | Módulo Conservación | ✅ Ejecutado en producción |
+| `storage` | Buckets *(Supabase managed)* | ✅ Buckets creados |
+
+---
+
+## Storage Buckets (acceso público)
+
+| Bucket | Módulo | Contenido |
+|--------|--------|-----------|
+| `siembra-shapefiles` | Siembra | Polígonos .zip (finca + área en restauración) |
+| `siembra-fotos-camara` | Siembra | Fotos de cámaras trampa |
+| `ras-shapefiles` | Conservación | Polígonos .zip (finca + área en conservación) |
+| `ras-fotos-camara` | Conservación | Fotos de cámaras trampa |
+
+---
+
+## Schema `siembra` — Módulo Restauración / Siembra ✅
+
 | Tabla | Descripción |
 |-------|-------------|
-| `user_profiles` | Perfiles de empleados: nombre, rol, departamento, flag admin, último login |
+| `siembra.familias` | Familia en restauración: info base, socioeconomía, datos de siembra |
+| `siembra.monitoreos` | Eventos de monitoreo (fecha + % supervivencia) |
+| `siembra.camaras_trampa` | Cámaras trampa (nombre, lat, lon) |
+| `siembra.fotos_camara` | Fotos de cámaras trampa |
 
----
-
-### `fleet` — Flota vehicular
-| Tabla | Descripción |
-|-------|-------------|
-| `vehicles` | Catálogo de vehículos (actualmente definido en `lib/vehicles.ts`) |
-| `vehicle_reservations` | Reservas del calendario por vehículo y usuario |
-| `vehicle_inspections` | Inspecciones de recepción/devolución (7 pasos + fotos) |
-
----
-
-### `ras` — Restauración Ambiental y Social
-| Tabla | Descripción |
-|-------|-------------|
-| `ras.familias` | Registro principal de familias en restauración (info base, socioeconomía, datos de restauración) |
-| `ras.monitoreos` | Eventos de monitoreo por familia (fecha + % supervivencia) |
-| `ras.camaras_trampa` | Cámaras trampa por familia (nombre, coordenadas) |
-| `ras.fotos_camara` | Fotos de captura asociadas a cada cámara trampa |
-
-**Storage buckets:**
-- `ras-shapefiles` — Archivos .zip con shapefiles de predios
-- `ras-fotos-camara` — Fotografías de captura de cámaras trampa
-
-**Estado:** ✅ Implementado y en producción. Schema, tablas, políticas RLS y buckets ejecutados.
-
----
-
-### `storage` *(gestionado por Supabase — no modificar)*
-El bucket `inspection-photos` ya reside aquí.
-
----
-
-## Migración desde `public`
-
-Al mover tablas fuera del schema `public`, se deben tener en cuenta tres puntos:
-
-1. **Políticas RLS** — deben eliminarse y recrearse dentro del nuevo schema.
-2. **Código de la aplicación** — Supabase JS apunta a `public` por defecto; se debe configurar el `search_path` en el cliente o calificar los nombres (`fleet.vehicle_reservations`).
-3. **Service role / anon key** — siguen funcionando sin cambios, solo se ajustan las políticas.
-
----
-
-## SQL del schema `ras` (ejecutar en Supabase)
+### SQL ejecutado
 
 ```sql
-CREATE SCHEMA IF NOT EXISTS ras;
+CREATE SCHEMA IF NOT EXISTS siembra;
 
-CREATE TABLE ras.familias (
+CREATE TABLE siembra.familias (
   id                         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   municipio                  TEXT NOT NULL,
   vereda                     TEXT,
@@ -84,12 +69,88 @@ CREATE TABLE ras.familias (
   updated_at                 TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE ras.monitoreos (
+CREATE TABLE siembra.monitoreos (
   id                UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  familia_id        UUID REFERENCES ras.familias(id) ON DELETE CASCADE,
+  familia_id        UUID REFERENCES siembra.familias(id) ON DELETE CASCADE,
   fecha             DATE NOT NULL,
   supervivencia_pct NUMERIC CHECK (supervivencia_pct BETWEEN 0 AND 100),
   created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE siembra.camaras_trampa (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  familia_id UUID REFERENCES siembra.familias(id) ON DELETE CASCADE,
+  nombre     TEXT NOT NULL,
+  latitud    NUMERIC NOT NULL,
+  longitud   NUMERIC NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE siembra.fotos_camara (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  camara_id  UUID REFERENCES siembra.camaras_trampa(id) ON DELETE CASCADE,
+  url        TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE siembra.familias       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE siembra.monitoreos     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE siembra.camaras_trampa ENABLE ROW LEVEL SECURITY;
+ALTER TABLE siembra.fotos_camara   ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "read_familias"     ON siembra.familias       FOR SELECT TO authenticated USING (true);
+CREATE POLICY "insert_familias"   ON siembra.familias       FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "delete_familias"   ON siembra.familias       FOR DELETE TO authenticated USING (true);
+CREATE POLICY "read_monitoreos"   ON siembra.monitoreos     FOR SELECT TO authenticated USING (true);
+CREATE POLICY "insert_monitoreos" ON siembra.monitoreos     FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "read_camaras"      ON siembra.camaras_trampa FOR SELECT TO authenticated USING (true);
+CREATE POLICY "insert_camaras"    ON siembra.camaras_trampa FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "read_fotos"        ON siembra.fotos_camara   FOR SELECT TO authenticated USING (true);
+CREATE POLICY "insert_fotos"      ON siembra.fotos_camara   FOR INSERT TO authenticated WITH CHECK (true);
+
+-- IMPORTANTE: Supabase no otorga permisos automáticamente en schemas distintos de public.
+-- Sin estos GRANTs se produce "permission denied for table X" aunque las políticas RLS existan.
+GRANT USAGE ON SCHEMA siembra TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, DELETE ON ALL TABLES IN SCHEMA siembra TO authenticated, service_role;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA siembra TO authenticated, service_role;
+```
+
+---
+
+## Schema `ras` — Módulo Conservación ✅
+
+| Tabla | Descripción |
+|-------|-------------|
+| `ras.familias` | Familia en conservación: info base, hectáreas, plan, indicadores |
+| `ras.camaras_trampa` | Cámaras trampa (nombre, lat, lon) |
+| `ras.fotos_camara` | Fotos de cámaras trampa |
+
+### SQL ejecutado
+
+```sql
+CREATE SCHEMA IF NOT EXISTS ras;
+
+CREATE TABLE ras.familias (
+  id                         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  municipio                  TEXT NOT NULL,
+  vereda                     TEXT,
+  nombre_finca               TEXT,
+  nombre_propietario         TEXT NOT NULL,
+  adultos                    INT DEFAULT 0,
+  ninos                      INT DEFAULT 0,
+  ha_potreros                NUMERIC,
+  ha_bosque                  NUMERIC,
+  ha_otras                   NUMERIC,
+  bajo_conservacion          BOOLEAN DEFAULT FALSE,
+  acuerdo_conservacion       BOOLEAN DEFAULT FALSE,
+  arboles_semilleros         INT DEFAULT 0,
+  especies_forestales        INT DEFAULT 0,
+  otros_indices              TEXT,
+  shapefile_finca_url        TEXT,
+  shapefile_conservacion_url TEXT,
+  created_by                 TEXT,
+  created_at                 TIMESTAMPTZ DEFAULT NOW(),
+  updated_at                 TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE ras.camaras_trampa (
@@ -109,43 +170,48 @@ CREATE TABLE ras.fotos_camara (
 );
 
 ALTER TABLE ras.familias       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ras.monitoreos     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ras.camaras_trampa ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ras.fotos_camara   ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "read_familias"     ON ras.familias       FOR SELECT TO authenticated USING (true);
-CREATE POLICY "insert_familias"   ON ras.familias       FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "read_monitoreos"   ON ras.monitoreos     FOR SELECT TO authenticated USING (true);
-CREATE POLICY "insert_monitoreos" ON ras.monitoreos     FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "read_camaras"      ON ras.camaras_trampa FOR SELECT TO authenticated USING (true);
-CREATE POLICY "insert_camaras"    ON ras.camaras_trampa FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "read_fotos"        ON ras.fotos_camara   FOR SELECT TO authenticated USING (true);
-CREATE POLICY "insert_fotos"      ON ras.fotos_camara   FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "read_familias"   ON ras.familias       FOR SELECT TO authenticated USING (true);
+CREATE POLICY "insert_familias" ON ras.familias       FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "delete_familias" ON ras.familias       FOR DELETE TO authenticated USING (true);
+CREATE POLICY "read_camaras"    ON ras.camaras_trampa FOR SELECT TO authenticated USING (true);
+CREATE POLICY "insert_camaras"  ON ras.camaras_trampa FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "read_fotos"      ON ras.fotos_camara   FOR SELECT TO authenticated USING (true);
+CREATE POLICY "insert_fotos"    ON ras.fotos_camara   FOR INSERT TO authenticated WITH CHECK (true);
 
--- Eliminar familias (CASCADE sobre monitoreos, camaras_trampa y fotos_camara)
-CREATE POLICY "delete_familias"   ON ras.familias       FOR DELETE TO authenticated USING (true);
+-- IMPORTANTE: Supabase no otorga permisos automáticamente en schemas distintos de public.
+-- Sin estos GRANTs se produce "permission denied for table X" aunque las políticas RLS existan.
+GRANT USAGE ON SCHEMA ras TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, DELETE ON ALL TABLES IN SCHEMA ras TO authenticated, service_role;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA ras TO authenticated, service_role;
 ```
-
-**Storage buckets a crear manualmente en Supabase → Storage:**
-- `ras-shapefiles` (acceso público)
-- `ras-fotos-camara` (acceso público)
 
 ---
 
-## SQL de schemas existentes (pendiente de ejecutar)
+## Notas de desarrollo
 
-```sql
--- Crear schemas
-CREATE SCHEMA IF NOT EXISTS people;
-CREATE SCHEMA IF NOT EXISTS fleet;
+### Multi-schema en Supabase JS
 
--- Mover tablas
-ALTER TABLE public.user_profiles      SET SCHEMA people;
-ALTER TABLE public.vehicle_reservations SET SCHEMA fleet;
-ALTER TABLE public.vehicle_inspections  SET SCHEMA fleet;
+```ts
+// Siembra
+supabase.schema('siembra').from('familias').select(...)
 
--- Si vehicles se migra a BD en el futuro:
--- ALTER TABLE public.vehicles SET SCHEMA fleet;
+// Conservación
+supabase.schema('ras').from('familias').select(...)
 ```
 
-> **Estado:** Pendiente de aprobación y ejecución.
+### Relación entre módulos y rutas de la app
+
+| Ruta | Schema | Descripción |
+|------|--------|-------------|
+| `/intranet/ras` | — | Hub selector (Siembra / Conservación) |
+| `/intranet/ras/siembra` | `siembra` | Lista de familias en restauración |
+| `/intranet/ras/siembra/nueva` | `siembra` | Formulario nuevo registro |
+| `/intranet/ras/conservacion` | `ras` | Lista de familias en conservación |
+| `/intranet/ras/conservacion/nueva` | `ras` | Formulario nuevo registro |
+| `POST /api/ras/familias` | `siembra` | API creación siembra |
+| `DELETE /api/ras/familias/[id]` | `siembra` | API eliminación siembra |
+| `POST /api/ras/conservacion` | `ras` | API creación conservación |
+| `DELETE /api/ras/conservacion/[id]` | `ras` | API eliminación conservación |

@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 /**
- * POST /api/ras/familias
- * Crea un registro completo de familia en restauración:
- * 1. Sube shapefiles a siembra-shapefiles
- * 2. Inserta en siembra.familias
- * 3. Inserta monitoreos en siembra.monitoreos
- * 4. Por cada cámara: inserta en siembra.camaras_trampa, sube fotos a siembra-fotos-camara e inserta en siembra.fotos_camara
+ * POST /api/ras/conservacion
+ * Crea un registro completo de familia en conservación:
+ * 1. Sube shapefiles a ras-shapefiles
+ * 2. Inserta en ras.familias
+ * 3. Por cada cámara: inserta en ras.camaras_trampa, sube fotos a ras-fotos-camara e inserta en ras.fotos_camara
  */
 export async function POST(req: NextRequest) {
   const supabase = createServerSupabaseClient()
@@ -15,6 +14,7 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
     const rawData = formData.get('data')
+
     if (!rawData || typeof rawData !== 'string') {
       return NextResponse.json({ error: 'Datos requeridos' }, { status: 400 })
     }
@@ -39,69 +39,59 @@ export async function POST(req: NextRequest) {
 
     // ── Subir shapefiles ──
     let shapefile_finca_url: string | null = null
-    let shapefile_restauracion_url: string | null = null
+    let shapefile_conservacion_url: string | null = null
 
     const shpFinca = formData.get('shp_finca') as File | null
-    const shpRestauracion = formData.get('shp_restauracion') as File | null
+    const shpConservacion = formData.get('shp_conservacion') as File | null
 
     if (shpFinca) {
       const path = `${requesterEmail}/${Date.now()}_finca_${shpFinca.name}`
       const { error: upErr } = await supabase.storage
-        .from('siembra-shapefiles')
+        .from('ras-shapefiles')
         .upload(path, shpFinca, { contentType: 'application/zip' })
       if (!upErr) {
-        const { data: urlData } = supabase.storage.from('siembra-shapefiles').getPublicUrl(path)
+        const { data: urlData } = supabase.storage.from('ras-shapefiles').getPublicUrl(path)
         shapefile_finca_url = urlData.publicUrl
       } else {
         console.error('Error subiendo shp_finca:', upErr.message)
       }
     }
 
-    if (shpRestauracion) {
-      const path = `${requesterEmail}/${Date.now()}_restauracion_${shpRestauracion.name}`
+    if (shpConservacion) {
+      const path = `${requesterEmail}/${Date.now()}_conservacion_${shpConservacion.name}`
       const { error: upErr } = await supabase.storage
-        .from('siembra-shapefiles')
-        .upload(path, shpRestauracion, { contentType: 'application/zip' })
+        .from('ras-shapefiles')
+        .upload(path, shpConservacion, { contentType: 'application/zip' })
       if (!upErr) {
-        const { data: urlData } = supabase.storage.from('siembra-shapefiles').getPublicUrl(path)
-        shapefile_restauracion_url = urlData.publicUrl
+        const { data: urlData } = supabase.storage.from('ras-shapefiles').getPublicUrl(path)
+        shapefile_conservacion_url = urlData.publicUrl
       } else {
-        console.error('Error subiendo shp_restauracion:', upErr.message)
+        console.error('Error subiendo shp_conservacion:', upErr.message)
       }
     }
 
-    // ── Insertar familia ──
-    const { monitoreos, camaras, ...familiaData } = data
+    // ── Insertar familia en conservación ──
+    const { camaras, ...familiaData } = data
 
     const { data: familia, error: familiaErr } = await supabase
-      .schema('siembra')
+      .schema('ras')
       .from('familias')
       .insert({
         ...familiaData,
         shapefile_finca_url,
-        shapefile_restauracion_url,
+        shapefile_conservacion_url,
       })
       .select('id')
       .single()
 
     if (familiaErr || !familia) {
-      return NextResponse.json({ error: familiaErr?.message ?? 'Error al crear familia' }, { status: 500 })
+      return NextResponse.json(
+        { error: familiaErr?.message ?? 'Error al crear el registro' },
+        { status: 500 }
+      )
     }
 
     const familiaId = familia.id
-
-    // ── Insertar monitoreos ──
-    if (Array.isArray(monitoreos) && monitoreos.length > 0) {
-      const { error: monErr } = await supabase
-        .schema('siembra')
-        .from('monitoreos')
-        .insert(monitoreos.map((m: { fecha: string; supervivencia_pct: number }) => ({
-          familia_id: familiaId,
-          fecha: m.fecha,
-          supervivencia_pct: m.supervivencia_pct,
-        })))
-      if (monErr) console.error('Error monitoreos:', monErr.message)
-    }
 
     // ── Insertar cámaras trampa y fotos ──
     if (Array.isArray(camaras) && camaras.length > 0) {
@@ -109,7 +99,7 @@ export async function POST(req: NextRequest) {
         const cam = camaras[i]
 
         const { data: camara, error: camErr } = await supabase
-          .schema('siembra')
+          .schema('ras')
           .from('camaras_trampa')
           .insert({
             familia_id: familiaId,
@@ -121,7 +111,7 @@ export async function POST(req: NextRequest) {
           .single()
 
         if (camErr || !camara) {
-          console.error('Error cámara:', camErr?.message)
+          console.error('Error cámara conservación:', camErr?.message)
           continue
         }
 
@@ -131,17 +121,17 @@ export async function POST(req: NextRequest) {
         for (const foto of fotos) {
           const path = `${familiaId}/${camara.id}/${Date.now()}_${foto.name}`
           const { error: fotoUpErr } = await supabase.storage
-            .from('siembra-fotos-camara')
+            .from('ras-fotos-camara')
             .upload(path, foto, { contentType: foto.type })
 
           if (!fotoUpErr) {
-            const { data: urlData } = supabase.storage.from('siembra-fotos-camara').getPublicUrl(path)
+            const { data: urlData } = supabase.storage.from('ras-fotos-camara').getPublicUrl(path)
             await supabase
-              .schema('siembra')
+              .schema('ras')
               .from('fotos_camara')
               .insert({ camara_id: camara.id, url: urlData.publicUrl })
           } else {
-            console.error('Error subiendo foto:', fotoUpErr.message)
+            console.error('Error subiendo foto conservación:', fotoUpErr.message)
           }
         }
       }
@@ -149,7 +139,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ id: familiaId }, { status: 201 })
   } catch (err) {
-    console.error('Error POST /api/ras/familias:', err)
+    console.error('Error POST /api/ras/conservacion:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
