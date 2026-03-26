@@ -14,6 +14,8 @@ export default function LandingPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [department, setDepartment] = useState<string | null>(null)
 
+  //.
+
   // Verificar sesión al montar
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user: u } }) => {
