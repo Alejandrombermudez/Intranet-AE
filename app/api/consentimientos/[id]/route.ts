@@ -8,9 +8,10 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = createServerSupabaseClient()
 
     const authHeader = req.headers.get('authorization') ?? ''
@@ -34,8 +35,6 @@ export async function DELETE(
     if (!profile?.is_admin && profile?.department !== 'Financiero') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
-
-    const { id } = params
 
     const { error } = await supabase
       .from('consentimientos')
