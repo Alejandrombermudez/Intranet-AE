@@ -59,3 +59,31 @@ GRANT USAGE ON ALL SEQUENCES IN SCHEMA ras TO authenticated, service_role;
 GRANT USAGE ON SCHEMA siembra TO anon, authenticated, service_role;
 GRANT SELECT, INSERT, DELETE ON ALL TABLES IN SCHEMA siembra TO authenticated, service_role;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA siembra TO authenticated, service_role;
+
+
+-- ── [PENDIENTE] Tabla de consentimientos — Módulo Financiero ──────────────────
+-- Tabla en schema public (sin prefijo) para registrar firmas de consentimiento
+-- de tratamiento de datos. Acceso anónimo para insertar (formulario público),
+-- solo autenticados pueden leer (intranet Financiero).
+
+CREATE TABLE public.consentimientos (
+  id                 UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  nombre             TEXT NOT NULL,
+  apellido           TEXT NOT NULL,
+  cedula             TEXT NOT NULL,
+  celular            TEXT NOT NULL,
+  correo             TEXT NOT NULL,
+  acepta_tratamiento BOOLEAN NOT NULL DEFAULT TRUE,
+  acepta_politicas   BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at         TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.consentimientos ENABLE ROW LEVEL SECURITY;
+
+-- Cualquier persona (sin login) puede enviar el formulario
+CREATE POLICY "anon_insert_consentimientos"
+  ON public.consentimientos FOR INSERT TO anon WITH CHECK (true);
+
+-- Solo usuarios autenticados (Financiero o admin) pueden leer
+CREATE POLICY "auth_read_consentimientos"
+  ON public.consentimientos FOR SELECT TO authenticated USING (true);

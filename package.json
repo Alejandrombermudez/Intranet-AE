@@ -13,6 +13,8 @@
     "@hookform/resolvers": "^5.2.2",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.562.0",
     "next": "16.1.2",
     "react": "19.2.3",
@@ -20,6 +22,7 @@
     "react-hook-form": "^7.71.2",
     "recharts": "^3.7.0",
     "resend": "^6.9.3",
+    "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {

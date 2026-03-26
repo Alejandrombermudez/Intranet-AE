@@ -10,6 +10,7 @@ import {
   ArrowLeft, ShieldCheck, Shield, Pencil, Check, X,
   Users, Loader2, AlertCircle, BarChart2, ImageOff, Construction,
   Leaf, ArrowRight, Filter, CalendarDays, ChevronDown,
+  Link2, Copy, CheckCheck, FileSpreadsheet, FileDown, BarChart3, Trash2,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -35,6 +36,18 @@ interface InspectionStat {
   photo_lateral_der: string | null
   photo_tablero: string | null
   vehicle_reservations: { vehicle_id: string; vehicle_name: string } | null
+}
+
+interface Consentimiento {
+  id: string
+  nombre: string
+  apellido: string
+  cedula: string
+  celular: string
+  correo: string
+  acepta_tratamiento: boolean
+  acepta_politicas: boolean
+  created_at: string
 }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -602,6 +615,366 @@ function ModuloEnConstruccion({ department }: { department: string }) {
   )
 }
 
+// ─── ConsentimientosTab ───────────────────────────────────────────────────────
+
+function ConsentimientosTab() {
+  const [registros, setRegistros] = useState<Consentimiento[]>([])
+  const [loadingData, setLoadingData] = useState(true)
+  const [copied, setCopied] = useState(false)
+  const [filtro, setFiltro] = useState<'todos' | 'mes' | 'custom'>('todos')
+  const [desde, setDesde] = useState('')
+  const [hasta, setHasta] = useState('')
+  const [downloading, setDownloading] = useState<'pdf' | 'excel' | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const formUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/consentimiento`
+    : '/consentimiento'
+
+  const buildParams = () => {
+    const p = new URLSearchParams()
+    if (filtro === 'mes') {
+      const now = new Date()
+      p.set('desde', new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10))
+      p.set('hasta', now.toISOString().slice(0, 10))
+    } else if (filtro === 'custom' && desde && hasta) {
+      p.set('desde', desde)
+      p.set('hasta', hasta)
+    }
+    return p.toString()
+  }
+
+  const loadData = async () => {
+    setLoadingData(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token ?? ''
+      const params = buildParams()
+      const res = await fetch(`/api/consentimientos${params ? '?' + params : ''}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json()
+      setRegistros(json.data ?? [])
+    } catch {
+      console.error('Error cargando consentimientos')
+    } finally {
+      setLoadingData(false)
+    }
+  }
+
+  useEffect(() => { loadData() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const applyFilter = () => loadData()
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token ?? ''
+      const res = await fetch(`/api/consentimientos/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setRegistros((prev) => prev.filter((r) => r.id !== id))
+      }
+    } catch {
+      console.error('Error eliminando consentimiento')
+    } finally {
+      setDeletingId(null)
+      setConfirmDeleteId(null)
+    }
+  }
+
+  const copyUrl = async () => {
+    await navigator.clipboard.writeText(formUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2500)
+  }
+
+  const formatFecha = (iso: string) =>
+    new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) +
+    ' · ' +
+    new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+
+  const downloadExcel = async () => {
+    setDownloading('excel')
+    try {
+      const { utils, writeFile } = await import('xlsx')
+      const rows = registros.map((c) => ({
+        'Nombre':   c.nombre,
+        'Apellido': c.apellido,
+        'Cédula':   c.cedula,
+        'Celular':  c.celular,
+        'Correo':   c.correo,
+        'Fecha':    formatFecha(c.created_at),
+        'Acepta tratamiento': c.acepta_tratamiento ? 'Sí' : 'No',
+        'Acepta políticas':   c.acepta_politicas   ? 'Sí' : 'No',
+      }))
+      const ws = utils.json_to_sheet(rows)
+      const wb = utils.book_new()
+      utils.book_append_sheet(wb, ws, 'Consentimientos')
+      writeFile(wb, `consentimientos_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    } finally {
+      setDownloading(null)
+    }
+  }
+
+  const downloadPDF = async () => {
+    setDownloading('pdf')
+    try {
+      const { default: jsPDF } = await import('jspdf')
+      const { default: autoTable } = await import('jspdf-autotable')
+      const doc = new jsPDF({ orientation: 'landscape' })
+
+      doc.setFontSize(14)
+      doc.setTextColor(13, 115, 119)
+      doc.text('Amazonia Emprende — Consentimientos de Tratamiento de Datos', 14, 14)
+      doc.setFontSize(9)
+      doc.setTextColor(100)
+      doc.text(`Generado el ${new Date().toLocaleString('es-CO')} · ${registros.length} registros`, 14, 21)
+
+      autoTable(doc, {
+        startY: 27,
+        head: [['Nombre', 'Apellido', 'Cédula', 'Celular', 'Correo', 'Fecha de registro']],
+        body: registros.map((c) => [
+          c.nombre,
+          c.apellido,
+          c.cedula,
+          c.celular,
+          c.correo,
+          formatFecha(c.created_at),
+        ]),
+        headStyles: { fillColor: [13, 115, 119], fontSize: 9, fontStyle: 'bold' },
+        styles: { fontSize: 8, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [248, 247, 246] },
+      })
+
+      doc.save(`consentimientos_${new Date().toISOString().slice(0, 10)}.pdf`)
+    } finally {
+      setDownloading(null)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+
+      {/* Banner con el link del formulario */}
+      <div className="rounded-2xl border-2 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4"
+        style={{ backgroundColor: '#0d737710', borderColor: '#0d737730' }}>
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ backgroundColor: '#0d737720' }}>
+          <Link2 size={20} style={{ color: PRIMARY }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-black text-stone-800 mb-0.5">Link del formulario para usuarios</p>
+          <p className="text-xs text-stone-500 mb-2">
+            Comparte este enlace para que las personas diligencien el formulario de consentimiento.
+          </p>
+          <code className="text-xs font-mono px-2 py-1 rounded-lg bg-white border border-stone-200 text-stone-700 break-all">
+            {formUrl}
+          </code>
+        </div>
+        <button onClick={copyUrl}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shrink-0 ${
+            copied
+              ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-200'
+              : 'text-white shadow-sm hover:shadow-md border-2 border-transparent'
+          }`}
+          style={copied ? {} : { backgroundColor: PRIMARY }}>
+          {copied ? <><CheckCheck size={15} /> Copiado</> : <><Copy size={15} /> Copiar link</>}
+        </button>
+      </div>
+
+      {/* Filtros */}
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5">
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <p className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Período</p>
+            <div className="flex gap-1">
+              {([
+                { key: 'todos', label: 'Todos' },
+                { key: 'mes',   label: 'Este mes' },
+                { key: 'custom',label: 'Personalizado' },
+              ] as const).map((opt) => (
+                <button key={opt.key} onClick={() => setFiltro(opt.key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    filtro === opt.key
+                      ? 'text-white shadow-sm'
+                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                  }`}
+                  style={filtro === opt.key ? { backgroundColor: PRIMARY } : {}}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filtro === 'custom' && (
+            <>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Desde</label>
+                <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)}
+                  className="px-3 py-1.5 text-sm border-2 border-stone-200 rounded-lg focus:outline-none focus:border-primary" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Hasta</label>
+                <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)}
+                  className="px-3 py-1.5 text-sm border-2 border-stone-200 rounded-lg focus:outline-none focus:border-primary" />
+              </div>
+            </>
+          )}
+
+          <button onClick={applyFilter}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-bold text-white shadow-sm hover:shadow-md transition-all"
+            style={{ backgroundColor: PRIMARY }}>
+            <Filter size={13} /> Aplicar
+          </button>
+
+          <div className="ml-auto flex gap-2">
+            <button onClick={downloadExcel} disabled={!!downloading || registros.length === 0}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold text-emerald-700 bg-emerald-50 border-2 border-emerald-200 hover:bg-emerald-100 transition-all disabled:opacity-40">
+              {downloading === 'excel'
+                ? <Loader2 size={14} className="animate-spin" />
+                : <FileSpreadsheet size={14} />}
+              Excel
+            </button>
+            <button onClick={downloadPDF} disabled={!!downloading || registros.length === 0}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold text-red-700 bg-red-50 border-2 border-red-200 hover:bg-red-100 transition-all disabled:opacity-40">
+              {downloading === 'pdf'
+                ? <Loader2 size={14} className="animate-spin" />
+                : <FileDown size={14} />}
+              PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla */}
+      <div className="bg-white rounded-2xl shadow-lg border border-stone-200 overflow-hidden">
+        {/* Cabecera resumen */}
+        <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+          <p className="text-sm font-black text-stone-800">Registros de consentimiento</p>
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white"
+            style={{ backgroundColor: PRIMARY }}>
+            {registros.length} {registros.length === 1 ? 'registro' : 'registros'}
+          </span>
+        </div>
+
+        {loadingData ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 size={28} className="animate-spin" style={{ color: PRIMARY }} />
+          </div>
+        ) : registros.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-stone-400 gap-3">
+            <ShieldCheck size={36} className="text-stone-300" />
+            <p className="text-sm font-bold text-stone-500">Sin registros en este período</p>
+            <p className="text-xs text-stone-400">Comparte el link del formulario para recibir consentimientos.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-stone-50 border-b border-stone-200">
+                  {['Nombre completo', 'Cédula', 'Celular', 'Correo', 'Fecha de registro', ''].map((h) => (
+                    <th key={h} className="px-4 py-3 text-[11px] font-bold text-stone-400 uppercase tracking-wider whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {registros.map((c) => (
+                  <tr key={c.id} className="border-b border-stone-100 hover:bg-stone-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-bold text-stone-900 text-sm">{c.nombre} {c.apellido}</p>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-stone-600 font-mono">{c.cedula}</td>
+                    <td className="px-4 py-3 text-sm text-stone-600">{c.celular}</td>
+                    <td className="px-4 py-3 text-sm text-stone-600">{c.correo}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 text-xs text-stone-400">
+                        <CalendarDays size={11} /> {formatShortDate(c.created_at)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {confirmDeleteId === c.id ? (
+                        <span className="flex items-center gap-1.5 text-xs">
+                          <span className="text-stone-500 font-semibold">¿Eliminar?</span>
+                          <button
+                            onClick={() => handleDelete(c.id)}
+                            disabled={deletingId === c.id}
+                            className="px-2 py-0.5 rounded-md bg-red-100 text-red-700 font-bold hover:bg-red-200 transition-colors disabled:opacity-50">
+                            {deletingId === c.id ? <Loader2 size={11} className="animate-spin" /> : 'Sí'}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 font-bold hover:bg-stone-200 transition-colors">
+                            No
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(c.id)}
+                          className="p-1.5 rounded-lg text-stone-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                          title="Eliminar registro">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── FinancieroModule: wrapper con sub-tabs ────────────────────────────────────
+
+function FinancieroModule({ inspections, loading }: { inspections: InspectionStat[]; loading: boolean }) {
+  const [subTab, setSubTab] = useState<'estadisticas' | 'consentimientos'>('estadisticas')
+
+  return (
+    <div>
+      {/* Sub-tabs */}
+      <div className="flex gap-1 mb-7 bg-white rounded-xl p-1 shadow-sm border border-stone-200 w-fit">
+        <button
+          onClick={() => setSubTab('estadisticas')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            subTab === 'estadisticas'
+              ? 'text-white shadow-sm'
+              : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+          }`}
+          style={subTab === 'estadisticas' ? { backgroundColor: PRIMARY } : {}}>
+          <BarChart3 size={14} /> Estadísticas de Carros
+        </button>
+        <button
+          onClick={() => setSubTab('consentimientos')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            subTab === 'consentimientos'
+              ? 'text-white shadow-sm'
+              : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+          }`}
+          style={subTab === 'consentimientos' ? { backgroundColor: PRIMARY } : {}}>
+          <ShieldCheck size={14} /> Tratamiento de Datos
+        </button>
+      </div>
+
+      {subTab === 'estadisticas' && (
+        <EstadisticasTab inspections={inspections} loading={loading} />
+      )}
+      {subTab === 'consentimientos' && (
+        <ConsentimientosTab />
+      )}
+    </div>
+  )
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function IntranetPage() {
@@ -809,7 +1182,7 @@ export default function IntranetPage() {
 
         {/* ── Tab módulo: contenido según departamento ── */}
         {activeTab === 'modulo' && myProfile?.department === 'Financiero' && (
-          <EstadisticasTab inspections={inspections} loading={statsLoading} />
+          <FinancieroModule inspections={inspections} loading={statsLoading} />
         )}
         {activeTab === 'modulo' && myProfile?.department === 'RAS' && (
           <ModuloRAS />
