@@ -8,7 +8,7 @@ import type { User } from '@supabase/supabase-js'
 import { VEHICLES } from '@/lib/vehicles'
 import {
   ArrowLeft, ShieldCheck, Shield, Pencil, Check, X,
-  Users, Loader2, AlertCircle, BarChart2, ImageOff, Construction,
+  Users, Loader2, AlertCircle, AlertTriangle, BarChart2, ImageOff, Construction,
   Leaf, ArrowRight, Filter, CalendarDays, ChevronDown,
   Link2, Copy, CheckCheck, FileSpreadsheet, FileDown, BarChart3, Trash2,
 } from 'lucide-react'
@@ -35,7 +35,16 @@ interface InspectionStat {
   photo_lateral_izq: string | null
   photo_lateral_der: string | null
   photo_tablero: string | null
+  kilometraje: number | null
   vehicle_reservations: { vehicle_id: string; vehicle_name: string } | null
+}
+
+interface VehicleDoc {
+  vehicle_id: string
+  vehicle_name: string
+  soat_expiry: string | null
+  tecnomecanica_expiry: string | null
+  updated_by: string | null
 }
 
 interface Consentimiento {
@@ -79,6 +88,13 @@ function formatDate(iso: string): string {
     ' · ' +
     d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
   )
+}
+
+function daysUntil(dateStr: string | null): number | null {
+  if (!dateStr) return null
+  const exp = new Date(dateStr + 'T12:00:00').getTime()
+  const now = new Date(); now.setHours(12, 0, 0, 0)
+  return Math.ceil((exp - now.getTime()) / 86400000)
 }
 
 function formatShortDate(iso: string): string {
@@ -268,6 +284,46 @@ function PhotoGrid({ insp }: { insp: InspectionStat | undefined }) {
 
 function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat[]; loading: boolean }) {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all')
+  const [vehicleDocs, setVehicleDocs] = useState<VehicleDoc[]>([])
+  const [editingDocs, setEditingDocs] = useState<Record<string, { soat: string; tecno: string; saving: boolean }>>({})
+
+  useEffect(() => {
+    fetch('/api/vehicle-documents')
+      .then((r) => r.json())
+      .then((d: VehicleDoc[]) => setVehicleDocs(Array.isArray(d) ? d : []))
+      .catch(() => {/* no-op */})
+  }, [])
+
+  const saveDoc = async (vehicleId: string, vehicleName: string) => {
+    const entry = editingDocs[vehicleId]
+    if (!entry) return
+    setEditingDocs((prev) => ({ ...prev, [vehicleId]: { ...entry, saving: true } }))
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token ?? ''
+      const res = await fetch('/api/vehicle-documents', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          vehicle_id: vehicleId,
+          vehicle_name: vehicleName,
+          soat_expiry: entry.soat || null,
+          tecnomecanica_expiry: entry.tecno || null,
+        }),
+      })
+      if (res.ok) {
+        const updated: VehicleDoc = await res.json()
+        setVehicleDocs((prev) => {
+          const idx = prev.findIndex((d) => d.vehicle_id === vehicleId)
+          return idx >= 0
+            ? prev.map((d) => d.vehicle_id === vehicleId ? updated : d)
+            : [...prev, updated]
+        })
+        setEditingDocs((prev) => { const n = { ...prev }; delete n[vehicleId]; return n })
+      }
+    } catch {/* no-op */}
+    setEditingDocs((prev) => ({ ...prev, [vehicleId]: { ...prev[vehicleId], saving: false } }))
+  }
 
   const filtered = selectedVehicleId === 'all'
     ? inspections
@@ -342,8 +398,132 @@ function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat
 
   const pct = stats.total > 0 ? Math.round((stats.withIssuesCount / stats.total) * 100) : 0
 
+  // Compute alerts for docs expiring soon
+  const docAlerts = VEHICLES.flatMap((v) => {
+    const doc = vehicleDocs.find((d) => d.vehicle_id === v.id)
+    const alerts: { vehicle: string; field: string; days: number | null }[] = []
+    const soatDays = daysUntil(doc?.soat_expiry ?? null)
+    const tecnoDays = daysUntil(doc?.tecnomecanica_expiry ?? null)
+    if (soatDays !== null && soatDays <= 30) alerts.push({ vehicle: v.name, field: 'SOAT', days: soatDays })
+    if (tecnoDays !== null && tecnoDays <= 30) alerts.push({ vehicle: v.name, field: 'Tecnomecánica', days: tecnoDays })
+    return alerts
+  })
+
   return (
     <div className="space-y-8">
+
+      {/* ── Alerta documentación vehicular ── */}
+      {docAlerts.length > 0 && (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={20} />
+            <div>
+              <p className="font-bold text-amber-900 mb-1">Documentación vehicular próxima a vencer</p>
+              <ul className="space-y-0.5">
+                {docAlerts.map((a, i) => (
+                  <li key={i} className={`text-sm font-semibold ${a.days !== null && a.days <= 7 ? 'text-red-700' : 'text-amber-800'}`}>
+                    {a.vehicle} — {a.field}:{' '}
+                    {a.days !== null && a.days <= 0 ? 'VENCIDO' : `vence en ${a.days} día(s)`}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Documentación Vehicular ── */}
+      <div>
+        <h3 className="text-lg font-black text-stone-900 mb-4 flex items-center gap-2">
+          Documentación Vehicular
+          <span className="text-xs font-medium text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">SOAT y Tecnomecánica</span>
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {VEHICLES.map((v) => {
+            const doc = vehicleDocs.find((d) => d.vehicle_id === v.id)
+            const VehicleIcon = v.icon
+            const editing = editingDocs[v.id]
+            const soatDays = daysUntil(doc?.soat_expiry ?? null)
+            const tecnoDays = daysUntil(doc?.tecnomecanica_expiry ?? null)
+
+            const colorClass = (days: number | null) =>
+              days === null ? 'text-stone-400' :
+              days <= 7 ? 'text-red-600 font-bold' :
+              days <= 30 ? 'text-amber-600 font-bold' :
+              'text-emerald-600 font-semibold'
+
+            return (
+              <div key={v.id} className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <VehicleIcon size={20} style={{ color: v.color }} />
+                  <p className="font-black text-stone-900">{v.name}</p>
+                  {!editing && (
+                    <button
+                      onClick={() => setEditingDocs((prev) => ({ ...prev, [v.id]: { soat: doc?.soat_expiry ?? '', tecno: doc?.tecnomecanica_expiry ?? '', saving: false } }))}
+                      className="ml-auto text-stone-400 hover:text-primary transition-colors"
+                      title="Editar fechas"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                </div>
+                {editing ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-1">Vencimiento SOAT</label>
+                      <input type="date" value={editing.soat}
+                        onChange={(e) => setEditingDocs((p) => ({ ...p, [v.id]: { ...p[v.id], soat: e.target.value } }))}
+                        className="w-full px-3 py-2 border-2 border-stone-200 rounded-lg text-sm font-medium focus:border-primary focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-1">Vencimiento Tecnomecánica</label>
+                      <input type="date" value={editing.tecno}
+                        onChange={(e) => setEditingDocs((p) => ({ ...p, [v.id]: { ...p[v.id], tecno: e.target.value } }))}
+                        className="w-full px-3 py-2 border-2 border-stone-200 rounded-lg text-sm font-medium focus:border-primary focus:outline-none" />
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button onClick={() => saveDoc(v.id, v.name)} disabled={editing.saving}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-white bg-primary hover:bg-primary-dark disabled:opacity-50 transition-all">
+                        {editing.saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                        Guardar
+                      </button>
+                      <button onClick={() => setEditingDocs((p) => { const n = { ...p }; delete n[v.id]; return n })}
+                        className="px-4 py-2 rounded-lg text-xs font-bold border border-stone-200 text-stone-500 hover:bg-stone-50 transition-all">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-stone-50 rounded-xl p-3">
+                      <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-1">SOAT</p>
+                      <p className={`text-sm ${colorClass(soatDays)}`}>
+                        {doc?.soat_expiry ? new Date(doc.soat_expiry + 'T12:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : <span className="text-stone-300 font-normal">Sin fecha</span>}
+                      </p>
+                      {soatDays !== null && (
+                        <p className={`text-xs mt-0.5 ${colorClass(soatDays)}`}>
+                          {soatDays <= 0 ? 'VENCIDO' : `${soatDays}d restantes`}
+                        </p>
+                      )}
+                    </div>
+                    <div className="bg-stone-50 rounded-xl p-3">
+                      <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-1">Tecnomecánica</p>
+                      <p className={`text-sm ${colorClass(tecnoDays)}`}>
+                        {doc?.tecnomecanica_expiry ? new Date(doc.tecnomecanica_expiry + 'T12:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : <span className="text-stone-300 font-normal">Sin fecha</span>}
+                      </p>
+                      {tecnoDays !== null && (
+                        <p className={`text-xs mt-0.5 ${colorClass(tecnoDays)}`}>
+                          {tecnoDays <= 0 ? 'VENCIDO' : `${tecnoDays}d restantes`}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
       {/* ── Selector de vehículo ── */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -465,7 +645,7 @@ function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="bg-stone-50 border-b border-stone-200">
-                    {['Vehículo', 'Tipo', 'Fecha', 'Categorías con problemas'].map((h) => (
+                    {['Vehículo', 'Tipo', 'Fecha', 'Km', 'Categorías con problemas'].map((h) => (
                       <th key={h} className="px-4 py-3 text-[11px] font-bold text-stone-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -493,6 +673,9 @@ function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat
                           {new Date(insp.submitted_at).toLocaleDateString('es-CO', {
                             day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
                           })}
+                        </td>
+                        <td className="px-4 py-3 text-stone-700 text-xs font-medium whitespace-nowrap">
+                          {insp.kilometraje != null ? insp.kilometraje.toLocaleString('es-CO') + ' km' : <span className="text-stone-300">—</span>}
                         </td>
                         <td className="px-4 py-3">
                           {issuesCats.length === 0 ? (

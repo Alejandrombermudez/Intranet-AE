@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
       photo_lateral_izq,
       photo_lateral_der,
       photo_tablero,
+      kilometraje,
       vehicle_reservations ( vehicle_id, vehicle_name )
     `)
     .not('submitted_at', 'is', null)

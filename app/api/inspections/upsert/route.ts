@@ -24,6 +24,7 @@ interface UpsertBody {
   photo_tablero?: string
   // Cierre final
   submitted_at?: string
+  kilometraje?: number
 }
 
 // Extrae el path dentro del bucket a partir de una URL pública de Supabase Storage
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
       'cat6_status', 'cat6_issues', 'cat6_other',
       'photo_frontal', 'photo_posterior', 'photo_lateral_izq',
       'photo_lateral_der', 'photo_tablero',
-      'submitted_at',
+      'submitted_at', 'kilometraje',
     ] as const
 
     for (const f of fields) {

@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import {
   ArrowLeft, Loader2, ShieldCheck, Users, MapPin,
   Camera, FileArchive, Leaf, ExternalLink,
-  CheckCircle2, XCircle, ChevronDown,
+  CheckCircle2, XCircle, ChevronDown, Pencil, FileText, Image as ImageIcon,
 } from 'lucide-react'
 
 const PRIMARY = '#0d7377'
@@ -31,10 +31,13 @@ interface Familia {
   otros_indices: string | null
   shapefile_finca_url: string | null
   shapefile_conservacion_url: string | null
+  shapefile_arboles_url: string | null
+  documento_acuerdo_url: string | null
   created_by: string | null
   created_at: string
 }
 
+interface FotoPredio { id: string; url: string; categoria: string }
 interface Foto { id: string; url: string }
 interface Camara {
   id: string
@@ -90,6 +93,7 @@ export default function ConservacionDetailPage() {
   const [loading, setLoading] = useState(true)
   const [familia, setFamilia] = useState<Familia | null>(null)
   const [camaras, setCamaras] = useState<Camara[]>([])
+  const [fotosPredioCat, setFotosPredioCat] = useState<Record<string, FotoPredio[]>>({})
   const [otrosVisible, setOtrosVisible] = useState(false)
 
   useEffect(() => {
@@ -120,6 +124,18 @@ export default function ConservacionDetailPage() {
         camarasConFotos.push({ ...cam, fotos: fotos ?? [] })
       }
       setCamaras(camarasConFotos)
+
+      // Fotos de predio por categoría
+      const { data: fpData } = await supabase
+        .schema('ras').from('fotos_predio')
+        .select('id, url, categoria').eq('familia_id', id)
+      const fpByCat: Record<string, FotoPredio[]> = {}
+      for (const fp of (fpData ?? [])) {
+        if (!fpByCat[fp.categoria]) fpByCat[fp.categoria] = []
+        fpByCat[fp.categoria].push(fp)
+      }
+      setFotosPredioCat(fpByCat)
+
       setLoading(false)
     }
     init()
@@ -158,7 +174,12 @@ export default function ConservacionDetailPage() {
                 <p className="text-xs text-stone-500 mt-0.5">{familia.nombre_finca}</p>
               )}
             </div>
-            <div className="w-[130px]" />
+            <Link href={`/intranet/ras/conservacion/${id}/editar`}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shrink-0 shadow-sm hover:shadow-md transition-all"
+              style={{ backgroundColor: PRIMARY }}>
+              <Pencil size={15} />
+              <span className="hidden sm:block">Editar</span>
+            </Link>
           </div>
         </div>
       </header>
@@ -203,10 +224,10 @@ export default function ConservacionDetailPage() {
         </section>
 
         {/* ── Archivos Espaciales ── */}
-        {(familia.shapefile_finca_url || familia.shapefile_conservacion_url) && (
+        {(familia.shapefile_finca_url || familia.shapefile_conservacion_url || familia.shapefile_arboles_url || familia.documento_acuerdo_url) && (
           <section className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
-            <SectionTitle icon={<FileArchive size={16} />} title="Archivos Espaciales" />
-            <div className="flex flex-col sm:flex-row gap-3">
+            <SectionTitle icon={<FileArchive size={16} />} title="Archivos Espaciales y Documentos" />
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3">
               {familia.shapefile_finca_url && (
                 <a href={familia.shapefile_finca_url} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-stone-200 text-stone-700 font-bold text-sm hover:border-primary hover:text-primary transition-all">
@@ -219,6 +240,49 @@ export default function ConservacionDetailPage() {
                   <FileArchive size={16} /> Polígono conservación <ExternalLink size={12} className="ml-auto text-stone-400" />
                 </a>
               )}
+              {familia.shapefile_arboles_url && (
+                <a href={familia.shapefile_arboles_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-stone-200 text-stone-700 font-bold text-sm hover:border-primary hover:text-primary transition-all">
+                  <FileArchive size={16} /> Árboles (puntos) <ExternalLink size={12} className="ml-auto text-stone-400" />
+                </a>
+              )}
+              {familia.documento_acuerdo_url && (
+                <a href={familia.documento_acuerdo_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-emerald-200 text-emerald-700 font-bold text-sm hover:border-emerald-400 transition-all">
+                  <FileText size={16} /> Acuerdo / Tratamiento datos <ExternalLink size={12} className="ml-auto text-emerald-400" />
+                </a>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ── Fotos del Predio ── */}
+        {Object.keys(fotosPredioCat).length > 0 && (
+          <section className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
+            <SectionTitle icon={<ImageIcon size={16} />} title="Fotos del Predio" />
+            <div className="space-y-5">
+              {['predio', 'familia', 'copa_arboles', 'tronco', 'otras'].map((cat) => {
+                const fotos = fotosPredioCat[cat]
+                if (!fotos?.length) return null
+                const catLabels: Record<string, string> = {
+                  predio: 'Predio', familia: 'Familia', copa_arboles: 'Copa de árboles', tronco: 'Tronco', otras: 'Otras',
+                }
+                return (
+                  <div key={cat}>
+                    <p className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">
+                      {catLabels[cat] ?? cat} ({fotos.length})
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {fotos.map((f) => (
+                        <a key={f.id} href={f.url} target="_blank" rel="noopener noreferrer">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={f.url} alt={cat} className="w-20 h-20 object-cover rounded-lg border border-stone-200 hover:opacity-80 transition-opacity" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </section>
         )}

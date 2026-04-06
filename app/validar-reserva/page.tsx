@@ -374,7 +374,7 @@ function Step7Photos({
 }: {
   reservation: Reservation
   inspectionType: InspectionType
-  onFinish: (urls: Record<string, string>) => void
+  onFinish: (urls: Record<string, string>, kilometraje: number | null) => void
   onBack: () => void
   saving: boolean
 }) {
@@ -382,6 +382,8 @@ function Step7Photos({
   const [previews, setPreviews] = useState<Record<string, string>>({})
   const [uploading, setUploading] = useState(false)
   const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({})
+  const [kilometraje, setKilometraje] = useState('')
+  const [kmError, setKmError] = useState('')
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   const handleFile = (key: string, file: File | null) => {
@@ -399,6 +401,11 @@ function Step7Photos({
   }
 
   const handleFinish = async () => {
+    const km = kilometraje.trim()
+    if (!km) { setKmError('El kilometraje es obligatorio'); return }
+    const kmNum = parseInt(km, 10)
+    if (isNaN(kmNum) || kmNum < 0) { setKmError('Ingresa un kilometraje válido'); return }
+    setKmError('')
     setUploading(true)
     const urls: Record<string, string> = {}
     const errors: Record<string, string> = {}
@@ -433,7 +440,7 @@ function Step7Photos({
 
     setUploadErrors(errors)
     setUploading(false)
-    onFinish(urls)
+    onFinish(urls, parseInt(kilometraje.trim(), 10))
   }
 
   return (
@@ -455,6 +462,24 @@ function Step7Photos({
       <p className="text-sm text-stone-500 mb-4">
         Toma o adjunta las fotos del estado del vehículo. Puedes subir las que tengas disponibles.
       </p>
+
+      {/* Kilometraje */}
+      <div className="mb-5">
+        <label className="block text-xs font-bold text-stone-700 uppercase tracking-widest mb-1.5">
+          Kilometraje actual del vehículo *
+        </label>
+        <input
+          type="number"
+          min={0}
+          value={kilometraje}
+          onChange={(e) => { setKilometraje(e.target.value); setKmError('') }}
+          placeholder="Ej: 45230"
+          className={`w-full px-4 py-3 border-2 rounded-xl font-medium text-stone-900 placeholder:text-stone-400 focus:outline-none transition-all ${
+            kmError ? 'border-red-400 focus:border-red-500' : 'border-stone-300 focus:border-primary'
+          }`}
+        />
+        {kmError && <p className="text-xs text-red-500 font-medium mt-1">{kmError}</p>}
+      </div>
 
       <div className="grid grid-cols-2 gap-3 mb-6">
         {PHOTO_SLOTS.map((slot) => {
@@ -953,10 +978,11 @@ export default function ValidarReservaPage() {
     }
   }
 
-  const handlePhotosFinish = async (photoUrls: Record<string, string>) => {
+  const handlePhotosFinish = async (photoUrls: Record<string, string>, km: number | null) => {
     const ok = await saveStep(7, {
       ...photoUrls,
       submitted_at: new Date().toISOString(),
+      ...(km !== null ? { kilometraje: km } : {}),
     })
     if (ok) setStep(8)
   }

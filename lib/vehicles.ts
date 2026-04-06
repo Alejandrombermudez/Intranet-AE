@@ -21,3 +21,9 @@ export const VEHICLES: Vehicle[] = [
 export const VEHICLE_MAP: Record<string, Vehicle> = Object.fromEntries(
   VEHICLES.map(v => [v.id, v])
 )
+
+/** FOTON (camioneta2) is reserved internally every Monday and Tuesday */
+export function fotonIsBlocked(date: Date): boolean {
+  const dow = date.getDay() // 0=Sun, 1=Mon, 2=Tue
+  return dow === 1 || dow === 2
+}

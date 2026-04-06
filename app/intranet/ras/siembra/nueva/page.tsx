@@ -16,10 +16,19 @@ import {
 
 const PRIMARY = '#0d7377'
 
+const FOTO_CATS = [
+  { key: 'predio',       label: 'Predio',          min: 10 },
+  { key: 'familia',      label: 'Familia',          min: 1  },
+  { key: 'copa_arboles', label: 'Copa de árboles',  min: 3  },
+  { key: 'tronco',       label: 'Tronco',           min: 2  },
+  { key: 'otras',        label: 'Otras',            min: 4  },
+]
+
 const STEPS = [
   { label: 'Info Base',    icon: <Users    size={14} /> },
   { label: 'Restauración', icon: <Trees    size={14} /> },
   { label: 'Archivos SHP', icon: <MapPin   size={14} /> },
+  { label: 'Fotos Predio', icon: <ImageIcon size={14} /> },
   { label: 'Monitoreos',   icon: <Activity size={14} /> },
   { label: 'Cámaras',      icon: <Camera   size={14} /> },
 ]
@@ -63,6 +72,47 @@ function PhotoPreview({ file, onRemove }: { file: File; onRemove: () => void }) 
         className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
         <X size={10} />
       </button>
+    </div>
+  )
+}
+
+// ─── FotoCatCard — tarjeta por categoría (useRef propio, evita hook en map) ───
+
+function FotoCatCard({
+  catKey, label, min, files, onAdd, onRemove,
+}: {
+  catKey: string; label: string; min: number
+  files: File[]; onAdd: (fs: File[]) => void; onRemove: (i: number) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const ok = files.length >= min
+  return (
+    <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-3 border-b border-stone-100 bg-stone-50">
+        <span className="font-black text-stone-700 text-sm">{label}</span>
+        <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full ${ok ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+          {files.length}/{min}
+        </span>
+      </div>
+      <div className="p-4 space-y-3">
+        {files.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {files.map((f, fi) => (
+              <PhotoPreview key={fi} file={f} onRemove={() => onRemove(fi)} />
+            ))}
+          </div>
+        )}
+        <input ref={inputRef} type="file" accept="image/*" multiple className="hidden"
+          onChange={(e) => {
+            const newFiles = Array.from(e.target.files ?? [])
+            if (newFiles.length) onAdd(newFiles)
+            e.target.value = ''
+          }} />
+        <button type="button" onClick={() => inputRef.current?.click()}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border-2 border-stone-200 text-stone-600 hover:border-primary hover:text-primary transition-all">
+          <Plus size={13} /> Agregar fotos
+        </button>
+      </div>
     </div>
   )
 }
@@ -155,10 +205,15 @@ export default function NuevaSiembraPage() {
   const [submitting, setSubmitting] = useState(false)
   const [authReady, setAuthReady] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [fotosWarning, setFotosWarning] = useState(false)
 
   // Archivos fuera de RHF (File no es serializable por Zod)
   const [shpFinca, setShpFinca] = useState<File | null>(null)
   const [shpRestauracion, setShpRestauracion] = useState<File | null>(null)
+  const [shpArboles, setShpArboles] = useState<File | null>(null)
+  const [docAcuerdo, setDocAcuerdo] = useState<File | null>(null)
+  // Fotos por categoría de predio
+  const [fotosPredioCat, setFotosPredioCat] = useState<Record<string, File[]>>({})
   // Fotos por cámara: Record<índice_cámara, File[]>
   const [fotosPorCamara, setFotosPorCamara] = useState<Record<number, File[]>>({})
 
@@ -202,6 +257,7 @@ export default function NuevaSiembraPage() {
     ['municipio', 'nombre_propietario', 'adultos', 'ninos', 'ha_potreros', 'ha_bosque', 'ha_otras', 'empleos_locales'],
     ['ha_restauracion', 'parcelas_monitoreo', 'plantulas_sembradas', 'especies_sembradas'],
     [], // archivos no se validan con RHF
+    [], // fotos predio
     ['monitoreos'],
     ['camaras'],
   ]
@@ -213,6 +269,14 @@ export default function NuevaSiembraPage() {
   }
 
   const prevStep = () => setStep((s) => Math.max(s - 1, 0))
+
+  // ── Fotos predio helpers ──
+  const addFotosPredioCat = (cat: string, files: File[]) => {
+    setFotosPredioCat((prev) => ({ ...prev, [cat]: [...(prev[cat] ?? []), ...files] }))
+  }
+  const removeFotoPredioCat = (cat: string, idx: number) => {
+    setFotosPredioCat((prev) => ({ ...prev, [cat]: (prev[cat] ?? []).filter((_, i) => i !== idx) }))
+  }
 
   // ── Eliminar cámara re-indexando fotosPorCamara ──────────────────────────
   const removeCamera = (i: number) => {
@@ -229,15 +293,25 @@ export default function NuevaSiembraPage() {
     })
   }
 
-  // ── Submit ──
-  const onSubmit = async (data: FamiliaForm) => {
+  // ── Verificar mínimos de fotos predio ──
+  const underMinCats = FOTO_CATS.filter((c) => (fotosPredioCat[c.key] ?? []).length < c.min)
+
+  // ── Submit interno ──
+  const doSubmit = async (data: FamiliaForm) => {
     if (!userEmail) return
     setSubmitting(true)
+    setFotosWarning(false)
     try {
       const formData = new FormData()
       formData.append('data', JSON.stringify({ ...data, created_by: userEmail }))
       if (shpFinca) formData.append('shp_finca', shpFinca)
       if (shpRestauracion) formData.append('shp_restauracion', shpRestauracion)
+      if (shpArboles) formData.append('shp_arboles', shpArboles)
+      if (docAcuerdo) formData.append('doc_acuerdo', docAcuerdo)
+
+      FOTO_CATS.forEach(({ key }) => {
+        (fotosPredioCat[key] ?? []).forEach((f, i) => formData.append(`foto_${key}_${i}`, f))
+      })
 
       Object.entries(fotosPorCamara).forEach(([idx, files]) => {
         files.forEach((f) => formData.append(`camara_${idx}_foto`, f))
@@ -254,6 +328,19 @@ export default function NuevaSiembraPage() {
       setSubmitting(false)
     }
   }
+
+  // ── Submit ──
+  const onSubmit = async (data: FamiliaForm) => {
+    if (underMinCats.length > 0) {
+      setFotosWarning(true)
+      // store data for confirmed submit via ref workaround — use closure
+      pendingDataRef.current = data
+      return
+    }
+    await doSubmit(data)
+  }
+
+  const pendingDataRef = useRef<FamiliaForm | null>(null)
 
   if (!authReady) {
     return (
@@ -413,11 +500,70 @@ export default function NuevaSiembraPage() {
               </p>
               <Dropzone label="Polígono total de la finca" file={shpFinca} onFile={setShpFinca} />
               <Dropzone label="Polígono en restauración" file={shpRestauracion} onFile={setShpRestauracion} />
+              <Dropzone label="Árboles — Shapefile de puntos (.zip)" file={shpArboles} onFile={setShpArboles} />
+              <Dropzone label="Tratamiento de datos y acuerdo de conservación con AE (PDF, opcional)" file={docAcuerdo} onFile={setDocAcuerdo} accept=".pdf" />
             </div>
           )}
 
-          {/* ── PASO 4: Monitoreos ── */}
+          {/* ── PASO 4: Fotos del Predio ── */}
           {step === 3 && (
+            <div className="space-y-6">
+              <SectionTitle icon={<ImageIcon size={18} />} title="Fotos del Predio" />
+              <p className="text-sm text-stone-500">
+                Sube fotos organizadas por categoría. Los mínimos recomendados se muestran en cada categoría.
+              </p>
+
+              {FOTO_CATS.map(({ key, label, min }) => (
+                <FotoCatCard
+                  key={key}
+                  catKey={key}
+                  label={label}
+                  min={min}
+                  files={fotosPredioCat[key] ?? []}
+                  onAdd={(fs) => addFotosPredioCat(key, fs)}
+                  onRemove={(i) => removeFotoPredioCat(key, i)}
+                />
+              ))}
+
+              {/* Banner de advertencia si hay categorías bajo el mínimo */}
+              {fotosWarning && underMinCats.length > 0 && (
+                <div className="rounded-2xl border-2 border-red-300 bg-red-50 p-4 space-y-3">
+                  <p className="text-sm font-bold text-red-700">
+                    Las siguientes categorías están por debajo del mínimo recomendado:
+                  </p>
+                  <ul className="space-y-1">
+                    {underMinCats.map(({ key, label, min }) => (
+                      <li key={key} className="text-xs text-red-600">
+                        {label}: {(fotosPredioCat[key] ?? []).length}/{min}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setFotosWarning(false)}
+                      className="px-4 py-2 rounded-xl text-xs font-bold border-2 border-red-300 text-red-700 hover:bg-red-100 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={async () => {
+                        if (pendingDataRef.current) await doSubmit(pendingDataRef.current)
+                      }}
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-60"
+                    >
+                      {submitting ? <Loader2 size={13} className="animate-spin inline" /> : 'Subir de todas formas'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── PASO 5: Monitoreos ── */}
+          {step === 4 && (
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <SectionTitle icon={<Activity size={18} />} title="Monitoreos" />
@@ -466,8 +612,8 @@ export default function NuevaSiembraPage() {
             </div>
           )}
 
-          {/* ── PASO 5: Cámaras Trampa ── */}
-          {step === 4 && (
+          {/* ── PASO 6: Cámaras Trampa ── */}
+          {step === 5 && (
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <SectionTitle icon={<Camera size={18} />} title="Biodiversidad / Cámaras Trampa" />

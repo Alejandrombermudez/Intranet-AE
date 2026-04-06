@@ -37,12 +37,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
-    // ── Subir shapefiles ──
+    // ── Subir shapefiles y documentos ──
     let shapefile_finca_url: string | null = null
     let shapefile_conservacion_url: string | null = null
+    let shapefile_arboles_url: string | null = null
+    let documento_acuerdo_url: string | null = null
 
     const shpFinca = formData.get('shp_finca') as File | null
     const shpConservacion = formData.get('shp_conservacion') as File | null
+    const shpArboles = formData.get('shp_arboles') as File | null
+    const docAcuerdo = formData.get('doc_acuerdo') as File | null
 
     if (shpFinca) {
       const path = `${requesterEmail}/${Date.now()}_finca_${shpFinca.name}`
@@ -70,6 +74,32 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (shpArboles) {
+      const path = `${requesterEmail}/${Date.now()}_arboles_${shpArboles.name}`
+      const { error: upErr } = await supabase.storage
+        .from('ras-shapefiles')
+        .upload(path, shpArboles, { contentType: 'application/zip' })
+      if (!upErr) {
+        const { data: urlData } = supabase.storage.from('ras-shapefiles').getPublicUrl(path)
+        shapefile_arboles_url = urlData.publicUrl
+      } else {
+        console.error('Error subiendo shp_arboles:', upErr.message)
+      }
+    }
+
+    if (docAcuerdo) {
+      const path = `${requesterEmail}/${Date.now()}_acuerdo_${docAcuerdo.name}`
+      const { error: upErr } = await supabase.storage
+        .from('ras-documentos')
+        .upload(path, docAcuerdo, { contentType: 'application/pdf' })
+      if (!upErr) {
+        const { data: urlData } = supabase.storage.from('ras-documentos').getPublicUrl(path)
+        documento_acuerdo_url = urlData.publicUrl
+      } else {
+        console.error('Error subiendo doc_acuerdo:', upErr.message)
+      }
+    }
+
     // ── Insertar familia en conservación ──
     const { camaras, ...familiaData } = data
 
@@ -80,6 +110,8 @@ export async function POST(req: NextRequest) {
         ...familiaData,
         shapefile_finca_url,
         shapefile_conservacion_url,
+        shapefile_arboles_url,
+        documento_acuerdo_url,
       })
       .select('id')
       .single()
@@ -134,6 +166,28 @@ export async function POST(req: NextRequest) {
             console.error('Error subiendo foto conservación:', fotoUpErr.message)
           }
         }
+      }
+    }
+
+    // ── Subir fotos de predio por categoría ──
+    const FOTO_CATS = ['predio', 'familia', 'copa_arboles', 'tronco', 'otras']
+    for (const cat of FOTO_CATS) {
+      let i = 0
+      while (true) {
+        const foto = formData.get(`foto_${cat}_${i}`) as File | null
+        if (!foto || !(foto instanceof File)) break
+        const path = `${familiaId}/${cat}/${crypto.randomUUID()}_${foto.name}`
+        const { error: upErr } = await supabase.storage
+          .from('ras-fotos-predio')
+          .upload(path, foto, { contentType: foto.type })
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from('ras-fotos-predio').getPublicUrl(path)
+          await supabase.schema('ras').from('fotos_predio')
+            .insert({ familia_id: familiaId, categoria: cat, url: urlData.publicUrl })
+        } else {
+          console.error(`Error subiendo foto conservación ${cat}_${i}:`, upErr.message)
+        }
+        i++
       }
     }
 

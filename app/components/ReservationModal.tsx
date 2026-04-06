@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { VEHICLES } from '@/lib/vehicles'
+import { VEHICLES, fotonIsBlocked } from '@/lib/vehicles'
 import { formatPurpose } from '@/lib/types'
 import { AlertTriangle, Check } from 'lucide-react'
 
@@ -26,6 +26,7 @@ export default function ReservationModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [conflictDates, setConflictDates] = useState<string[]>([])
+  const [fotonBlockedInRange, setFotonBlockedInRange] = useState(false)
   const [project, setProject] = useState<string>('')
   const [activity, setActivity] = useState<string>('')
 
@@ -37,6 +38,7 @@ export default function ReservationModal({
       setEndDate('')
       setError('')
       setConflictDates([])
+      setFotonBlockedInRange(false)
       setProject('')
       setActivity('')
     }
@@ -46,8 +48,23 @@ export default function ReservationModal({
   useEffect(() => {
     if (selectedVehicle && startDate && endDate) {
       checkConflicts()
+      // Check FOTON block (Mon/Tue) across the selected range
+      if (selectedVehicle === 'camioneta2') {
+        const s = new Date(startDate + 'T12:00:00')
+        const e = new Date(endDate + 'T12:00:00')
+        const cur = new Date(s)
+        let blocked = false
+        while (cur <= e) {
+          if (fotonIsBlocked(cur)) { blocked = true; break }
+          cur.setDate(cur.getDate() + 1)
+        }
+        setFotonBlockedInRange(blocked)
+      } else {
+        setFotonBlockedInRange(false)
+      }
     } else {
       setConflictDates([])
+      setFotonBlockedInRange(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVehicle, startDate, endDate])
@@ -287,6 +304,22 @@ export default function ReservationModal({
             </div>
           )}
 
+          {/* FOTON bloqueado lunes/martes */}
+          {fotonBlockedInRange && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="text-red-600 shrink-0 mt-0.5" size={22} />
+                <div>
+                  <p className="font-bold text-red-900 mb-1">FOTON no disponible</p>
+                  <p className="text-sm text-red-800 font-medium">
+                    El rango seleccionado incluye lunes o martes — días reservados para uso interno.
+                    Elige un rango que no incluya lunes ni martes.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Error general */}
           {error && (
             <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 text-center">
@@ -305,7 +338,7 @@ export default function ReservationModal({
             </button>
             <button
               type="submit"
-              disabled={loading || hasConflict}
+              disabled={loading || hasConflict || fotonBlockedInRange}
               className="flex-1 px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark disabled:bg-stone-300 disabled:cursor-not-allowed transition-all shadow-lg"
             >
               {loading ? 'Guardando...' : 'Crear Reserva'}

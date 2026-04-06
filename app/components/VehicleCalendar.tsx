@@ -1,10 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { VEHICLES, VEHICLE_MAP } from '@/lib/vehicles'
+import { VEHICLES, VEHICLE_MAP, fotonIsBlocked } from '@/lib/vehicles'
 import type { Reservation } from '@/lib/types'
 import { parsePurpose } from '@/lib/types'
-import { ClipboardList, ChevronLeft, ChevronRight, Tag } from 'lucide-react'
+import { ClipboardList, ChevronLeft, ChevronRight, Tag, Lock } from 'lucide-react'
 
 export default function VehicleCalendar() {
   const [reservations, setReservations] = useState<Reservation[]>([])
@@ -218,6 +218,20 @@ export default function VehicleCalendar() {
                       {VEHICLES.map(vehicle => {
                         const reservation = getReservationForDay(vehicle.id, date)
                         const IconComponent = vehicle.icon
+                        const isFotonBlocked = vehicle.id === 'camioneta2' && fotonIsBlocked(date) && !reservation
+
+                        if (isFotonBlocked) {
+                          return (
+                            <div
+                              key={vehicle.id}
+                              className="text-xs p-1.5 rounded bg-stone-200 text-stone-400 cursor-not-allowed flex items-center gap-1"
+                              title="FOTON – No disponible (uso interno lunes y martes)"
+                            >
+                              <Lock size={11} />
+                              <span className="truncate">Bloqueado</span>
+                            </div>
+                          )
+                        }
 
                         return (
                           <div

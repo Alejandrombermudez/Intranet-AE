@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
   ArrowLeft, Plus, Loader2, ShieldCheck, MapPin,
-  CalendarDays, ChevronRight, Trash2, AlertTriangle, Trees,
+  CalendarDays, ChevronRight, Trash2, AlertTriangle, Trees, Pencil,
 } from 'lucide-react'
 
 const PRIMARY = '#0d7377'
@@ -236,6 +236,11 @@ export default function ConservacionListPage() {
                               <Link href={`/intranet/ras/conservacion/${f.id}`}
                                 className="flex items-center gap-1 text-xs font-bold text-stone-400 hover:text-primary transition-colors">
                                 Ver <ChevronRight size={13} />
+                              </Link>
+                              <Link href={`/intranet/ras/conservacion/${f.id}/editar`}
+                                className="text-stone-300 hover:text-primary transition-colors"
+                                title="Editar registro">
+                                <Pencil size={14} />
                               </Link>
                               <button onClick={() => setConfirmId(f.id)}
                                 className="text-stone-300 hover:text-red-500 transition-colors"
