@@ -10,9 +10,8 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
  * 4. Por cada cámara: inserta en siembra.camaras_trampa, sube fotos a siembra-fotos-camara e inserta en siembra.fotos_camara
  */
 export async function POST(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
-
   try {
+    const supabase = createServerSupabaseClient()
     const formData = await req.formData()
     const rawData = formData.get('data')
     if (!rawData || typeof rawData !== 'string') {

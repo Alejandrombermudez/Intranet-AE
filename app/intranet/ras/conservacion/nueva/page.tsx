@@ -354,8 +354,15 @@ export default function NuevaConservacionPage() {
       if (res.ok) {
         router.push('/intranet/ras/conservacion')
       } else {
-        const err = await res.json().catch(() => ({}))
-        alert(err.error ?? 'Error al guardar. Intenta de nuevo.')
+        const rawBody = await res.text().catch(() => '')
+        let errMsg = `Error ${res.status}`
+        try {
+          const parsed = JSON.parse(rawBody)
+          errMsg = parsed.error ?? parsed.message ?? rawBody.slice(0, 300) ?? errMsg
+        } catch {
+          errMsg = `Error ${res.status}: ${rawBody.slice(0, 300) || '(sin respuesta del servidor)'}`
+        }
+        alert(errMsg)
       }
     } finally {
       setSubmitting(false)

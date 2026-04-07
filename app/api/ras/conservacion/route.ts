@@ -9,9 +9,8 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
  * 3. Por cada cámara: inserta en ras.camaras_trampa, sube fotos a ras-fotos-camara e inserta en ras.fotos_camara
  */
 export async function POST(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
-
   try {
+    const supabase = createServerSupabaseClient()
     const formData = await req.formData()
     const rawData = formData.get('data')
 
