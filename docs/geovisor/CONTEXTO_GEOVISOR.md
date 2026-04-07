@@ -43,10 +43,15 @@ poligono_finca.zip
 
 Los `.zip` se almacenan en **Supabase Storage** (acceso público):
 
-| Bucket | Tipo de polígono |
-|--------|-----------------|
-| `siembra-shapefiles` | Finca completa + área en restauración (módulo Siembra) |
-| `ras-shapefiles` | Finca completa + área en conservación (módulo Conservación) |
+| Bucket | Tipo de contenido |
+|--------|------------------|
+| `siembra-shapefiles` | Finca completa + área en restauración + **árboles puntos** (módulo Siembra) |
+| `ras-shapefiles` | Finca completa + área en conservación + **árboles puntos** (módulo Conservación) |
+| `ras-documentos` | PDFs de acuerdo / tratamiento de datos (compartido por ambos módulos) |
+| `siembra-fotos-predio` | Fotos categorizadas del predio (módulo Siembra) |
+| `ras-fotos-predio` | Fotos categorizadas del predio (módulo Conservación) |
+| `siembra-fotos-camara` | Fotos de cámaras trampa (módulo Siembra) |
+| `ras-fotos-camara` | Fotos de cámaras trampa (módulo Conservación) |
 
 La URL pública de cada archivo se guarda en la base de datos (ver sección 3).
 
@@ -64,12 +69,23 @@ siembra.familias
   vereda                     TEXT
   nombre_finca               TEXT
   ha_restauracion            NUMERIC        -- hectáreas en restauración
-  shapefile_finca_url        TEXT           -- URL pública del ZIP (polígono finca)
-  shapefile_restauracion_url TEXT           -- URL pública del ZIP (polígono restauración)
-  bajo_conservacion          BOOLEAN
+  ha_potreros                NUMERIC
+  ha_bosque                  NUMERIC
+  ha_otras                   NUMERIC
   plantulas_sembradas        INT
   especies_sembradas         INT
+  parcelas_monitoreo         INT
+  empleos_locales            INT
+  plan_restauracion          TEXT
+  adultos                    INT
+  ninos                      INT
+  bajo_conservacion          BOOLEAN
+  shapefile_finca_url        TEXT           -- URL pública del ZIP (polígono finca)
+  shapefile_restauracion_url TEXT           -- URL pública del ZIP (polígono restauración)
+  shapefile_arboles_url      TEXT           -- ★ NUEVO: URL del ZIP de puntos de árboles
+  documento_acuerdo_url      TEXT           -- ★ NUEVO: URL del PDF de acuerdo/tratamiento de datos
   created_at                 TIMESTAMPTZ
+  created_by                 TEXT
 
 siembra.camaras_trampa
   id         UUID
@@ -81,8 +97,32 @@ siembra.camaras_trampa
 siembra.fotos_camara
   id        UUID
   camara_id UUID → siembra.camaras_trampa(id)
-  url       TEXT                            -- URL pública de la foto (bucket siembra-fotos-camara)
+  url       TEXT                            -- URL pública (bucket: siembra-fotos-camara)
+
+-- ★ NUEVA TABLA
+siembra.fotos_predio
+  id         UUID
+  familia_id UUID → siembra.familias(id)
+  categoria  TEXT  CHECK IN ('predio','familia','copa_arboles','tronco','otras')
+  url        TEXT                           -- URL pública (bucket: siembra-fotos-predio)
+  created_at TIMESTAMPTZ
+
+siembra.monitoreos
+  id                UUID
+  familia_id        UUID → siembra.familias(id)
+  fecha             DATE
+  supervivencia_pct NUMERIC (0–100)
 ```
+
+**Mínimos de fotos por categoría (referencia de negocio):**
+
+| Categoría | `categoria` key | Mínimo recomendado |
+|-----------|----------------|--------------------|
+| Predio | `predio` | 10 |
+| Familia | `familia` | 1 |
+| Copa de árboles | `copa_arboles` | 3 |
+| Tronco | `tronco` | 2 |
+| Otras | `otras` | 4 |
 
 ### Módulo Conservación — schema `ras`
 
@@ -94,13 +134,21 @@ ras.familias
   vereda                     TEXT
   nombre_finca               TEXT
   ha_bosque                  NUMERIC        -- hectáreas de bosque
-  shapefile_finca_url        TEXT           -- URL pública del ZIP (polígono finca)
-  shapefile_conservacion_url TEXT           -- URL pública del ZIP (polígono conservación)
+  ha_potreros                NUMERIC
+  ha_otras                   NUMERIC
   bajo_conservacion          BOOLEAN
   acuerdo_conservacion       BOOLEAN
   arboles_semilleros         INT
   especies_forestales        INT
+  otros_indices              TEXT
+  adultos                    INT
+  ninos                      INT
+  shapefile_finca_url        TEXT           -- URL pública del ZIP (polígono finca)
+  shapefile_conservacion_url TEXT           -- URL pública del ZIP (polígono conservación)
+  shapefile_arboles_url      TEXT           -- ★ NUEVO: URL del ZIP de puntos de árboles
+  documento_acuerdo_url      TEXT           -- ★ NUEVO: URL del PDF de acuerdo/tratamiento de datos
   created_at                 TIMESTAMPTZ
+  created_by                 TEXT
 
 ras.camaras_trampa
   id         UUID
@@ -112,7 +160,15 @@ ras.camaras_trampa
 ras.fotos_camara
   id        UUID
   camara_id UUID → ras.camaras_trampa(id)
-  url       TEXT
+  url       TEXT                            -- URL pública (bucket: ras-fotos-camara)
+
+-- ★ NUEVA TABLA
+ras.fotos_predio
+  id         UUID
+  familia_id UUID → ras.familias(id)
+  categoria  TEXT  CHECK IN ('predio','familia','copa_arboles','tronco','otras')
+  url        TEXT                           -- URL pública (bucket: ras-fotos-predio)
+  created_at TIMESTAMPTZ
 ```
 
 ---
@@ -121,19 +177,56 @@ ras.fotos_camara
 
 El geovisor debe poder mostrar las siguientes capas (toggleables):
 
-| # | Capa | Tipo | Fuente |
-|---|------|------|--------|
+| # | Capa | Tipo geométrico | Fuente |
+|---|------|----------------|--------|
 | 1 | Polígonos de fincas — Siembra | Polígono | `siembra.familias.shapefile_finca_url` |
-| 2 | Polígonos en restauración | Polígono | `siembra.familias.shapefile_restauracion_url` |
-| 3 | Polígonos de fincas — Conservación | Polígono | `ras.familias.shapefile_finca_url` |
-| 4 | Polígonos en conservación | Polígono | `ras.familias.shapefile_conservacion_url` |
-| 5 | Cámaras trampa — Siembra | Punto (lat/lon) | `siembra.camaras_trampa` |
-| 6 | Cámaras trampa — Conservación | Punto (lat/lon) | `ras.camaras_trampa` |
+| 2 | Área en restauración | Polígono | `siembra.familias.shapefile_restauracion_url` |
+| 3 | **★ Árboles — Siembra** | Puntos (SHP) | `siembra.familias.shapefile_arboles_url` |
+| 4 | Polígonos de fincas — Conservación | Polígono | `ras.familias.shapefile_finca_url` |
+| 5 | Área en conservación | Polígono | `ras.familias.shapefile_conservacion_url` |
+| 6 | **★ Árboles — Conservación** | Puntos (SHP) | `ras.familias.shapefile_arboles_url` |
+| 7 | Cámaras trampa — Siembra | Punto (lat/lon DB) | `siembra.camaras_trampa` |
+| 8 | Cámaras trampa — Conservación | Punto (lat/lon DB) | `ras.camaras_trampa` |
 
-Para los puntos de cámaras trampa, al hacer clic debería mostrar un popup con:
-- Nombre/ID de la cámara
-- Nombre del propietario y finca
-- Miniaturas de fotos (de `fotos_camara.url`)
+> **Nota sobre la capa de árboles:** `shapefile_arboles_url` es un ZIP con un shapefile de **puntos** (no polígonos). Cada punto representa un árbol o semillero. Renderizar como marcadores pequeños (círculo ~4px) en color distinto al de las cámaras trampa.
+> Este campo es **opcional** — puede ser `null` si el usuario no subió el shapefile.
+
+### Popups de cada capa
+
+**Polígonos de finca / área:**
+- Nombre propietario (`nombre_propietario`)
+- Nombre finca (`nombre_finca`)
+- Municipio + vereda
+- Hectáreas del polígono (campo según tipo: `ha_restauracion` o `ha_bosque`)
+- Link a la página de detalle: `/intranet/ras/siembra/{id}` o `/intranet/ras/conservacion/{id}`
+
+**Puntos de árboles (SHP):**
+- Los atributos disponibles dependen del shapefile subido por el usuario (campos DBF)
+- Mostrar los campos que traiga el SHP + el nombre de la familia propietaria
+
+**Cámaras trampa (lat/lon):**
+- Nombre/ID de la cámara (`nombre`)
+- Nombre del propietario y finca (join con familia)
+- Miniaturas de las primeras 3–4 fotos (de `fotos_camara.url`)
+
+### Fotos del predio (no en el mapa, pero sí en el panel lateral)
+
+Al seleccionar una familia en el mapa se puede mostrar un panel lateral con:
+
+```ts
+// Query de fotos_predio para la familia seleccionada
+const { data } = await supabase
+  .schema('siembra') // o 'ras'
+  .from('fotos_predio')
+  .select('categoria, url')
+  .eq('familia_id', familiaId)
+  .order('created_at')
+
+// Agrupar por categoría:
+// 'predio' | 'familia' | 'copa_arboles' | 'tronco' | 'otras'
+```
+
+Las fotos se pueden mostrar como galería por pestañas/categorías en el panel. No tienen coordenadas — son simplemente fotos del lugar.
 
 ---
 
@@ -248,15 +341,71 @@ No se necesitan variables adicionales para la Opción A del geovisor.
 
 ---
 
-## 10. Checklist de implementación
+## 10. Consultas de datos recomendadas
 
-- [ ] Instalar dependencias: `shpjs`, `jszip`, `leaflet` (o `mapbox-gl`)
-- [ ] Crear `app/intranet/ras/geovisor/page.tsx` con guard de auth
-- [ ] Consultar `siembra.familias` y `ras.familias` para obtener URLs de shapefiles
-- [ ] Consultar `siembra.camaras_trampa` y `ras.camaras_trampa` para puntos GPS
-- [ ] Implementar función `fetchAndParseShapefile(url)` usando `shpjs`
-- [ ] Renderizar capas en el mapa con colores distintos por módulo
-- [ ] Popups en polígonos: nombre propietario, finca, ha, municipio
-- [ ] Popups en cámaras: nombre cámara, fotos en miniatura
-- [ ] Toggle de capas (show/hide por tipo)
+```ts
+// Siembra — familias con todos los campos espaciales
+const { data: siembraFamilias } = await supabase
+  .schema('siembra')
+  .from('familias')
+  .select(`
+    id, nombre_propietario, municipio, vereda, nombre_finca,
+    ha_restauracion, ha_bosque, ha_potreros,
+    shapefile_finca_url, shapefile_restauracion_url,
+    shapefile_arboles_url, documento_acuerdo_url
+  `)
+
+// RAS — familias con todos los campos espaciales
+const { data: rasFamilias } = await supabase
+  .schema('ras')
+  .from('familias')
+  .select(`
+    id, nombre_propietario, municipio, vereda, nombre_finca,
+    ha_bosque, ha_potreros,
+    shapefile_finca_url, shapefile_conservacion_url,
+    shapefile_arboles_url, documento_acuerdo_url
+  `)
+
+// Cámaras con fotos
+const { data: siembraCamaras } = await supabase
+  .schema('siembra')
+  .from('camaras_trampa')
+  .select('id, familia_id, nombre, latitud, longitud, fotos_camara(url)')
+
+const { data: rasCamaras } = await supabase
+  .schema('ras')
+  .from('camaras_trampa')
+  .select('id, familia_id, nombre, latitud, longitud, fotos_camara(url)')
+
+// Fotos de predio (para panel lateral)
+const { data: fotosPredioCat } = await supabase
+  .schema('siembra') // o 'ras'
+  .from('fotos_predio')
+  .select('id, familia_id, categoria, url')
+  .eq('familia_id', selectedFamiliaId)
+```
+
+---
+
+## 11. Checklist de implementación
+
+- [ ] Instalar dependencias: `shpjs`, `leaflet` (o `mapbox-gl`)
+- [ ] Crear `app/intranet/ras/geovisor/page.tsx` con guard de auth (solo RAS o admin)
+- [ ] Consultar `siembra.familias` y `ras.familias` (SELECT de campos espaciales)
+- [ ] Consultar `siembra.camaras_trampa` y `ras.camaras_trampa` con fotos anidadas
+- [ ] Implementar `fetchAndParseShapefile(url)` con `shpjs` — soporta ZIP directo
+- [ ] Renderizar **8 capas** toggleables con colores distintos:
+  - Siembra finca → verde oscuro
+  - Siembra restauración → verde claro
+  - Siembra árboles → verde lima (puntos pequeños)
+  - RAS finca → azul oscuro
+  - RAS conservación → azul claro
+  - RAS árboles → azul cyan (puntos pequeños)
+  - Cámaras Siembra → naranja
+  - Cámaras RAS → rojo
+- [ ] Popups en polígonos: propietario, finca, municipio, ha, link a detalle
+- [ ] Popups en puntos árboles: atributos del SHP + nombre familia
+- [ ] Popups en cámaras: nombre, familia, miniaturas fotos
+- [ ] Panel lateral al seleccionar familia: fotos del predio por categoría (fotos_predio)
+- [ ] Manejar `shapefile_arboles_url === null` (campo opcional — muchas familias no lo tienen)
 - [ ] Agregar card "Geovisor" en `/intranet/ras/page.tsx`

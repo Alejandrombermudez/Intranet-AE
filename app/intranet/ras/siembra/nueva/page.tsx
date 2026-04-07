@@ -525,40 +525,6 @@ export default function NuevaSiembraPage() {
                 />
               ))}
 
-              {/* Banner de advertencia si hay categorías bajo el mínimo */}
-              {fotosWarning && underMinCats.length > 0 && (
-                <div className="rounded-2xl border-2 border-red-300 bg-red-50 p-4 space-y-3">
-                  <p className="text-sm font-bold text-red-700">
-                    Las siguientes categorías están por debajo del mínimo recomendado:
-                  </p>
-                  <ul className="space-y-1">
-                    {underMinCats.map(({ key, label, min }) => (
-                      <li key={key} className="text-xs text-red-600">
-                        {label}: {(fotosPredioCat[key] ?? []).length}/{min}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setFotosWarning(false)}
-                      className="px-4 py-2 rounded-xl text-xs font-bold border-2 border-red-300 text-red-700 hover:bg-red-100 transition-all"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      onClick={async () => {
-                        if (pendingDataRef.current) await doSubmit(pendingDataRef.current)
-                      }}
-                      className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-60"
-                    >
-                      {submitting ? <Loader2 size={13} className="animate-spin inline" /> : 'Subir de todas formas'}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -697,6 +663,41 @@ export default function NuevaSiembraPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Banner de advertencia fotos predio bajo mínimo */}
+          {fotosWarning && underMinCats.length > 0 && (
+            <div className="rounded-2xl border-2 border-red-300 bg-red-50 p-4 space-y-3 mt-6">
+              <p className="text-sm font-bold text-red-700">
+                Las siguientes categorías están por debajo del mínimo recomendado:
+              </p>
+              <ul className="space-y-1">
+                {underMinCats.map(({ key, label, min }) => (
+                  <li key={key} className="text-xs text-red-600">
+                    {label}: {(fotosPredioCat[key] ?? []).length}/{min}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFotosWarning(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold border-2 border-red-300 text-red-700 hover:bg-red-100 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={async () => {
+                    if (pendingDataRef.current) await doSubmit(pendingDataRef.current)
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-60"
+                >
+                  {submitting ? <Loader2 size={13} className="animate-spin inline" /> : 'Subir de todas formas'}
+                </button>
               </div>
             </div>
           )}
