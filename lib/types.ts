@@ -5,6 +5,7 @@ export interface UserProfile {
   role: string | null
   department: string | null
   is_admin: boolean
+  can_access_intranet: boolean
   last_login: string
   created_at: string
 }

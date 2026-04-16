@@ -14,6 +14,7 @@ export async function PATCH(req: NextRequest) {
   const role: string | undefined = body?.role
   const department: string | undefined = body?.department
   const is_admin: boolean | undefined = body?.is_admin
+  const can_access_intranet: boolean | undefined = body?.can_access_intranet
 
   if (!requesterEmail || !targetEmail) {
     return NextResponse.json({ error: 'requesterEmail and targetEmail required' }, { status: 400 })
@@ -37,6 +38,7 @@ export async function PATCH(req: NextRequest) {
   if (role       !== undefined) updates.role       = role
   if (department !== undefined) updates.department = department
   if (is_admin   !== undefined) updates.is_admin   = is_admin
+  if (can_access_intranet !== undefined) updates.can_access_intranet = can_access_intranet
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 })

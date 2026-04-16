@@ -20,6 +20,12 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
+  const [canAccessIntranet, setCanAccessIntranet] = useState(false)
+  const [showEmailLogin, setShowEmailLogin] = useState(false)
+  const [emailInput, setEmailInput] = useState('')
+  const [passwordInput, setPasswordInput] = useState('')
+  const [emailError, setEmailError] = useState('')
+  const [emailLoading, setEmailLoading] = useState(false)
 
   // ── Gestión de reservas (solo cuando hay sesión) ─────────────────────────
   const [myReservations, setMyReservations] = useState<Reservation[]>([])
@@ -36,10 +42,11 @@ export default function CalendarPage() {
       if (u?.email) {
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('is_admin')
+          .select('is_admin, can_access_intranet')
           .eq('email', u.email)
           .single()
         setIsAdmin(profile?.is_admin ?? false)
+        setCanAccessIntranet(profile?.can_access_intranet ?? false)
       }
       setAuthLoading(false)
     })
@@ -102,6 +109,36 @@ export default function CalendarPage() {
     setMyReservations([])
   }
 
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setEmailLoading(true)
+    setEmailError('')
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: emailInput,
+      password: passwordInput,
+    })
+    if (error) {
+      setEmailError('Correo o contraseña incorrectos')
+      setEmailLoading(false)
+      return
+    }
+    setUser(data.user)
+    setShowEmailLogin(false)
+    setEmailInput('')
+    setPasswordInput('')
+    // Cargar perfil del nuevo usuario
+    if (data.user?.email) {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('is_admin, can_access_intranet')
+        .eq('email', data.user.email)
+        .single()
+      setIsAdmin(profile?.is_admin ?? false)
+      setCanAccessIntranet(profile?.can_access_intranet ?? false)
+    }
+    setEmailLoading(false)
+  }
+
   // Azure AD puede enviar el nombre en 'full_name' o en 'name'
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'Usuario'
   const firstName = displayName.split(' ')[0]
@@ -126,7 +163,7 @@ export default function CalendarPage() {
                 <span className="hidden sm:block">Inicio</span>
               </Link>
 
-              {!authLoading && isAdmin && (
+              {!authLoading && (isAdmin || canAccessIntranet) && (
                 <Link
                   href="/intranet"
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-primary border border-primary/30 bg-primary/5 hover:bg-primary/15 transition-all"
@@ -156,21 +193,66 @@ export default function CalendarPage() {
               )}
 
               {!authLoading && !user && (
-                <button
-                  onClick={handleMicrosoftLogin}
-                  disabled={loading}
-                  className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-stone-800 to-stone-900 hover:from-black hover:to-stone-800 transition-all shadow-md border border-stone-700 disabled:opacity-60 text-sm"
-                >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 23 23" fill="none">
-                    <path fill="#F25022" d="M1 1H10V10H1V1Z"/>
-                    <path fill="#00A4EF" d="M1 12H10V21H1V12Z"/>
-                    <path fill="#7FBA00" d="M12 1H21V10H12V1Z"/>
-                    <path fill="#FFB900" d="M12 12H21V21H12V12Z"/>
-                  </svg>
-                  <span className="hidden sm:block">
-                    {loading ? 'Redirigiendo...' : 'Iniciar Sesión'}
-                  </span>
-                </button>
+                <div className="relative flex flex-col items-end gap-1">
+                  {/* Microsoft SSO */}
+                  <button
+                    onClick={handleMicrosoftLogin}
+                    disabled={loading}
+                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-stone-800 to-stone-900 hover:from-black hover:to-stone-800 transition-all shadow-md border border-stone-700 disabled:opacity-60 text-sm"
+                  >
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 23 23" fill="none">
+                      <path fill="#F25022" d="M1 1H10V10H1V1Z"/>
+                      <path fill="#00A4EF" d="M1 12H10V21H1V12Z"/>
+                      <path fill="#7FBA00" d="M12 1H21V10H12V1Z"/>
+                      <path fill="#FFB900" d="M12 12H21V21H12V12Z"/>
+                    </svg>
+                    <span className="hidden sm:block">
+                      {loading ? 'Redirigiendo...' : 'Iniciar Sesión'}
+                    </span>
+                  </button>
+
+                  {/* Acceso externo (email/contraseña) */}
+                  <button
+                    onClick={() => setShowEmailLogin((v) => !v)}
+                    className="text-[11px] text-stone-400 hover:text-stone-600 transition-colors underline-offset-2 hover:underline"
+                  >
+                    Acceso externo
+                  </button>
+
+                  {showEmailLogin && (
+                    <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-2xl border border-stone-200 p-4 w-72 z-50">
+                      <p className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3">Acceso con correo</p>
+                      <form onSubmit={handleEmailLogin} className="space-y-2.5">
+                        <input
+                          type="email"
+                          value={emailInput}
+                          onChange={(e) => setEmailInput(e.target.value)}
+                          placeholder="correo@ejemplo.com"
+                          required
+                          className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg focus:outline-none focus:border-primary transition-colors"
+                        />
+                        <input
+                          type="password"
+                          value={passwordInput}
+                          onChange={(e) => setPasswordInput(e.target.value)}
+                          placeholder="Contraseña"
+                          required
+                          className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg focus:outline-none focus:border-primary transition-colors"
+                        />
+                        {emailError && (
+                          <p className="text-xs text-red-600 font-medium">{emailError}</p>
+                        )}
+                        <button
+                          type="submit"
+                          disabled={emailLoading}
+                          className="w-full py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-dark transition-all disabled:opacity-60"
+                        >
+                          {emailLoading ? 'Ingresando...' : 'Ingresar'}
+                        </button>
+                      </form>
+                    </div>
+                  )}
+                </div>
               )}
 
               {!authLoading && user && (

@@ -121,11 +121,12 @@ function EditRow({ profile, onSave, onCancel }: EditRowProps) {
   const [role, setRole] = useState(profile.role ?? '')
   const [department, setDepartment] = useState(profile.department ?? '')
   const [isAdmin, setIsAdmin] = useState(profile.is_admin)
+  const [canAccessIntranet, setCanAccessIntranet] = useState(profile.can_access_intranet)
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
     setSaving(true)
-    await onSave(profile.email, { role: role || null, department: department || null, is_admin: isAdmin })
+    await onSave(profile.email, { role: role || null, department: department || null, is_admin: isAdmin, can_access_intranet: canAccessIntranet })
     setSaving(false)
   }
 
@@ -158,6 +159,15 @@ function EditRow({ profile, onSave, onCancel }: EditRowProps) {
             <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${isAdmin ? 'translate-x-4' : 'translate-x-0'}`} />
           </div>
           <span className="text-xs font-bold text-stone-600">{isAdmin ? 'Sí' : 'No'}</span>
+        </label>
+      </td>
+      <td className="px-4 py-3">
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <div onClick={() => setCanAccessIntranet((v) => !v)}
+            className={`w-10 h-6 rounded-full flex items-center px-0.5 cursor-pointer transition-colors ${canAccessIntranet ? 'bg-emerald-500' : 'bg-stone-300'}`}>
+            <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${canAccessIntranet ? 'translate-x-4' : 'translate-x-0'}`} />
+          </div>
+          <span className="text-xs font-bold text-stone-600">{canAccessIntranet ? 'Sí' : 'No'}</span>
         </label>
       </td>
       <td className="px-4 py-3 text-xs text-stone-400">{formatDate(profile.last_login)}</td>
@@ -212,6 +222,15 @@ function UserRow({ profile, isSelf, onEdit }: UserRowProps) {
           <span className="inline-flex items-center gap-1 px-2 py-1 bg-stone-100 text-stone-400 rounded-lg text-xs font-medium">
             <Shield size={12} /> Usuario
           </span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {profile.can_access_intranet ? (
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold">
+            <ArrowRight size={12} /> Sí
+          </span>
+        ) : (
+          <span className="text-stone-300 text-xs">—</span>
         )}
       </td>
       <td className="px-4 py-3 text-xs text-stone-400 whitespace-nowrap">{formatDate(profile.last_login)}</td>
@@ -1356,14 +1375,14 @@ export default function IntranetPage() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-stone-50 border-b border-stone-200">
-                      {['', 'Nombre / Email', 'Departamento', 'Rol', 'Admin', 'Último acceso', ''].map((h, i) => (
+                      {['', 'Nombre / Email', 'Departamento', 'Rol', 'Admin', 'Ve Intranet', 'Último acceso', ''].map((h, i) => (
                         <th key={i} className="px-4 py-3 text-[11px] font-bold text-stone-400 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {users.length === 0 && (
-                      <tr><td colSpan={7} className="px-4 py-12 text-center text-stone-400 font-semibold">No hay usuarios registrados aún.</td></tr>
+                      <tr><td colSpan={8} className="px-4 py-12 text-center text-stone-400 font-semibold">No hay usuarios registrados aún.</td></tr>
                     )}
                     {users.map((profile) =>
                       editingEmail === profile.email ? (

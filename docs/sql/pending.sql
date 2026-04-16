@@ -14,6 +14,14 @@
 -- ════════════════════════════════════════════════════════════
 
 
+-- ── [PENDIENTE] Nueva columna user_profiles.can_access_intranet ──────────────
+-- Controla si el usuario ve el botón "Intranet" en el calendario.
+-- Independiente de is_admin: permite acceder al módulo propio sin ver el panel admin.
+
+ALTER TABLE public.user_profiles
+  ADD COLUMN IF NOT EXISTS can_access_intranet BOOLEAN NOT NULL DEFAULT FALSE;
+
+
 -- ── [PENDIENTE] Trigger auto-sync auth.users → public.user_profiles ──────────
 -- Motivo: el perfil solo se guardaba desde JS del cliente en el auth callback.
 -- Si el usuario cierra la ventana o hay error de red, el registro se pierde.
