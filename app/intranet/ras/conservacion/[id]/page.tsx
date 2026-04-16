@@ -21,6 +21,21 @@ interface Familia {
   nombre_propietario: string
   adultos: number
   ninos: number
+  tipo_documento: string | null
+  numero_documento: string | null
+  telefono: string | null
+  nucleo: string | null
+  departamento: string | null
+  cant_mujeres: number | null
+  cant_hombres: number | null
+  actividad_economica: string | null
+  tiene_espacio_vegetal: boolean | null
+  empleos_locales: number | null
+  num_individuos: number | null
+  num_especies_inventario: number | null
+  area_bosque_recorrida: number | null
+  distancia_florencia_km: number | null
+  tiempo_florencia_min: number | null
   ha_potreros: number | null
   ha_bosque: number | null
   ha_otras: number | null
@@ -186,29 +201,54 @@ export default function ConservacionDetailPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 space-y-8">
 
-        {/* ── Información Base ── */}
+        {/* ── Identificación y Contacto ── */}
         <section className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
-          <SectionTitle icon={<Users size={16} />} title="Información Base" />
+          <SectionTitle icon={<Users size={16} />} title="Identificación y Contacto" />
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <Stat label="Propietario" value={familia.nombre_propietario} />
+            {familia.tipo_documento && <Stat label="Tipo documento" value={familia.tipo_documento} />}
+            {familia.numero_documento && <Stat label="Número documento" value={familia.numero_documento} />}
+            {familia.telefono && <Stat label="Teléfono" value={familia.telefono} />}
+            {familia.nucleo && <Stat label="Núcleo" value={familia.nucleo} />}
+            {familia.departamento && <Stat label="Departamento" value={familia.departamento} />}
             <Stat label="Municipio" value={familia.municipio} />
-            <Stat label="Vereda" value={familia.vereda} />
-            <Stat label="Finca" value={familia.nombre_finca} />
-            <Stat label="Adultos" value={familia.adultos} />
-            <Stat label="Niños" value={familia.ninos} />
+            {familia.vereda && <Stat label="Vereda" value={familia.vereda} />}
+            {familia.nombre_finca && <Stat label="Finca" value={familia.nombre_finca} />}
             <Stat label="Registrado" value={formatDate(familia.created_at)} />
             {familia.created_by && <Stat label="Por" value={familia.created_by} />}
           </div>
         </section>
 
-        {/* ── Hectáreas y Estado ── */}
+        {/* ── Composición del Hogar y Economía ── */}
         <section className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
-          <SectionTitle icon={<MapPin size={16} />} title="Hectáreas y Estado del Predio" />
+          <SectionTitle icon={<Users size={16} />} title="Composición del Hogar y Economía" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Stat label="Adultos" value={familia.adultos} />
+            <Stat label="Niños" value={familia.ninos} />
+            {familia.cant_mujeres != null && <Stat label="Mujeres" value={familia.cant_mujeres} />}
+            {familia.cant_hombres != null && <Stat label="Hombres" value={familia.cant_hombres} />}
+            {familia.actividad_economica && <Stat label="Actividad económica" value={familia.actividad_economica} />}
+            {familia.empleos_locales != null && <Stat label="Empleos locales" value={familia.empleos_locales} />}
+            {familia.tiene_espacio_vegetal != null && (
+              <BoolStat label="Espacio material vegetal" value={familia.tiene_espacio_vegetal} />
+            )}
+          </div>
+        </section>
+
+        {/* ── Predio, Inventario y Accesibilidad ── */}
+        <section className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
+          <SectionTitle icon={<MapPin size={16} />} title="Predio, Inventario y Accesibilidad" />
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <Stat label="Potreros" value={familia.ha_potreros != null ? `${familia.ha_potreros} ha` : null} />
             <Stat label="Bosque" value={familia.ha_bosque != null ? `${familia.ha_bosque} ha` : null} />
             <Stat label="Otras" value={familia.ha_otras != null ? `${familia.ha_otras} ha` : null} />
             <BoolStat label="Bajo figura de conservación" value={familia.bajo_conservacion} />
             <BoolStat label="Acuerdo de conservación" value={familia.acuerdo_conservacion} />
+            {familia.num_individuos != null && <Stat label="Individuos (inventario)" value={familia.num_individuos.toLocaleString('es-CO')} />}
+            {familia.num_especies_inventario != null && <Stat label="Especies identificadas" value={familia.num_especies_inventario} />}
+            {familia.area_bosque_recorrida != null && <Stat label="Área bosque recorrida" value={`${familia.area_bosque_recorrida} ha`} />}
+            {familia.distancia_florencia_km != null && <Stat label="Distancia Florencia" value={`${familia.distancia_florencia_km} km`} />}
+            {familia.tiempo_florencia_min != null && <Stat label="Tiempo Florencia" value={`${familia.tiempo_florencia_min} min`} />}
           </div>
         </section>
 

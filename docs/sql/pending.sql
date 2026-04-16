@@ -14,6 +14,26 @@
 -- ════════════════════════════════════════════════════════════
 
 
+-- ── [PENDIENTE] Ampliación ras.familias — datos socioeconómicos del CSV ───────
+-- Mismos campos que se agregaron a siembra.familias, adaptados a conservación.
+
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS tipo_documento          TEXT;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS numero_documento        TEXT;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS telefono                TEXT;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS nucleo                  TEXT;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS departamento            TEXT;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS cant_mujeres            INT DEFAULT 0;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS cant_hombres            INT DEFAULT 0;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS actividad_economica     TEXT;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS tiene_espacio_vegetal   BOOLEAN DEFAULT FALSE;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS empleos_locales         INT DEFAULT 0;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS num_individuos          INT DEFAULT 0;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS num_especies_inventario INT DEFAULT 0;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS area_bosque_recorrida   NUMERIC;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS distancia_florencia_km  NUMERIC;
+ALTER TABLE ras.familias ADD COLUMN IF NOT EXISTS tiempo_florencia_min    INT;
+
+
 -- ── [PENDIENTE] Nueva columna user_profiles.can_access_intranet ──────────────
 -- Controla si el usuario ve el botón "Intranet" en el calendario.
 -- Independiente de is_admin: permite acceder al módulo propio sin ver el panel admin.

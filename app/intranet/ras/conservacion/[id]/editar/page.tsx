@@ -17,6 +17,21 @@ interface FamiliaConservEdit {
   nombre_propietario: string
   adultos: string
   ninos: string
+  tipo_documento: string
+  numero_documento: string
+  telefono: string
+  nucleo: string
+  departamento: string
+  cant_mujeres: string
+  cant_hombres: string
+  actividad_economica: string
+  tiene_espacio_vegetal: boolean
+  empleos_locales: string
+  num_individuos: string
+  num_especies_inventario: string
+  area_bosque_recorrida: string
+  distancia_florencia_km: string
+  tiempo_florencia_min: string
   bajo_conservacion: boolean
   acuerdo_conservacion: boolean
   ha_potreros: string
@@ -34,7 +49,14 @@ interface FamiliaConservEdit {
 
 const EMPTY: FamiliaConservEdit = {
   municipio: '', vereda: '', nombre_finca: '', nombre_propietario: '',
-  adultos: '', ninos: '', bajo_conservacion: false, acuerdo_conservacion: false,
+  adultos: '', ninos: '',
+  tipo_documento: '', numero_documento: '', telefono: '',
+  nucleo: '', departamento: '',
+  cant_mujeres: '', cant_hombres: '',
+  actividad_economica: '', tiene_espacio_vegetal: false, empleos_locales: '',
+  num_individuos: '', num_especies_inventario: '',
+  area_bosque_recorrida: '', distancia_florencia_km: '', tiempo_florencia_min: '',
+  bajo_conservacion: false, acuerdo_conservacion: false,
   ha_potreros: '', ha_bosque: '', ha_otras: '',
   arboles_semilleros: '', especies_forestales: '', otros_indices: '',
   shapefile_finca_url: null, shapefile_conservacion_url: null,
@@ -122,6 +144,21 @@ export default function ConservacionEditPage() {
         nombre_propietario: fam.nombre_propietario ?? '',
         adultos: fam.adultos != null ? String(fam.adultos) : '',
         ninos: fam.ninos != null ? String(fam.ninos) : '',
+        tipo_documento: fam.tipo_documento ?? '',
+        numero_documento: fam.numero_documento ?? '',
+        telefono: fam.telefono ?? '',
+        nucleo: fam.nucleo ?? '',
+        departamento: fam.departamento ?? '',
+        cant_mujeres: fam.cant_mujeres != null ? String(fam.cant_mujeres) : '',
+        cant_hombres: fam.cant_hombres != null ? String(fam.cant_hombres) : '',
+        actividad_economica: fam.actividad_economica ?? '',
+        tiene_espacio_vegetal: fam.tiene_espacio_vegetal ?? false,
+        empleos_locales: fam.empleos_locales != null ? String(fam.empleos_locales) : '',
+        num_individuos: fam.num_individuos != null ? String(fam.num_individuos) : '',
+        num_especies_inventario: fam.num_especies_inventario != null ? String(fam.num_especies_inventario) : '',
+        area_bosque_recorrida: fam.area_bosque_recorrida != null ? String(fam.area_bosque_recorrida) : '',
+        distancia_florencia_km: fam.distancia_florencia_km != null ? String(fam.distancia_florencia_km) : '',
+        tiempo_florencia_min: fam.tiempo_florencia_min != null ? String(fam.tiempo_florencia_min) : '',
         bajo_conservacion: fam.bajo_conservacion ?? false,
         acuerdo_conservacion: fam.acuerdo_conservacion ?? false,
         ha_potreros: fam.ha_potreros != null ? String(fam.ha_potreros) : '',
@@ -165,6 +202,21 @@ export default function ConservacionEditPage() {
         arboles_semilleros: form.arboles_semilleros !== '' ? Number(form.arboles_semilleros) : null,
         especies_forestales: form.especies_forestales !== '' ? Number(form.especies_forestales) : null,
         otros_indices: form.otros_indices.trim() || null,
+        tipo_documento: form.tipo_documento.trim() || null,
+        numero_documento: form.numero_documento.trim() || null,
+        telefono: form.telefono.trim() || null,
+        nucleo: form.nucleo.trim() || null,
+        departamento: form.departamento.trim() || null,
+        cant_mujeres: form.cant_mujeres !== '' ? Number(form.cant_mujeres) : null,
+        cant_hombres: form.cant_hombres !== '' ? Number(form.cant_hombres) : null,
+        actividad_economica: form.actividad_economica.trim() || null,
+        tiene_espacio_vegetal: form.tiene_espacio_vegetal,
+        empleos_locales: form.empleos_locales !== '' ? Number(form.empleos_locales) : null,
+        num_individuos: form.num_individuos !== '' ? Number(form.num_individuos) : null,
+        num_especies_inventario: form.num_especies_inventario !== '' ? Number(form.num_especies_inventario) : null,
+        area_bosque_recorrida: form.area_bosque_recorrida !== '' ? Number(form.area_bosque_recorrida) : null,
+        distancia_florencia_km: form.distancia_florencia_km !== '' ? Number(form.distancia_florencia_km) : null,
+        tiempo_florencia_min: form.tiempo_florencia_min !== '' ? Number(form.tiempo_florencia_min) : null,
       }))
       if (shpFinca) fd.append('shp_finca', shpFinca)
       if (shpConservacion) fd.append('shp_conservacion', shpConservacion)
@@ -233,13 +285,45 @@ export default function ConservacionEditPage() {
       <form id="edit-form-conserv" onSubmit={handleSubmit}>
         <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 space-y-6">
 
-          {/* ── Información Base ── */}
-          <SectionCard icon={<Users size={16} />} title="Información Base">
+          {/* ── Identificación y Contacto ── */}
+          <SectionCard icon={<Users size={16} />} title="Identificación y Contacto">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className={labelCls}>Nombre del Propietario *</label>
+                <input value={form.nombre_propietario} onChange={(e) => set('nombre_propietario', e.target.value)}
+                  className={inputCls} required />
+              </div>
+              <div>
+                <label className={labelCls}>Tipo de documento</label>
+                <select value={form.tipo_documento} onChange={(e) => set('tipo_documento', e.target.value)} className={inputCls}>
+                  <option value="">— Seleccionar —</option>
+                  {['CC','NUIP','CE','TI','PP','NIT'].map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Número de documento</label>
+                <input value={form.numero_documento} onChange={(e) => set('numero_documento', e.target.value)}
+                  className={inputCls} placeholder="12345678" />
+              </div>
+              <div>
+                <label className={labelCls}>Teléfono</label>
+                <input value={form.telefono} onChange={(e) => set('telefono', e.target.value)}
+                  className={inputCls} placeholder="3001234567" />
+              </div>
+              <div>
+                <label className={labelCls}>Núcleo</label>
+                <input value={form.nucleo} onChange={(e) => set('nucleo', e.target.value)}
+                  className={inputCls} placeholder="Ej: Piedemonte" />
+              </div>
+              <div>
+                <label className={labelCls}>Departamento</label>
+                <input value={form.departamento} onChange={(e) => set('departamento', e.target.value)}
+                  className={inputCls} placeholder="Ej: Caquetá" />
+              </div>
               <div>
                 <label className={labelCls}>Municipio *</label>
                 <input value={form.municipio} onChange={(e) => set('municipio', e.target.value)}
-                  className={inputCls} placeholder="Ej. Florencia" required />
+                  className={inputCls} required placeholder="Ej. Florencia" />
               </div>
               <div>
                 <label className={labelCls}>Vereda</label>
@@ -251,21 +335,48 @@ export default function ConservacionEditPage() {
                 <input value={form.nombre_finca} onChange={(e) => set('nombre_finca', e.target.value)}
                   className={inputCls} placeholder="Ej. El Paraíso" />
               </div>
+            </div>
+          </SectionCard>
+
+          {/* ── Composición del Hogar y Economía ── */}
+          <SectionCard icon={<Users size={16} />} title="Composición del Hogar y Economía">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
               <div>
-                <label className={labelCls}>Nombre del Propietario *</label>
-                <input value={form.nombre_propietario} onChange={(e) => set('nombre_propietario', e.target.value)}
-                  className={inputCls} required />
-              </div>
-              <div>
-                <label className={labelCls}>Adultos en el hogar</label>
+                <label className={labelCls}>Adultos</label>
                 <input type="number" min="0" value={form.adultos} onChange={(e) => set('adultos', e.target.value)}
                   className={inputCls} placeholder="0" />
               </div>
               <div>
-                <label className={labelCls}>Niños en el hogar</label>
+                <label className={labelCls}>Niños</label>
                 <input type="number" min="0" value={form.ninos} onChange={(e) => set('ninos', e.target.value)}
                   className={inputCls} placeholder="0" />
               </div>
+              <div>
+                <label className={labelCls}>Mujeres</label>
+                <input type="number" min="0" value={form.cant_mujeres} onChange={(e) => set('cant_mujeres', e.target.value)}
+                  className={inputCls} placeholder="0" />
+              </div>
+              <div>
+                <label className={labelCls}>Hombres</label>
+                <input type="number" min="0" value={form.cant_hombres} onChange={(e) => set('cant_hombres', e.target.value)}
+                  className={inputCls} placeholder="0" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Actividad económica</label>
+                <input value={form.actividad_economica} onChange={(e) => set('actividad_economica', e.target.value)}
+                  className={inputCls} placeholder="Ej: Ganadería, Forestal" />
+              </div>
+              <div>
+                <label className={labelCls}>Empleos locales</label>
+                <input type="number" min="0" value={form.empleos_locales} onChange={(e) => set('empleos_locales', e.target.value)}
+                  className={inputCls} placeholder="0" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <BoolToggle label="¿Tiene espacio para tratar material vegetal?"
+                value={form.tiene_espacio_vegetal} onChange={(v) => set('tiene_espacio_vegetal', v)} />
             </div>
           </SectionCard>
 
@@ -298,6 +409,33 @@ export default function ConservacionEditPage() {
               <BoolToggle label="Acuerdo de conservación"
                 value={form.acuerdo_conservacion}
                 onChange={(v) => set('acuerdo_conservacion', v)} />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4 pt-4 border-t border-stone-100">
+              <div>
+                <label className={labelCls}>Individuos (árboles)</label>
+                <input type="number" min="0" value={form.num_individuos}
+                  onChange={(e) => set('num_individuos', e.target.value)} className={inputCls} placeholder="0" />
+              </div>
+              <div>
+                <label className={labelCls}>Especies identificadas</label>
+                <input type="number" min="0" value={form.num_especies_inventario}
+                  onChange={(e) => set('num_especies_inventario', e.target.value)} className={inputCls} placeholder="0" />
+              </div>
+              <div>
+                <label className={labelCls}>Área bosque recorrida (ha)</label>
+                <input type="number" min="0" step="0.01" value={form.area_bosque_recorrida}
+                  onChange={(e) => set('area_bosque_recorrida', e.target.value)} className={inputCls} placeholder="0.00" />
+              </div>
+              <div>
+                <label className={labelCls}>Distancia Florencia (km)</label>
+                <input type="number" min="0" step="0.1" value={form.distancia_florencia_km}
+                  onChange={(e) => set('distancia_florencia_km', e.target.value)} className={inputCls} placeholder="0.0" />
+              </div>
+              <div>
+                <label className={labelCls}>Tiempo Florencia (min)</label>
+                <input type="number" min="0" value={form.tiempo_florencia_min}
+                  onChange={(e) => set('tiempo_florencia_min', e.target.value)} className={inputCls} placeholder="0" />
+              </div>
             </div>
           </SectionCard>
 

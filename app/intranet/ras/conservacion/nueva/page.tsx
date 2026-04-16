@@ -27,11 +27,12 @@ const FOTO_CATS = [
 const PRIMARY = '#0d7377'
 
 const STEPS = [
-  { label: 'Info Base',    icon: <Users       size={14} /> },
-  { label: 'Hectáreas',    icon: <Trees       size={14} /> },
-  { label: 'Conservación', icon: <ShieldCheck size={14} /> },
-  { label: 'Fotos Predio', icon: <ImageIcon   size={14} /> },
-  { label: 'Biodiversidad',icon: <Camera      size={14} /> },
+  { label: 'Identificación',  icon: <Users       size={14} /> },
+  { label: 'Hogar & Ec.',     icon: <Users       size={14} /> },
+  { label: 'Predio & Inv.',   icon: <Trees       size={14} /> },
+  { label: 'Conservación',    icon: <ShieldCheck size={14} /> },
+  { label: 'Fotos Predio',    icon: <ImageIcon   size={14} /> },
+  { label: 'Biodiversidad',   icon: <Camera      size={14} /> },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -258,15 +259,17 @@ export default function NuevaConservacionPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: standardSchemaResolver(familiaConservacionSchema) as any,
     defaultValues: {
-      municipio: '', vereda: '', nombre_finca: '', nombre_propietario: '',
-      adultos: 0, ninos: 0,
+      nombre_propietario: '', tipo_documento: '', numero_documento: '',
+      telefono: '', nucleo: '', departamento: '',
+      municipio: '', vereda: '', nombre_finca: '',
+      adultos: 0, ninos: 0, cant_mujeres: 0, cant_hombres: 0,
+      actividad_economica: '', empleos_locales: 0, tiene_espacio_vegetal: false,
       ha_potreros: 0, ha_bosque: 0, ha_otras: 0,
-      bajo_conservacion: false,
-      acuerdo_conservacion: false,
-      arboles_semilleros: 0,
-      especies_forestales: 0,
-      otros_indices: '',
-      camaras: [],
+      bajo_conservacion: false, acuerdo_conservacion: false,
+      num_individuos: 0, num_especies_inventario: 0,
+      area_bosque_recorrida: 0, distancia_florencia_km: 0, tiempo_florencia_min: 0,
+      arboles_semilleros: 0, especies_forestales: 0,
+      otros_indices: '', camaras: [],
     },
   })
 
@@ -289,10 +292,11 @@ export default function NuevaConservacionPage() {
 
   // ── Validación parcial por paso ──
   const STEP_FIELDS: (keyof FamiliaConservacionForm)[][] = [
-    ['municipio', 'nombre_propietario', 'adultos', 'ninos'],
+    ['nombre_propietario', 'municipio'],
+    ['adultos', 'ninos'],
     ['ha_potreros', 'ha_bosque', 'ha_otras'],
     ['arboles_semilleros', 'especies_forestales'],
-    [], // fotos predio — no valida RHF
+    [],
     ['camaras'],
   ]
 
@@ -415,12 +419,44 @@ export default function NuevaConservacionPage() {
       <main className="max-w-3xl mx-auto px-4 py-8 sm:px-6">
         <form onSubmit={handleSubmit(onSubmit)}>
 
-          {/* ══ PASO 1: Información Base ══ */}
+          {/* ══ PASO 0: Identificación ══ */}
           {step === 0 && (
             <div className="space-y-6">
-              <SectionTitle icon={<Users size={18} />} title="Información Base" />
+              <SectionTitle icon={<Users size={18} />} title="Identificación y Contacto" />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="sm:col-span-2">
+                  <Label required>Nombre del propietario/a</Label>
+                  <input {...register('nombre_propietario')}
+                    className={errors.nombre_propietario ? inputErrCls : inputCls}
+                    placeholder="Nombre completo" />
+                  <FieldError message={errors.nombre_propietario?.message} />
+                </div>
+                <div>
+                  <Label>Tipo de documento</Label>
+                  <select {...register('tipo_documento')} className={inputCls}>
+                    <option value="">— Seleccionar —</option>
+                    {['CC','NUIP','CE','TI','PP','NIT'].map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label>Número de documento</Label>
+                  <input {...register('numero_documento')} className={inputCls} placeholder="Ej: 12345678" />
+                </div>
+                <div>
+                  <Label>Teléfono</Label>
+                  <input {...register('telefono')} className={inputCls} placeholder="Ej: 3001234567" />
+                </div>
+                <div>
+                  <Label>Núcleo</Label>
+                  <input {...register('nucleo')} className={inputCls} placeholder="Ej: Piedemonte" />
+                </div>
+                <div>
+                  <Label>Departamento</Label>
+                  <input {...register('departamento')} className={inputCls} placeholder="Ej: Caquetá" />
+                </div>
                 <div>
                   <Label required>Municipio</Label>
                   <input {...register('municipio')} className={errors.municipio ? inputErrCls : inputCls}
@@ -435,17 +471,17 @@ export default function NuevaConservacionPage() {
                   <Label>Nombre de la finca</Label>
                   <input {...register('nombre_finca')} className={inputCls} placeholder="Ej: La Esperanza" />
                 </div>
-                <div>
-                  <Label required>Nombre del propietario/a</Label>
-                  <input {...register('nombre_propietario')}
-                    className={errors.nombre_propietario ? inputErrCls : inputCls}
-                    placeholder="Nombre completo" />
-                  <FieldError message={errors.nombre_propietario?.message} />
-                </div>
               </div>
+            </div>
+          )}
+
+          {/* ══ PASO 1: Hogar & Economía ══ */}
+          {step === 1 && (
+            <div className="space-y-6">
+              <SectionTitle icon={<Users size={18} />} title="Composición del Hogar y Economía" />
 
               <Divider label="Composición de la familia" />
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
                   <Label># Adultos</Label>
                   <input type="number" min={0} {...register('adultos')} className={inputCls} />
@@ -456,14 +492,46 @@ export default function NuevaConservacionPage() {
                   <input type="number" min={0} {...register('ninos')} className={inputCls} />
                   <FieldError message={errors.ninos?.message} />
                 </div>
+                <div>
+                  <Label># Mujeres</Label>
+                  <input type="number" min={0} {...register('cant_mujeres')} className={inputCls} />
+                  <FieldError message={errors.cant_mujeres?.message} />
+                </div>
+                <div>
+                  <Label># Hombres</Label>
+                  <input type="number" min={0} {...register('cant_hombres')} className={inputCls} />
+                  <FieldError message={errors.cant_hombres?.message} />
+                </div>
               </div>
+
+              <Divider label="Actividad económica" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <Label>Actividad económica principal</Label>
+                  <input {...register('actividad_economica')} className={inputCls}
+                    placeholder="Ej: Ganadería, Forestal, Agricultura" />
+                </div>
+                <div>
+                  <Label># Empleos locales generados</Label>
+                  <input type="number" min={0} {...register('empleos_locales')} className={inputCls} />
+                </div>
+              </div>
+
+              <Controller control={control} name="tiene_espacio_vegetal" render={({ field }) => (
+                <RadioSiNo
+                  name="tiene_espacio_vegetal"
+                  label="¿Tiene espacio para tratar material vegetal?"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )} />
             </div>
           )}
 
-          {/* ══ PASO 2: Hectáreas y Estado del Predio ══ */}
-          {step === 1 && (
+          {/* ══ PASO 2: Predio & Inventario ══ */}
+          {step === 2 && (
             <div className="space-y-6">
-              <SectionTitle icon={<Trees size={18} />} title="Número de Hectáreas y Estado del Predio" />
+              <SectionTitle icon={<Trees size={18} />} title="Predio & Inventario Forestal" />
 
               <Divider label="Uso del suelo (hectáreas)" />
               <div className="grid grid-cols-3 gap-4">
@@ -487,27 +555,52 @@ export default function NuevaConservacionPage() {
               <Divider label="Estado del predio" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <Controller control={control} name="bajo_conservacion" render={({ field }) => (
-                  <RadioSiNo
-                    name="bajo_conservacion"
-                    label="Predio bajo figura de conservación"
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
+                  <RadioSiNo name="bajo_conservacion" label="Predio bajo figura de conservación"
+                    value={field.value} onChange={field.onChange} />
                 )} />
                 <Controller control={control} name="acuerdo_conservacion" render={({ field }) => (
-                  <RadioSiNo
-                    name="acuerdo_conservacion"
-                    label="Acuerdo de conservación"
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
+                  <RadioSiNo name="acuerdo_conservacion" label="Acuerdo de conservación"
+                    value={field.value} onChange={field.onChange} />
                 )} />
+              </div>
+
+              <Divider label="Inventario forestal" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div>
+                  <Label># Individuos (árboles)</Label>
+                  <input type="number" min={0} {...register('num_individuos')} className={inputCls} />
+                  <FieldError message={errors.num_individuos?.message} />
+                </div>
+                <div>
+                  <Label># Especies identificadas</Label>
+                  <input type="number" min={0} {...register('num_especies_inventario')} className={inputCls} />
+                  <FieldError message={errors.num_especies_inventario?.message} />
+                </div>
+                <div>
+                  <Label>Área bosque recorrida (ha)</Label>
+                  <input type="number" min={0} step="0.01" {...register('area_bosque_recorrida')} className={inputCls} />
+                  <FieldError message={errors.area_bosque_recorrida?.message} />
+                </div>
+              </div>
+
+              <Divider label="Accesibilidad" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Distancia a Florencia/Morelia (km)</Label>
+                  <input type="number" min={0} step="0.1" {...register('distancia_florencia_km')} className={inputCls} />
+                  <FieldError message={errors.distancia_florencia_km?.message} />
+                </div>
+                <div>
+                  <Label>Tiempo a Florencia/Morelia (min)</Label>
+                  <input type="number" min={0} {...register('tiempo_florencia_min')} className={inputCls} />
+                  <FieldError message={errors.tiempo_florencia_min?.message} />
+                </div>
               </div>
             </div>
           )}
 
-          {/* ══ PASO 3: Plan de Conservación ══ */}
-          {step === 2 && (
+          {/* ══ PASO 3: Conservación ══ */}
+          {step === 3 && (
             <div className="space-y-6">
               <SectionTitle icon={<ShieldCheck size={18} />} title="Plan de Conservación" />
 
@@ -539,7 +632,7 @@ export default function NuevaConservacionPage() {
           )}
 
           {/* ══ PASO 4: Fotos del Predio ══ */}
-          {step === 3 && (
+          {step === 4 && (
             <div className="space-y-6">
               <SectionTitle icon={<ImageIcon size={18} />} title="Fotos del Predio" />
               <p className="text-sm text-stone-500">
@@ -562,7 +655,7 @@ export default function NuevaConservacionPage() {
           )}
 
           {/* ══ PASO 5: Biodiversidad ══ */}
-          {step === 4 && (
+          {step === 5 && (
             <div className="space-y-5">
 
               {/* Cámaras trampa */}
