@@ -19,13 +19,27 @@ interface Familia {
   vereda: string | null
   nombre_finca: string | null
   nombre_propietario: string
+  tipo_documento: string | null
+  numero_documento: string | null
+  telefono: string | null
+  nucleo: string | null
+  departamento: string | null
   adultos: number
   ninos: number
+  cant_mujeres: number | null
+  cant_hombres: number | null
+  actividad_economica: string | null
+  tiene_espacio_vegetal: boolean | null
+  empleos_locales: number
   ha_potreros: number | null
   ha_bosque: number | null
   ha_otras: number | null
   bajo_conservacion: boolean
-  empleos_locales: number
+  num_individuos: number | null
+  num_especies_inventario: number | null
+  area_bosque_recorrida: number | null
+  distancia_florencia_km: number | null
+  tiempo_florencia_min: number | null
   plan_restauracion: string | null
   ha_restauracion: number | null
   parcelas_monitoreo: number | null
@@ -190,33 +204,70 @@ export default function SiembraDetailPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 space-y-8">
 
-        {/* ── Sección 1: Información Base ── */}
+        {/* ── Sección 1: Identificación ── */}
         <section className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
-          <SectionTitle icon={<Users size={16} />} title="Información Base y Socioeconomía" />
+          <SectionTitle icon={<Users size={16} />} title="Identificación y Contacto" />
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {familia.tipo_documento && <Stat label="Tipo documento" value={familia.tipo_documento} />}
+            {familia.numero_documento && <Stat label="N.º identificación" value={familia.numero_documento} />}
+            {familia.telefono && <Stat label="Teléfono" value={familia.telefono} />}
+            {familia.nucleo && <Stat label="Núcleo" value={familia.nucleo} />}
+            {familia.departamento && <Stat label="Departamento" value={familia.departamento} />}
             <Stat label="Municipio" value={familia.municipio} />
             <Stat label="Vereda" value={familia.vereda} />
             <Stat label="Finca" value={familia.nombre_finca} />
-            <Stat label="Adultos" value={familia.adultos} />
-            <Stat label="Niños" value={familia.ninos} />
-            <Stat label="Empleos locales" value={familia.empleos_locales} />
-            <Stat label="Bajo figura de conservación" value={
-              familia.bajo_conservacion
-                ? <span className="flex items-center gap-1 text-emerald-600"><CheckCircle2 size={13} />Sí</span>
-                : <span className="flex items-center gap-1 text-stone-400"><XCircle size={13} />No</span>
-            } />
             <Stat label="Registrado" value={formatDate(familia.created_at)} />
             {familia.created_by && <Stat label="Por" value={familia.created_by} />}
           </div>
         </section>
 
-        {/* ── Sección 2: Uso del suelo ── */}
+        {/* ── Sección 2: Hogar & Economía ── */}
         <section className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
-          <SectionTitle icon={<MapPin size={16} />} title="Uso del Suelo (hectáreas)" />
-          <div className="grid grid-cols-3 gap-3">
-            <Stat label="Potreros" value={familia.ha_potreros != null ? `${familia.ha_potreros} ha` : null} />
+          <SectionTitle icon={<Users size={16} />} title="Composición del Hogar y Economía" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Stat label="Adultos" value={familia.adultos} />
+            <Stat label="Niños" value={familia.ninos} />
+            {familia.cant_mujeres != null && <Stat label="Mujeres" value={familia.cant_mujeres} />}
+            {familia.cant_hombres != null && <Stat label="Hombres" value={familia.cant_hombres} />}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+            {familia.actividad_economica && <Stat label="Actividad económica" value={familia.actividad_economica} />}
+            <Stat label="Empleos locales" value={familia.empleos_locales} />
+            {familia.tiene_espacio_vegetal != null && (
+              <Stat label="Espacio material vegetal" value={
+                familia.tiene_espacio_vegetal
+                  ? <span className="flex items-center gap-1 text-emerald-600"><CheckCircle2 size={13} />Sí</span>
+                  : <span className="flex items-center gap-1 text-stone-400"><XCircle size={13} />No</span>
+              } />
+            )}
+          </div>
+        </section>
+
+        {/* ── Sección 3: Predio & Inventario ── */}
+        <section className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
+          <SectionTitle icon={<MapPin size={16} />} title="Predio e Inventario Forestal" />
+          <div className="grid grid-cols-3 gap-3 mb-3">
             <Stat label="Bosque" value={familia.ha_bosque != null ? `${familia.ha_bosque} ha` : null} />
+            <Stat label="Potreros" value={familia.ha_potreros != null ? `${familia.ha_potreros} ha` : null} />
             <Stat label="Otras" value={familia.ha_otras != null ? `${familia.ha_otras} ha` : null} />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+            {familia.num_individuos != null && <Stat label="Individuos (árboles)" value={familia.num_individuos} />}
+            {familia.num_especies_inventario != null && <Stat label="Especies (inventario)" value={familia.num_especies_inventario} />}
+            {familia.area_bosque_recorrida != null && <Stat label="Bosque recorrido" value={`${familia.area_bosque_recorrida} ha`} />}
+          </div>
+          {(familia.distancia_florencia_km != null || familia.tiempo_florencia_min != null) && (
+            <div className="grid grid-cols-2 gap-3">
+              {familia.distancia_florencia_km != null && <Stat label="Distancia a Florencia/Morelia" value={`${familia.distancia_florencia_km} km`} />}
+              {familia.tiempo_florencia_min != null && <Stat label="Tiempo de viaje" value={`${familia.tiempo_florencia_min} min`} />}
+            </div>
+          )}
+          <div className="mt-3">
+            <Stat label="Bajo figura de conservación" value={
+              familia.bajo_conservacion
+                ? <span className="flex items-center gap-1 text-emerald-600"><CheckCircle2 size={13} />Sí</span>
+                : <span className="flex items-center gap-1 text-stone-400"><XCircle size={13} />No</span>
+            } />
           </div>
         </section>
 

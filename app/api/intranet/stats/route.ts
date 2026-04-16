@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       photo_lateral_der,
       photo_tablero,
       kilometraje,
-      vehicle_reservations ( vehicle_id, vehicle_name )
+      vehicle_reservations ( vehicle_id, vehicle_name, user_name, user_email )
     `)
     .not('submitted_at', 'is', null)
     .order('submitted_at', { ascending: false })

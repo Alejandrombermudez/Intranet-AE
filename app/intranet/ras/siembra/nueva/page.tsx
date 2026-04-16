@@ -25,12 +25,14 @@ const FOTO_CATS = [
 ]
 
 const STEPS = [
-  { label: 'Info Base',    icon: <Users    size={14} /> },
-  { label: 'Restauración', icon: <Trees    size={14} /> },
-  { label: 'Archivos SHP', icon: <MapPin   size={14} /> },
-  { label: 'Fotos Predio', icon: <ImageIcon size={14} /> },
-  { label: 'Monitoreos',   icon: <Activity size={14} /> },
-  { label: 'Cámaras',      icon: <Camera   size={14} /> },
+  { label: 'Identificación',    icon: <Users     size={14} /> },
+  { label: 'Hogar & Economía',  icon: <Users     size={14} /> },
+  { label: 'Predio',            icon: <Trees     size={14} /> },
+  { label: 'Restauración',      icon: <Leaf      size={14} /> },
+  { label: 'Archivos SHP',      icon: <MapPin    size={14} /> },
+  { label: 'Fotos Predio',      icon: <ImageIcon size={14} /> },
+  { label: 'Monitoreos',        icon: <Activity  size={14} /> },
+  { label: 'Cámaras',           icon: <Camera    size={14} /> },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -222,9 +224,18 @@ export default function NuevaSiembraPage() {
     resolver: standardSchemaResolver(familiaSchema) as any,
     defaultValues: {
       municipio: '', vereda: '', nombre_finca: '', nombre_propietario: '',
+      tipo_documento: '', numero_documento: '', telefono: '',
+      nucleo: '', departamento: '',
       adultos: 0, ninos: 0,
+      cant_mujeres: 0, cant_hombres: 0,
+      actividad_economica: '',
+      tiene_espacio_vegetal: false,
+      empleos_locales: 0,
       ha_potreros: 0, ha_bosque: 0, ha_otras: 0,
-      bajo_conservacion: false, empleos_locales: 0,
+      bajo_conservacion: false,
+      num_individuos: 0, num_especies_inventario: 0,
+      area_bosque_recorrida: 0,
+      distancia_florencia_km: 0, tiempo_florencia_min: 0,
       plan_restauracion: '',
       ha_restauracion: 0, parcelas_monitoreo: 0,
       plantulas_sembradas: 0, especies_sembradas: 0,
@@ -254,12 +265,14 @@ export default function NuevaSiembraPage() {
 
   // ── Avanzar paso con validación parcial ──
   const STEP_FIELDS: (keyof FamiliaForm)[][] = [
-    ['municipio', 'nombre_propietario', 'adultos', 'ninos', 'ha_potreros', 'ha_bosque', 'ha_otras', 'empleos_locales'],
-    ['ha_restauracion', 'parcelas_monitoreo', 'plantulas_sembradas', 'especies_sembradas'],
-    [], // archivos no se validan con RHF
-    [], // fotos predio
-    ['monitoreos'],
-    ['camaras'],
+    ['nombre_propietario', 'municipio'],                                     // 0: Identificación
+    ['adultos', 'ninos', 'cant_mujeres', 'cant_hombres', 'empleos_locales'], // 1: Hogar & Economía
+    ['ha_bosque', 'ha_potreros', 'ha_otras'],                                // 2: Predio & Inventario
+    ['ha_restauracion', 'parcelas_monitoreo', 'plantulas_sembradas', 'especies_sembradas'], // 3: Restauración
+    [],  // 4: Archivos SHP
+    [],  // 5: Fotos Predio
+    ['monitoreos'],                                                           // 6: Monitoreos
+    ['camaras'],                                                              // 7: Cámaras
   ]
 
   const nextStep = async () => {
@@ -385,12 +398,49 @@ export default function NuevaSiembraPage() {
       <main className="max-w-3xl mx-auto px-4 py-8 sm:px-6">
         <form onSubmit={handleSubmit(onSubmit)}>
 
-          {/* ── PASO 1: Info Base ── */}
+          {/* ── PASO 1: Identificación ── */}
           {step === 0 && (
             <div className="space-y-6">
-              <SectionTitle icon={<Users size={18} />} title="Información Base y Socioeconomía" />
+              <SectionTitle icon={<Users size={18} />} title="Identificación del propietario/a" />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="sm:col-span-2">
+                  <Label required>Nombre completo del propietario/a</Label>
+                  <input {...register('nombre_propietario')} className={errors.nombre_propietario ? inputErrCls : inputCls} placeholder="Nombre completo" />
+                  <FieldError message={errors.nombre_propietario?.message} />
+                </div>
+                <div>
+                  <Label>Tipo de documento</Label>
+                  <select {...register('tipo_documento')} className={inputCls}>
+                    <option value="">— Seleccionar —</option>
+                    <option value="CC">CC – Cédula de Ciudadanía</option>
+                    <option value="NUIP">NUIP – Número Único de Identificación Personal</option>
+                    <option value="CE">CE – Cédula de Extranjería</option>
+                    <option value="TI">TI – Tarjeta de Identidad</option>
+                    <option value="PP">PP – Pasaporte</option>
+                    <option value="NIT">NIT</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Número de identificación</Label>
+                  <input {...register('numero_documento')} className={inputCls} placeholder="Ej: 17634957, Florencia" />
+                </div>
+                <div>
+                  <Label>Teléfono de contacto</Label>
+                  <input {...register('telefono')} className={inputCls} placeholder="Ej: 3101234567" />
+                </div>
+              </div>
+
+              <Divider label="Ubicación del predio" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <Label>Núcleo</Label>
+                  <input {...register('nucleo')} className={inputCls} placeholder="Ej: Piedemonte" />
+                </div>
+                <div>
+                  <Label>Departamento</Label>
+                  <input {...register('departamento')} className={inputCls} placeholder="Ej: Caquetá" />
+                </div>
                 <div>
                   <Label required>Municipio</Label>
                   <input {...register('municipio')} className={errors.municipio ? inputErrCls : inputCls} placeholder="Ej: Florencia" />
@@ -404,15 +454,17 @@ export default function NuevaSiembraPage() {
                   <Label>Nombre de la finca</Label>
                   <input {...register('nombre_finca')} className={inputCls} placeholder="Ej: La Esperanza" />
                 </div>
-                <div>
-                  <Label required>Nombre del propietario/a</Label>
-                  <input {...register('nombre_propietario')} className={errors.nombre_propietario ? inputErrCls : inputCls} placeholder="Nombre completo" />
-                  <FieldError message={errors.nombre_propietario?.message} />
-                </div>
               </div>
+            </div>
+          )}
 
-              <Divider label="Composición familiar" />
-              <div className="grid grid-cols-2 gap-5">
+          {/* ── PASO 2: Hogar & Economía ── */}
+          {step === 1 && (
+            <div className="space-y-6">
+              <SectionTitle icon={<Users size={18} />} title="Composición del hogar y actividad económica" />
+
+              <Divider label="Personas en el predio" />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
                   <Label># Adultos</Label>
                   <input type="number" min={0} {...register('adultos')} className={inputCls} />
@@ -423,19 +475,59 @@ export default function NuevaSiembraPage() {
                   <input type="number" min={0} {...register('ninos')} className={inputCls} />
                   <FieldError message={errors.ninos?.message} />
                 </div>
+                <div>
+                  <Label># Mujeres</Label>
+                  <input type="number" min={0} {...register('cant_mujeres')} className={inputCls} />
+                  <FieldError message={errors.cant_mujeres?.message} />
+                </div>
+                <div>
+                  <Label># Hombres</Label>
+                  <input type="number" min={0} {...register('cant_hombres')} className={inputCls} />
+                  <FieldError message={errors.cant_hombres?.message} />
+                </div>
               </div>
+
+              <Divider label="Economía" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="sm:col-span-2">
+                  <Label>Actividad económica principal</Label>
+                  <input {...register('actividad_economica')} className={inputCls}
+                    placeholder="Ej: Ganadería de leche, Forestal, Cultivos amazónicos…" />
+                </div>
+                <div>
+                  <Label>Empleos locales generados</Label>
+                  <input type="number" min={0} {...register('empleos_locales')} className={inputCls} />
+                  <FieldError message={errors.empleos_locales?.message} />
+                </div>
+                <div className="flex items-center gap-3 pt-6">
+                  <Controller control={control} name="tiene_espacio_vegetal" render={({ field }) => (
+                    <div onClick={() => field.onChange(!field.value)}
+                      className={`w-11 h-6 rounded-full flex items-center px-0.5 cursor-pointer transition-colors shrink-0 ${field.value ? 'bg-primary' : 'bg-stone-300'}`}>
+                      <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${field.value ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </div>
+                  )} />
+                  <span className="text-sm font-semibold text-stone-700">¿Tiene espacio para tratar material vegetal?</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── PASO 3: Predio & Inventario ── */}
+          {step === 2 && (
+            <div className="space-y-6">
+              <SectionTitle icon={<Trees size={18} />} title="Uso del suelo e inventario forestal" />
 
               <Divider label="Uso del suelo (hectáreas)" />
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label>Potreros</Label>
-                  <input type="number" min={0} step="0.01" {...register('ha_potreros')} className={inputCls} />
-                  <FieldError message={errors.ha_potreros?.message} />
-                </div>
-                <div>
                   <Label>Bosque</Label>
                   <input type="number" min={0} step="0.01" {...register('ha_bosque')} className={inputCls} />
                   <FieldError message={errors.ha_bosque?.message} />
+                </div>
+                <div>
+                  <Label>Potreros</Label>
+                  <input type="number" min={0} step="0.01" {...register('ha_potreros')} className={inputCls} />
+                  <FieldError message={errors.ha_potreros?.message} />
                 </div>
                 <div>
                   <Label>Otras</Label>
@@ -443,29 +535,48 @@ export default function NuevaSiembraPage() {
                   <FieldError message={errors.ha_otras?.message} />
                 </div>
               </div>
+              <div className="flex items-center gap-3">
+                <Controller control={control} name="bajo_conservacion" render={({ field }) => (
+                  <div onClick={() => field.onChange(!field.value)}
+                    className={`w-11 h-6 rounded-full flex items-center px-0.5 cursor-pointer transition-colors shrink-0 ${field.value ? 'bg-primary' : 'bg-stone-300'}`}>
+                    <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${field.value ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </div>
+                )} />
+                <span className="text-sm font-semibold text-stone-700">Bajo figura de conservación</span>
+              </div>
 
-              <Divider label="Otros datos" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <Divider label="Inventario forestal" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <Label>Empleos locales generados</Label>
-                  <input type="number" min={0} {...register('empleos_locales')} className={inputCls} />
-                  <FieldError message={errors.empleos_locales?.message} />
+                  <Label>N.º de individuos (árboles)</Label>
+                  <input type="number" min={0} {...register('num_individuos')} className={inputCls} placeholder="Ej: 82" />
                 </div>
-                <div className="flex items-center gap-3 pt-6">
-                  <Controller control={control} name="bajo_conservacion" render={({ field }) => (
-                    <div onClick={() => field.onChange(!field.value)}
-                      className={`w-11 h-6 rounded-full flex items-center px-0.5 cursor-pointer transition-colors shrink-0 ${field.value ? 'bg-primary' : 'bg-stone-300'}`}>
-                      <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${field.value ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </div>
-                  )} />
-                  <span className="text-sm font-semibold text-stone-700">Bajo figura de conservación</span>
+                <div>
+                  <Label>N.º de especies (inventario)</Label>
+                  <input type="number" min={0} {...register('num_especies_inventario')} className={inputCls} placeholder="Ej: 33" />
+                </div>
+                <div>
+                  <Label>Área de bosque recorrida (ha)</Label>
+                  <input type="number" min={0} step="0.1" {...register('area_bosque_recorrida')} className={inputCls} placeholder="Ej: 21" />
+                </div>
+              </div>
+
+              <Divider label="Accesibilidad" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Distancia a Florencia / Morelia (km)</Label>
+                  <input type="number" min={0} step="0.1" {...register('distancia_florencia_km')} className={inputCls} placeholder="Ej: 40" />
+                </div>
+                <div>
+                  <Label>Tiempo de viaje (minutos)</Label>
+                  <input type="number" min={0} {...register('tiempo_florencia_min')} className={inputCls} placeholder="Ej: 90" />
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── PASO 2: Restauración ── */}
-          {step === 1 && (
+          {/* ── PASO 4: Restauración ── */}
+          {step === 3 && (
             <div className="space-y-6">
               <SectionTitle icon={<Trees size={18} />} title="Datos de Restauración" />
 
@@ -498,8 +609,8 @@ export default function NuevaSiembraPage() {
             </div>
           )}
 
-          {/* ── PASO 3: Shapefiles ── */}
-          {step === 2 && (
+          {/* ── PASO 5: Shapefiles ── */}
+          {step === 4 && (
             <div className="space-y-6">
               <SectionTitle icon={<MapPin size={18} />} title="Archivos Espaciales (Shapefiles)" />
               <p className="text-sm text-stone-500">
@@ -512,8 +623,8 @@ export default function NuevaSiembraPage() {
             </div>
           )}
 
-          {/* ── PASO 4: Fotos del Predio ── */}
-          {step === 3 && (
+          {/* ── PASO 6: Fotos del Predio ── */}
+          {step === 5 && (
             <div className="space-y-6">
               <SectionTitle icon={<ImageIcon size={18} />} title="Fotos del Predio" />
               <p className="text-sm text-stone-500">
@@ -535,8 +646,8 @@ export default function NuevaSiembraPage() {
             </div>
           )}
 
-          {/* ── PASO 5: Monitoreos ── */}
-          {step === 4 && (
+          {/* ── PASO 7: Monitoreos ── */}
+          {step === 6 && (
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <SectionTitle icon={<Activity size={18} />} title="Monitoreos" />
@@ -585,8 +696,8 @@ export default function NuevaSiembraPage() {
             </div>
           )}
 
-          {/* ── PASO 6: Cámaras Trampa ── */}
-          {step === 5 && (
+          {/* ── PASO 8: Cámaras Trampa ── */}
+          {step === 7 && (
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <SectionTitle icon={<Camera size={18} />} title="Biodiversidad / Cámaras Trampa" />

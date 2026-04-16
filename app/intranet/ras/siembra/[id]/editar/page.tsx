@@ -15,13 +15,27 @@ interface FamiliaEdit {
   vereda: string
   nombre_finca: string
   nombre_propietario: string
+  tipo_documento: string
+  numero_documento: string
+  telefono: string
+  nucleo: string
+  departamento: string
   adultos: string
   ninos: string
+  cant_mujeres: string
+  cant_hombres: string
+  actividad_economica: string
+  tiene_espacio_vegetal: boolean
   empleos_locales: string
   bajo_conservacion: boolean
   ha_potreros: string
   ha_bosque: string
   ha_otras: string
+  num_individuos: string
+  num_especies_inventario: string
+  area_bosque_recorrida: string
+  distancia_florencia_km: string
+  tiempo_florencia_min: string
   ha_restauracion: string
   parcelas_monitoreo: string
   plantulas_sembradas: string
@@ -36,8 +50,14 @@ interface FamiliaEdit {
 
 const EMPTY: FamiliaEdit = {
   municipio: '', vereda: '', nombre_finca: '', nombre_propietario: '',
-  adultos: '', ninos: '', empleos_locales: '', bajo_conservacion: false,
+  tipo_documento: '', numero_documento: '', telefono: '',
+  nucleo: '', departamento: '',
+  adultos: '', ninos: '', cant_mujeres: '', cant_hombres: '',
+  actividad_economica: '', tiene_espacio_vegetal: false, empleos_locales: '',
+  bajo_conservacion: false,
   ha_potreros: '', ha_bosque: '', ha_otras: '',
+  num_individuos: '', num_especies_inventario: '', area_bosque_recorrida: '',
+  distancia_florencia_km: '', tiempo_florencia_min: '',
   ha_restauracion: '', parcelas_monitoreo: '', plantulas_sembradas: '', especies_sembradas: '',
   plan_restauracion: '',
   shapefile_finca_url: null, shapefile_restauracion_url: null,
@@ -103,13 +123,27 @@ export default function SiembraEditPage() {
         vereda: fam.vereda ?? '',
         nombre_finca: fam.nombre_finca ?? '',
         nombre_propietario: fam.nombre_propietario ?? '',
+        tipo_documento: fam.tipo_documento ?? '',
+        numero_documento: fam.numero_documento ?? '',
+        telefono: fam.telefono ?? '',
+        nucleo: fam.nucleo ?? '',
+        departamento: fam.departamento ?? '',
         adultos: fam.adultos != null ? String(fam.adultos) : '',
         ninos: fam.ninos != null ? String(fam.ninos) : '',
+        cant_mujeres: fam.cant_mujeres != null ? String(fam.cant_mujeres) : '',
+        cant_hombres: fam.cant_hombres != null ? String(fam.cant_hombres) : '',
+        actividad_economica: fam.actividad_economica ?? '',
+        tiene_espacio_vegetal: fam.tiene_espacio_vegetal ?? false,
         empleos_locales: fam.empleos_locales != null ? String(fam.empleos_locales) : '',
         bajo_conservacion: fam.bajo_conservacion ?? false,
         ha_potreros: fam.ha_potreros != null ? String(fam.ha_potreros) : '',
         ha_bosque: fam.ha_bosque != null ? String(fam.ha_bosque) : '',
         ha_otras: fam.ha_otras != null ? String(fam.ha_otras) : '',
+        num_individuos: fam.num_individuos != null ? String(fam.num_individuos) : '',
+        num_especies_inventario: fam.num_especies_inventario != null ? String(fam.num_especies_inventario) : '',
+        area_bosque_recorrida: fam.area_bosque_recorrida != null ? String(fam.area_bosque_recorrida) : '',
+        distancia_florencia_km: fam.distancia_florencia_km != null ? String(fam.distancia_florencia_km) : '',
+        tiempo_florencia_min: fam.tiempo_florencia_min != null ? String(fam.tiempo_florencia_min) : '',
         ha_restauracion: fam.ha_restauracion != null ? String(fam.ha_restauracion) : '',
         parcelas_monitoreo: fam.parcelas_monitoreo != null ? String(fam.parcelas_monitoreo) : '',
         plantulas_sembradas: fam.plantulas_sembradas != null ? String(fam.plantulas_sembradas) : '',
@@ -140,13 +174,27 @@ export default function SiembraEditPage() {
         vereda: form.vereda.trim() || null,
         nombre_finca: form.nombre_finca.trim() || null,
         nombre_propietario: form.nombre_propietario.trim(),
+        tipo_documento: form.tipo_documento.trim() || null,
+        numero_documento: form.numero_documento.trim() || null,
+        telefono: form.telefono.trim() || null,
+        nucleo: form.nucleo.trim() || null,
+        departamento: form.departamento.trim() || null,
         adultos: form.adultos !== '' ? Number(form.adultos) : null,
         ninos: form.ninos !== '' ? Number(form.ninos) : null,
+        cant_mujeres: form.cant_mujeres !== '' ? Number(form.cant_mujeres) : null,
+        cant_hombres: form.cant_hombres !== '' ? Number(form.cant_hombres) : null,
+        actividad_economica: form.actividad_economica.trim() || null,
+        tiene_espacio_vegetal: form.tiene_espacio_vegetal,
         empleos_locales: form.empleos_locales !== '' ? Number(form.empleos_locales) : null,
         bajo_conservacion: form.bajo_conservacion,
         ha_potreros: form.ha_potreros !== '' ? Number(form.ha_potreros) : null,
         ha_bosque: form.ha_bosque !== '' ? Number(form.ha_bosque) : null,
         ha_otras: form.ha_otras !== '' ? Number(form.ha_otras) : null,
+        num_individuos: form.num_individuos !== '' ? Number(form.num_individuos) : null,
+        num_especies_inventario: form.num_especies_inventario !== '' ? Number(form.num_especies_inventario) : null,
+        area_bosque_recorrida: form.area_bosque_recorrida !== '' ? Number(form.area_bosque_recorrida) : null,
+        distancia_florencia_km: form.distancia_florencia_km !== '' ? Number(form.distancia_florencia_km) : null,
+        tiempo_florencia_min: form.tiempo_florencia_min !== '' ? Number(form.tiempo_florencia_min) : null,
         ha_restauracion: form.ha_restauracion !== '' ? Number(form.ha_restauracion) : null,
         parcelas_monitoreo: form.parcelas_monitoreo !== '' ? Number(form.parcelas_monitoreo) : null,
         plantulas_sembradas: form.plantulas_sembradas !== '' ? Number(form.plantulas_sembradas) : null,
@@ -220,9 +268,46 @@ export default function SiembraEditPage() {
       <form id="edit-form" onSubmit={handleSubmit}>
         <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 space-y-6">
 
-          {/* ── Información Base ── */}
-          <SectionCard icon={<Users size={16} />} title="Información Base">
+          {/* ── Identificación ── */}
+          <SectionCard icon={<Users size={16} />} title="Identificación y Contacto">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className={labelCls}>Nombre del Propietario *</label>
+                <input value={form.nombre_propietario} onChange={(e) => set('nombre_propietario', e.target.value)}
+                  className={inputCls} required />
+              </div>
+              <div>
+                <label className={labelCls}>Tipo de Documento</label>
+                <select value={form.tipo_documento} onChange={(e) => set('tipo_documento', e.target.value)} className={inputCls}>
+                  <option value="">— Seleccionar —</option>
+                  <option value="CC">CC – Cédula de Ciudadanía</option>
+                  <option value="NUIP">NUIP</option>
+                  <option value="CE">CE – Cédula de Extranjería</option>
+                  <option value="TI">TI – Tarjeta de Identidad</option>
+                  <option value="PP">PP – Pasaporte</option>
+                  <option value="NIT">NIT</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>N.º de Identificación</label>
+                <input value={form.numero_documento} onChange={(e) => set('numero_documento', e.target.value)}
+                  className={inputCls} placeholder="Ej. 17634957, Florencia" />
+              </div>
+              <div>
+                <label className={labelCls}>Teléfono de Contacto</label>
+                <input value={form.telefono} onChange={(e) => set('telefono', e.target.value)}
+                  className={inputCls} placeholder="Ej. 3101234567" />
+              </div>
+              <div>
+                <label className={labelCls}>Núcleo</label>
+                <input value={form.nucleo} onChange={(e) => set('nucleo', e.target.value)}
+                  className={inputCls} placeholder="Ej. Piedemonte" />
+              </div>
+              <div>
+                <label className={labelCls}>Departamento</label>
+                <input value={form.departamento} onChange={(e) => set('departamento', e.target.value)}
+                  className={inputCls} placeholder="Ej. Caquetá" />
+              </div>
               <div>
                 <label className={labelCls}>Municipio *</label>
                 <input value={form.municipio} onChange={(e) => set('municipio', e.target.value)}
@@ -238,34 +323,52 @@ export default function SiembraEditPage() {
                 <input value={form.nombre_finca} onChange={(e) => set('nombre_finca', e.target.value)}
                   className={inputCls} placeholder="Ej. El Paraíso" />
               </div>
+            </div>
+          </SectionCard>
+
+          {/* ── Hogar & Economía ── */}
+          <SectionCard icon={<Users size={16} />} title="Composición del Hogar y Economía">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
               <div>
-                <label className={labelCls}>Nombre del Propietario *</label>
-                <input value={form.nombre_propietario} onChange={(e) => set('nombre_propietario', e.target.value)}
-                  className={inputCls} required />
-              </div>
-              <div>
-                <label className={labelCls}>Adultos en el hogar</label>
+                <label className={labelCls}>Adultos</label>
                 <input type="number" min="0" value={form.adultos} onChange={(e) => set('adultos', e.target.value)}
                   className={inputCls} placeholder="0" />
               </div>
               <div>
-                <label className={labelCls}>Niños en el hogar</label>
+                <label className={labelCls}>Niños</label>
                 <input type="number" min="0" value={form.ninos} onChange={(e) => set('ninos', e.target.value)}
                   className={inputCls} placeholder="0" />
               </div>
               <div>
-                <label className={labelCls}>Empleos locales generados</label>
+                <label className={labelCls}>Mujeres</label>
+                <input type="number" min="0" value={form.cant_mujeres} onChange={(e) => set('cant_mujeres', e.target.value)}
+                  className={inputCls} placeholder="0" />
+              </div>
+              <div>
+                <label className={labelCls}>Hombres</label>
+                <input type="number" min="0" value={form.cant_hombres} onChange={(e) => set('cant_hombres', e.target.value)}
+                  className={inputCls} placeholder="0" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className={labelCls}>Actividad Económica Principal</label>
+                <input value={form.actividad_economica} onChange={(e) => set('actividad_economica', e.target.value)}
+                  className={inputCls} placeholder="Ej. Ganadería de leche, Forestal…" />
+              </div>
+              <div>
+                <label className={labelCls}>Empleos Locales Generados</label>
                 <input type="number" min="0" value={form.empleos_locales} onChange={(e) => set('empleos_locales', e.target.value)}
                   className={inputCls} placeholder="0" />
               </div>
               <div className="flex flex-col justify-end">
-                <label className={labelCls}>Bajo figura de conservación</label>
+                <label className={labelCls}>Espacio para Material Vegetal</label>
                 <div className="flex gap-3 mt-1">
                   {[true, false].map((val) => (
                     <button key={String(val)} type="button"
-                      onClick={() => set('bajo_conservacion', val)}
+                      onClick={() => set('tiene_espacio_vegetal', val)}
                       className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
-                        form.bajo_conservacion === val
+                        form.tiene_espacio_vegetal === val
                           ? 'border-primary bg-primary/10 text-primary'
                           : 'border-stone-200 text-stone-400 hover:border-stone-300'
                       }`}>
@@ -277,26 +380,76 @@ export default function SiembraEditPage() {
             </div>
           </SectionCard>
 
-          {/* ── Hectáreas ── */}
-          <SectionCard icon={<MapPin size={16} />} title="Uso del Suelo (hectáreas)">
-            <div className="grid grid-cols-3 gap-4">
+          {/* ── Predio & Inventario ── */}
+          <SectionCard icon={<MapPin size={16} />} title="Predio e Inventario Forestal">
+            <div className="grid grid-cols-3 gap-4 mb-4">
               <div>
-                <label className={labelCls}>Potreros</label>
-                <input type="number" min="0" step="0.01" value={form.ha_potreros}
-                  onChange={(e) => set('ha_potreros', e.target.value)}
-                  className={inputCls} placeholder="0.00" />
-              </div>
-              <div>
-                <label className={labelCls}>Bosque</label>
+                <label className={labelCls}>Bosque (ha)</label>
                 <input type="number" min="0" step="0.01" value={form.ha_bosque}
                   onChange={(e) => set('ha_bosque', e.target.value)}
                   className={inputCls} placeholder="0.00" />
               </div>
               <div>
-                <label className={labelCls}>Otras</label>
+                <label className={labelCls}>Potreros (ha)</label>
+                <input type="number" min="0" step="0.01" value={form.ha_potreros}
+                  onChange={(e) => set('ha_potreros', e.target.value)}
+                  className={inputCls} placeholder="0.00" />
+              </div>
+              <div>
+                <label className={labelCls}>Otras (ha)</label>
                 <input type="number" min="0" step="0.01" value={form.ha_otras}
                   onChange={(e) => set('ha_otras', e.target.value)}
                   className={inputCls} placeholder="0.00" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className={labelCls}>N.º Individuos (árboles)</label>
+                <input type="number" min="0" value={form.num_individuos}
+                  onChange={(e) => set('num_individuos', e.target.value)}
+                  className={inputCls} placeholder="0" />
+              </div>
+              <div>
+                <label className={labelCls}>N.º Especies (inventario)</label>
+                <input type="number" min="0" value={form.num_especies_inventario}
+                  onChange={(e) => set('num_especies_inventario', e.target.value)}
+                  className={inputCls} placeholder="0" />
+              </div>
+              <div>
+                <label className={labelCls}>Bosque Recorrido (ha)</label>
+                <input type="number" min="0" step="0.1" value={form.area_bosque_recorrida}
+                  onChange={(e) => set('area_bosque_recorrida', e.target.value)}
+                  className={inputCls} placeholder="0.0" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className={labelCls}>Distancia a Florencia/Morelia (km)</label>
+                <input type="number" min="0" step="0.1" value={form.distancia_florencia_km}
+                  onChange={(e) => set('distancia_florencia_km', e.target.value)}
+                  className={inputCls} placeholder="0" />
+              </div>
+              <div>
+                <label className={labelCls}>Tiempo de Viaje (min)</label>
+                <input type="number" min="0" value={form.tiempo_florencia_min}
+                  onChange={(e) => set('tiempo_florencia_min', e.target.value)}
+                  className={inputCls} placeholder="0" />
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <label className={labelCls}>Bajo Figura de Conservación</label>
+              <div className="flex gap-3 mt-1">
+                {[true, false].map((val) => (
+                  <button key={String(val)} type="button"
+                    onClick={() => set('bajo_conservacion', val)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                      form.bajo_conservacion === val
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-stone-200 text-stone-400 hover:border-stone-300'
+                    }`}>
+                    {val ? 'Sí' : 'No'}
+                  </button>
+                ))}
               </div>
             </div>
           </SectionCard>

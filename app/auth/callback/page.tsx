@@ -40,15 +40,17 @@ function AuthCallbackContent() {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-          // Registrar / actualizar perfil en user_profiles
-          await fetch('/api/users/sync-profile', {
+          // Registrar / actualizar perfil en user_profiles (respaldo del trigger DB)
+          // Azure AD puede enviar el nombre en 'full_name' o en 'name'
+          const meta = session.user.user_metadata ?? {}
+          const full_name = (meta.full_name as string | null)
+            || (meta.name as string | null)
+            || null
+          fetch('/api/users/sync-profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email:     session.user.email,
-              full_name: session.user.user_metadata?.full_name ?? null,
-            }),
-          })
+            body: JSON.stringify({ email: session.user.email, full_name }),
+          }).catch(() => {/* el trigger de DB es el mecanismo principal */})
           setTimeout(() => {
             router.push('/')
           }, 500)

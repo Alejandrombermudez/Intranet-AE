@@ -36,7 +36,7 @@ interface InspectionStat {
   photo_lateral_der: string | null
   photo_tablero: string | null
   kilometraje: number | null
-  vehicle_reservations: { vehicle_id: string; vehicle_name: string } | null
+  vehicle_reservations: { vehicle_id: string; vehicle_name: string; user_name: string | null; user_email: string | null } | null
 }
 
 interface VehicleDoc {
@@ -645,7 +645,7 @@ function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="bg-stone-50 border-b border-stone-200">
-                    {['Vehículo', 'Tipo', 'Fecha', 'Km', 'Categorías con problemas'].map((h) => (
+                    {['Vehículo', 'Usuario', 'Tipo', 'Fecha', 'Km', 'Categorías con problemas'].map((h) => (
                       <th key={h} className="px-4 py-3 text-[11px] font-bold text-stone-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -659,6 +659,22 @@ function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat
                       <tr key={insp.id} className="border-b border-stone-100 hover:bg-stone-50 transition-colors">
                         <td className="px-4 py-3 font-semibold text-stone-800 whitespace-nowrap">
                           {insp.vehicle_reservations?.vehicle_name ?? <span className="text-stone-300">—</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          {insp.vehicle_reservations?.user_name ? (
+                            <div>
+                              <p className="text-xs font-semibold text-stone-800 whitespace-nowrap">
+                                {insp.vehicle_reservations.user_name}
+                              </p>
+                              {insp.vehicle_reservations.user_email && (
+                                <p className="text-[11px] text-stone-400 truncate max-w-[180px]">
+                                  {insp.vehicle_reservations.user_email}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-stone-300 text-xs">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${

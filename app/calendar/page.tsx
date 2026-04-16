@@ -102,7 +102,8 @@ export default function CalendarPage() {
     setMyReservations([])
   }
 
-  const displayName = user?.user_metadata?.full_name || user?.email || 'Usuario'
+  // Azure AD puede enviar el nombre en 'full_name' o en 'name'
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'Usuario'
   const firstName = displayName.split(' ')[0]
   const initials = displayName
     .split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()

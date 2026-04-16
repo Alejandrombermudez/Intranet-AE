@@ -46,24 +46,46 @@ CREATE SCHEMA IF NOT EXISTS siembra;
 
 CREATE TABLE siembra.familias (
   id                         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  -- Identificación
+  nombre_propietario         TEXT NOT NULL,
+  tipo_documento             TEXT,                       -- CC / NUIP / CE / TI / PP / NIT
+  numero_documento           TEXT,
+  telefono                   TEXT,
+  nucleo                     TEXT,                       -- Ej: "Piedemonte"
+  departamento               TEXT,
   municipio                  TEXT NOT NULL,
   vereda                     TEXT,
   nombre_finca               TEXT,
-  nombre_propietario         TEXT NOT NULL,
+  -- Hogar & Economía
   adultos                    INT DEFAULT 0,
   ninos                      INT DEFAULT 0,
+  cant_mujeres               INT DEFAULT 0,
+  cant_hombres               INT DEFAULT 0,
+  actividad_economica        TEXT,
+  tiene_espacio_vegetal      BOOLEAN DEFAULT FALSE,
+  empleos_locales            INT DEFAULT 0,
+  -- Predio & Inventario forestal
   ha_potreros                NUMERIC,
   ha_bosque                  NUMERIC,
   ha_otras                   NUMERIC,
   bajo_conservacion          BOOLEAN DEFAULT FALSE,
-  empleos_locales            INT DEFAULT 0,
+  num_individuos             INT DEFAULT 0,              -- árboles en inventario
+  num_especies_inventario    INT DEFAULT 0,              -- especies identificadas (≠ especies sembradas)
+  area_bosque_recorrida      NUMERIC,                    -- ha encuestadas en inventario
+  distancia_florencia_km     NUMERIC,
+  tiempo_florencia_min       INT,
+  -- Restauración
   plan_restauracion          TEXT,
   ha_restauracion            NUMERIC,
   parcelas_monitoreo         INT,
   plantulas_sembradas        INT,
   especies_sembradas         INT,
+  -- Archivos
   shapefile_finca_url        TEXT,
   shapefile_restauracion_url TEXT,
+  shapefile_arboles_url      TEXT,
+  documento_acuerdo_url      TEXT,
+  -- Auditoría
   created_by                 TEXT,
   created_at                 TIMESTAMPTZ DEFAULT NOW(),
   updated_at                 TIMESTAMPTZ DEFAULT NOW()
