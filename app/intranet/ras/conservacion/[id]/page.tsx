@@ -301,11 +301,11 @@ export default function ConservacionDetailPage() {
           <section className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
             <SectionTitle icon={<ImageIcon size={16} />} title="Fotos del Predio" />
             <div className="space-y-5">
-              {['predio', 'familia', 'copa_arboles', 'tronco', 'otras'].map((cat) => {
+              {['predio', 'familia', 'arboles', 'otras'].map((cat) => {
                 const fotos = fotosPredioCat[cat]
                 if (!fotos?.length) return null
                 const catLabels: Record<string, string> = {
-                  predio: 'Predio', familia: 'Familia', copa_arboles: 'Copa de árboles', tronco: 'Tronco', otras: 'Otras',
+                  predio: 'Predio', familia: 'Familia', arboles: 'Árboles', otras: 'Otras',
                 }
                 return (
                   <div key={cat}>

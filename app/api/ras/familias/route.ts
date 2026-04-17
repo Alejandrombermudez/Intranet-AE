@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Subir fotos de predio por categoría ──
-    const FOTO_CATS = ['predio', 'familia', 'copa_arboles', 'tronco', 'otras']
+    const FOTO_CATS = ['predio', 'familia', 'arboles', 'otras']
     for (const cat of FOTO_CATS) {
       let i = 0
       while (true) {

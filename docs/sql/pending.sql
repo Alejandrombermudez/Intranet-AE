@@ -14,6 +14,28 @@
 -- ════════════════════════════════════════════════════════════
 
 
+-- ── [PENDIENTE] Tablas fotos_predio (siembra + ras) ──────────────────────────
+-- Categorías: predio (min 3), familia (min 2), arboles (min 3), otras (min 2)
+
+CREATE TABLE IF NOT EXISTS siembra.fotos_predio (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  familia_id UUID REFERENCES siembra.familias(id) ON DELETE CASCADE,
+  categoria  TEXT NOT NULL CHECK (categoria IN ('predio','familia','arboles','otras')),
+  url        TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+GRANT SELECT, INSERT, DELETE ON siembra.fotos_predio TO authenticated, service_role;
+
+CREATE TABLE IF NOT EXISTS ras.fotos_predio (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  familia_id UUID REFERENCES ras.familias(id) ON DELETE CASCADE,
+  categoria  TEXT NOT NULL CHECK (categoria IN ('predio','familia','arboles','otras')),
+  url        TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+GRANT SELECT, INSERT, DELETE ON ras.fotos_predio TO authenticated, service_role;
+
+
 -- ── [PENDIENTE] Ampliación ras.familias — datos socioeconómicos del CSV ───────
 -- Mismos campos que se agregaron a siembra.familias, adaptados a conservación.
 

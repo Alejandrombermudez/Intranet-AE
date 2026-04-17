@@ -15,11 +15,10 @@ import {
 // ─── Fotos por categoría ──────────────────────────────────────────────────────
 
 const FOTO_CATS = [
-  { key: 'predio',       label: 'Predio',          min: 10 },
-  { key: 'familia',      label: 'Familia',          min: 1  },
-  { key: 'copa_arboles', label: 'Copa de árboles',  min: 3  },
-  { key: 'tronco',       label: 'Tronco',           min: 2  },
-  { key: 'otras',        label: 'Otras',            min: 4  },
+  { key: 'predio',   label: 'Predio',   min: 3 },
+  { key: 'familia',  label: 'Familia',  min: 2 },
+  { key: 'arboles',  label: 'Árboles',  min: 3 },
+  { key: 'otras',    label: 'Otras',    min: 2 },
 ]
 
 // ─── Constantes ───────────────────────────────────────────────────────────────

@@ -182,6 +182,28 @@ export async function PATCH(
       }
     }
 
+    // Fotos del predio por categoría (PATCH — sólo agrega, no elimina existentes)
+    const FOTO_CATS_PATCH = ['predio', 'familia', 'arboles', 'otras']
+    for (const cat of FOTO_CATS_PATCH) {
+      let i = 0
+      while (true) {
+        const foto = formData.get(`foto_${cat}_${i}`) as File | null
+        if (!foto || !(foto instanceof File) || foto.size === 0) break
+        const path = `${familiaId}/${cat}/${Date.now()}_${i}_${foto.name}`
+        const { error: upErr } = await supabase.storage
+          .from('siembra-fotos-predio')
+          .upload(path, foto, { contentType: foto.type })
+        if (!upErr) {
+          const { data: { publicUrl } } = supabase.storage.from('siembra-fotos-predio').getPublicUrl(path)
+          await supabase.schema('siembra').from('fotos_predio')
+            .insert({ familia_id: familiaId, categoria: cat, url: publicUrl })
+        } else {
+          console.error(`Error subiendo foto siembra ${cat}_${i}:`, upErr.message)
+        }
+        i++
+      }
+    }
+
     const { error: updateError } = await supabase
       .schema('siembra').from('familias').update(updateObj).eq('id', familiaId)
 

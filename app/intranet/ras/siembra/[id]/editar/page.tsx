@@ -5,10 +5,17 @@ import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
   ArrowLeft, Loader2, Save, Users, MapPin, Trees,
-  FileArchive, ExternalLink, UploadCloud, Leaf, FileText,
+  FileArchive, ExternalLink, UploadCloud, Leaf, FileText, Image as ImageIcon,
 } from 'lucide-react'
 
 const PRIMARY = '#0d7377'
+
+const FOTO_CATS = [
+  { key: 'predio',  label: 'Predio',  min: 3 },
+  { key: 'familia', label: 'Familia', min: 2 },
+  { key: 'arboles', label: 'Árboles', min: 3 },
+  { key: 'otras',   label: 'Otras',   min: 2 },
+]
 
 interface FamiliaEdit {
   municipio: string
@@ -93,6 +100,11 @@ export default function SiembraEditPage() {
   const [shpRestauracion, setShpRestauracion] = useState<File | null>(null)
   const [shpArboles, setShpArboles] = useState<File | null>(null)
   const [docAcuerdo, setDocAcuerdo] = useState<File | null>(null)
+  // Fotos del predio — existentes (cargadas de DB) y nuevas (por subir)
+  const [fotosExistentes, setFotosExistentes] = useState<Record<string, { id: string; url: string }[]>>({})
+  const [fotosNuevas, setFotosNuevas] = useState<Record<string, File[]>>({
+    predio: [], familia: [], arboles: [], otras: [],
+  })
   const shpFincaRef = useRef<HTMLInputElement>(null)
   const shpRestauracionRef = useRef<HTMLInputElement>(null)
   const shpArbolesRef = useRef<HTMLInputElement>(null)
@@ -156,6 +168,17 @@ export default function SiembraEditPage() {
         nombre_propietario_display: fam.nombre_propietario ?? '',
       })
       setLoading(false)
+
+      // Cargar fotos existentes
+      const { data: fpData } = await supabase
+        .schema('siembra').from('fotos_predio')
+        .select('id, url, categoria').eq('familia_id', id)
+      const fpByCat: Record<string, { id: string; url: string }[]> = {}
+      for (const fp of (fpData ?? [])) {
+        if (!fpByCat[fp.categoria]) fpByCat[fp.categoria] = []
+        fpByCat[fp.categoria].push({ id: fp.id, url: fp.url })
+      }
+      setFotosExistentes(fpByCat)
     }
     init()
   }, [id, router])
@@ -205,6 +228,12 @@ export default function SiembraEditPage() {
       if (shpRestauracion) fd.append('shp_restauracion', shpRestauracion)
       if (shpArboles) fd.append('shp_arboles', shpArboles)
       if (docAcuerdo) fd.append('doc_acuerdo', docAcuerdo)
+      // Adjuntar fotos nuevas por categoría
+      for (const { key } of FOTO_CATS) {
+        fotosNuevas[key]?.forEach((file, i) => {
+          fd.append(`foto_${key}_${i}`, file)
+        })
+      }
 
       const res = await fetch(`/api/ras/familias/${id}`, {
         method: 'PATCH',
@@ -574,6 +603,76 @@ export default function SiembraEditPage() {
                 <input ref={docAcuerdoRef} type="file" accept=".pdf" className="hidden"
                   onChange={(e) => setDocAcuerdo(e.target.files?.[0] ?? null)} />
               </div>
+            </div>
+          </SectionCard>
+
+          {/* ── Fotos del Predio ── */}
+          <SectionCard icon={<ImageIcon size={16} />} title="Fotos del Predio">
+            <p className="text-xs text-stone-400 mb-4">
+              10 fotos en total — agrega fotos nuevas en cada categoría. Las existentes no se eliminan al guardar.
+            </p>
+            <div className="space-y-5">
+              {FOTO_CATS.map(({ key, label, min }) => {
+                const existentes = fotosExistentes[key] ?? []
+                const nuevas = fotosNuevas[key] ?? []
+                const total = existentes.length + nuevas.length
+                const cumple = total >= min
+                return (
+                  <div key={key}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">{label}</span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        cumple ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                      }`}>
+                        {total} / {min}
+                      </span>
+                    </div>
+                    {/* Fotos existentes */}
+                    {existentes.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {existentes.map((f) => (
+                          <a key={f.id} href={f.url} target="_blank" rel="noopener noreferrer">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={f.url} alt={label} className="w-16 h-16 object-cover rounded-lg border border-stone-200 hover:opacity-80 transition-opacity" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {/* Preview fotos nuevas */}
+                    {nuevas.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {nuevas.map((file, idx) => (
+                          <div key={idx} className="relative">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={URL.createObjectURL(file)} alt={`nueva_${idx}`}
+                              className="w-16 h-16 object-cover rounded-lg border-2 border-primary/40" />
+                            <button type="button"
+                              onClick={() => setFotosNuevas(prev => ({
+                                ...prev,
+                                [key]: prev[key].filter((_, i) => i !== idx),
+                              }))}
+                              className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center hover:bg-red-600">
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Botón agregar */}
+                    <label className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-dashed border-stone-300 text-stone-500 text-sm font-semibold hover:border-primary hover:text-primary transition-all cursor-pointer justify-center">
+                      <UploadCloud size={15} />
+                      Agregar fotos
+                      <input type="file" accept="image/*" multiple className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files ?? [])
+                          if (files.length === 0) return
+                          setFotosNuevas(prev => ({ ...prev, [key]: [...(prev[key] ?? []), ...files] }))
+                          e.target.value = ''
+                        }} />
+                    </label>
+                  </div>
+                )
+              })}
             </div>
           </SectionCard>
 
