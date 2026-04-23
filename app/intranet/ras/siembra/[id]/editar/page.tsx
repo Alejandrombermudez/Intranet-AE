@@ -105,6 +105,7 @@ export default function SiembraEditPage() {
   const [fotosNuevas, setFotosNuevas] = useState<Record<string, File[]>>({
     predio: [], familia: [], arboles: [], otras: [],
   })
+  const [deletingFotoId, setDeletingFotoId] = useState<string | null>(null)
   const shpFincaRef = useRef<HTMLInputElement>(null)
   const shpRestauracionRef = useRef<HTMLInputElement>(null)
   const shpArbolesRef = useRef<HTMLInputElement>(null)
@@ -112,6 +113,28 @@ export default function SiembraEditPage() {
 
   const set = (key: keyof FamiliaEdit, val: string | boolean | null) =>
     setForm((prev) => ({ ...prev, [key]: val }))
+
+  const handleDeleteFoto = async (cat: string, fotoId: string) => {
+    if (!confirm('¿Eliminar esta foto? Esta acción no se puede deshacer.')) return
+    setDeletingFotoId(fotoId)
+    try {
+      const res = await fetch(`/api/ras/familias/fotos/${fotoId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${accessToken ?? ''}` },
+      })
+      if (res.ok) {
+        setFotosExistentes(prev => ({
+          ...prev,
+          [cat]: (prev[cat] ?? []).filter(f => f.id !== fotoId),
+        }))
+      } else {
+        const err = await res.json().catch(() => ({}))
+        alert(err.error ?? 'No se pudo eliminar la foto.')
+      }
+    } finally {
+      setDeletingFotoId(null)
+    }
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -609,7 +632,7 @@ export default function SiembraEditPage() {
           {/* ── Fotos del Predio ── */}
           <SectionCard icon={<ImageIcon size={16} />} title="Fotos del Predio">
             <p className="text-xs text-stone-400 mb-4">
-              10 fotos en total — agrega fotos nuevas en cada categoría. Las existentes no se eliminan al guardar.
+              10 fotos en total — pasa el cursor sobre una foto existente para eliminarla (borra el archivo permanentemente).
             </p>
             <div className="space-y-5">
               {FOTO_CATS.map(({ key, label, min }) => {
@@ -631,10 +654,21 @@ export default function SiembraEditPage() {
                     {existentes.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-2">
                         {existentes.map((f) => (
-                          <a key={f.id} href={f.url} target="_blank" rel="noopener noreferrer">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={f.url} alt={label} className="w-16 h-16 object-cover rounded-lg border border-stone-200 hover:opacity-80 transition-opacity" />
-                          </a>
+                          <div key={f.id} className="relative group">
+                            <a href={f.url} target="_blank" rel="noopener noreferrer">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={f.url} alt={label}
+                                className={`w-16 h-16 object-cover rounded-lg border border-stone-200 hover:opacity-80 transition-opacity ${deletingFotoId === f.id ? 'opacity-40' : ''}`} />
+                            </a>
+                            <button
+                              type="button"
+                              disabled={deletingFotoId !== null}
+                              onClick={() => handleDeleteFoto(key, f.id)}
+                              title="Eliminar foto"
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center hover:bg-red-600 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-0">
+                              ×
+                            </button>
+                          </div>
                         ))}
                       </div>
                     )}
