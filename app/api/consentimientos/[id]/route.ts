@@ -27,7 +27,7 @@ export async function DELETE(
     }
 
     const { data: profile } = await supabase
-      .from('user_profiles')
+      .schema('people').from('user_profiles')
       .select('is_admin, department')
       .eq('email', user.email)
       .single()

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 /**
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   // Verificar que el solicitante sea admin o pertenezca al departamento Financiero
   const { data: profile, error: profileError } = await supabase
-    .from('user_profiles')
+    .schema('people').from('user_profiles')
     .select('is_admin, department')
     .eq('email', email)
     .single()
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   // Inspecciones completadas con JOIN a vehicle_reservations (via FK reservation_id)
   const { data, error } = await supabase
-    .from('vehicle_inspections')
+    .schema('fleet').from('vehicle_inspections')
     .select(`
       id,
       inspection_type,

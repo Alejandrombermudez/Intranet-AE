@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { VEHICLES, VEHICLE_MAP, fotonIsBlocked } from '@/lib/vehicles'
@@ -32,7 +32,7 @@ export default function VehicleCalendar() {
   const loadReservations = async () => {
     try {
       const { data, error } = await supabase
-        .from('vehicle_reservations')
+        .schema('fleet').from('vehicle_reservations')
         .select('*')
         .order('start_date', { ascending: true })
 

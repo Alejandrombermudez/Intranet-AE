@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -59,7 +59,7 @@ export default function SiembraListPage() {
       if (!user) { router.push('/'); return }
 
       const { data: profile } = await supabase
-        .from('user_profiles')
+        .schema('people').from('user_profiles')
         .select('is_admin, department')
         .eq('email', user.email)
         .single()

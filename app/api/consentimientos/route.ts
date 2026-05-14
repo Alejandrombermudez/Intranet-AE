@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { z } from 'zod'
 
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { data: profile } = await supabase
-      .from('user_profiles')
+      .schema('people').from('user_profiles')
       .select('is_admin, department')
       .eq('email', user.email)
       .single()

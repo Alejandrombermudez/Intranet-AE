@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 /**
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     // ── Autorización: solo admin o departamento RAS ──
     const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
+      .schema('people').from('user_profiles')
       .select('is_admin, department')
       .eq('email', requesterEmail)
       .single()

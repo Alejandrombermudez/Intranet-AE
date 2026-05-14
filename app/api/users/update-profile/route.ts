@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 /**
@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest) {
 
   // Verificar que el solicitante sea administrador
   const { data: requester, error: reqError } = await supabase
-    .from('user_profiles')
+    .schema('people').from('user_profiles')
     .select('is_admin')
     .eq('email', requesterEmail)
     .single()
@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const { error } = await supabase
-    .from('user_profiles')
+    .schema('people').from('user_profiles')
     .update(updates)
     .eq('email', targetEmail)
 

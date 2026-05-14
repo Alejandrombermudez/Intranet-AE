@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -41,7 +41,7 @@ export default function CalendarPage() {
       setUser(u)
       if (u?.email) {
         const { data: profile } = await supabase
-          .from('user_profiles')
+          .schema('people').from('user_profiles')
           .select('is_admin, can_access_intranet')
           .eq('email', u.email)
           .single()
@@ -60,7 +60,7 @@ export default function CalendarPage() {
   const loadMyReservations = async (email: string) => {
     try {
       const { data, error } = await supabase
-        .from('vehicle_reservations')
+        .schema('fleet').from('vehicle_reservations')
         .select('*')
         .eq('user_email', email)
         .order('start_date', { ascending: true })
@@ -75,7 +75,7 @@ export default function CalendarPage() {
     setDeleteError('')
     try {
       const { error } = await supabase
-        .from('vehicle_reservations')
+        .schema('fleet').from('vehicle_reservations')
         .delete()
         .eq('id', reservationId)
       if (error) throw error
@@ -129,7 +129,7 @@ export default function CalendarPage() {
     // Cargar perfil del nuevo usuario
     if (data.user?.email) {
       const { data: profile } = await supabase
-        .from('user_profiles')
+        .schema('people').from('user_profiles')
         .select('is_admin, can_access_intranet')
         .eq('email', data.user.email)
         .single()

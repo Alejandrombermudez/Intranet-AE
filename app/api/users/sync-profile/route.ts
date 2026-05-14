@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 /**
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   // Supabase JS v2 upsert: solo sobreescribe las columnas presentes en el objeto.
   // is_admin, role y department NO se incluyen → no se tocan en el UPDATE.
   const { error } = await supabase
-    .from('user_profiles')
+    .schema('people').from('user_profiles')
     .upsert(
       { email, full_name, last_login: new Date().toISOString() },
       { onConflict: 'email', ignoreDuplicates: false }
