@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -1214,7 +1214,7 @@ export default function IntranetPage() {
       if (!user) { router.push('/'); return }
 
       const { data: profile } = await supabase
-        .from('user_profiles').select('is_admin, department').eq('email', user.email).single()
+        .schema('people').from('user_profiles').select('is_admin, department').eq('email', user.email).single()
 
       if (!profile?.is_admin && !profile?.department) { router.push('/'); return }
 
@@ -1241,7 +1241,7 @@ export default function IntranetPage() {
   }, [activeTab, currentUser, myProfile])
 
   const loadUsers = async () => {
-    const { data } = await supabase.from('user_profiles').select('*').order('last_login', { ascending: false })
+    const { data } = await supabase.schema('people').from('user_profiles').select('*').order('last_login', { ascending: false })
     setUsers(data ?? [])
   }
 

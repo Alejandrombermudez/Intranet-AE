@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 const BUCKET = 'inspection-photos'
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     // Upsert: INSERT si no existe, UPDATE si ya existe (por reservation_id + inspection_type)
     const { data, error } = await supabase
-      .from('vehicle_inspections')
+      .schema('fleet').from('vehicle_inspections')
       .upsert(payload, { onConflict: 'reservation_id,inspection_type' })
       .select('id')
       .single()
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       try {
         // 1. Obtener el vehicle_id de la reserva
         const { data: reservation } = await supabase
-          .from('vehicle_reservations')
+          .schema('fleet').from('vehicle_reservations')
           .select('vehicle_id')
           .eq('id', body.reservation_id)
           .single()
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
           // 2. Todos los formularios completos de este vehículo y tipo,
           //    ordenados del más antiguo al más reciente
           const { data: completed } = await supabase
-            .from('vehicle_inspections')
+            .schema('fleet').from('vehicle_inspections')
             .select(`
               id,
               submitted_at,
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
 
               // Eliminar registro de BD
               await supabase
-                .from('vehicle_inspections')
+                .schema('fleet').from('vehicle_inspections')
                 .delete()
                 .eq('id', old.id)
             }

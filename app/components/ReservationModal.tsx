@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { VEHICLES, fotonIsBlocked } from '@/lib/vehicles'
@@ -74,7 +74,7 @@ export default function ReservationModal({
 
     try {
       const { data, error } = await supabase
-        .from('vehicle_reservations')
+        .schema('fleet').from('vehicle_reservations')
         .select('start_date, end_date')
         .eq('vehicle_id', selectedVehicle)
         .or(`and(start_date.lte.${endDate},end_date.gt.${startDate})`)
@@ -129,7 +129,7 @@ export default function ReservationModal({
       const vehicle = VEHICLES.find(v => v.id === selectedVehicle)
 
       const { error: insertError } = await supabase
-        .from('vehicle_reservations')
+        .schema('fleet').from('vehicle_reservations')
         .insert([
           {
             vehicle_id: selectedVehicle,

@@ -117,7 +117,7 @@ export default function ConservacionDetailPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       const { data: profile } = await supabase
-        .from('user_profiles').select('is_admin, department').eq('email', user.email).single()
+        .schema('people').from('user_profiles').select('is_admin, department').eq('email', user.email).single()
       if (!profile?.is_admin && profile?.department !== 'RAS') { router.push('/'); return }
 
       // Familia

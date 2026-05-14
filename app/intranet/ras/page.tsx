@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -168,7 +168,7 @@ export default function RASHubPage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push('/'); return }
       const { data: profile } = await supabase
-        .from('user_profiles').select('is_admin, department').eq('email', user.email).single()
+        .schema('people').from('user_profiles').select('is_admin, department').eq('email', user.email).single()
       if (!profile?.is_admin && profile?.department !== 'RAS') { router.push('/'); return }
       setAuthReady(true)
     })

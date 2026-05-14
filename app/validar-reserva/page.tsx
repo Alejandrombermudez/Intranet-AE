@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -830,7 +830,7 @@ export default function ValidarReservaPage() {
     try {
       // 1. Reservas del usuario que inician o terminan hoy
       const { data: reservations, error: rErr } = await supabase
-        .from('vehicle_reservations')
+        .schema('fleet').from('vehicle_reservations')
         .select('*')
         .eq('user_email', email)
         .or(`start_date.eq.${today},end_date.eq.${today}`)
@@ -844,7 +844,7 @@ export default function ValidarReservaPage() {
       // 2. Inspecciones ya completadas para esas reservas
       const resIds = reservations.map((r: Reservation) => r.id)
       const { data: inspections } = await supabase
-        .from('vehicle_inspections')
+        .schema('fleet').from('vehicle_inspections')
         .select('reservation_id, inspection_type, submitted_at')
         .in('reservation_id', resIds)
 

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -22,7 +22,7 @@ export default function LandingPage() {
       setUser(u)
       if (u?.email) {
         const { data: profile } = await supabase
-          .from('user_profiles')
+          .schema('people').from('user_profiles')
           .select('is_admin, department')
           .eq('email', u.email)
           .single()

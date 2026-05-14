@@ -19,7 +19,7 @@ async function authCheck(req: NextRequest) {
   if (authError || !user?.email) return { error: 'No autenticado', status: 401, supabase, user: null }
 
   const { data: profile, error: profileError } = await supabase
-    .from('user_profiles').select('is_admin, department').eq('email', user.email).single()
+    .schema('people').from('user_profiles').select('is_admin, department').eq('email', user.email).single()
   if (profileError || (!profile?.is_admin && profile?.department !== 'RAS')) {
     return { error: 'No autorizado', status: 403, supabase, user: null }
   }
