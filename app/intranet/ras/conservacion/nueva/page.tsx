@@ -520,7 +520,7 @@ export default function NuevaConservacionPage() {
                 <RadioSiNo
                   name="tiene_espacio_vegetal"
                   label="¿Tiene espacio para tratar material vegetal?"
-                  value={field.value}
+                  value={field.value ?? false}
                   onChange={field.onChange}
                 />
               )} />
@@ -555,11 +555,11 @@ export default function NuevaConservacionPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <Controller control={control} name="bajo_conservacion" render={({ field }) => (
                   <RadioSiNo name="bajo_conservacion" label="Predio bajo figura de conservación"
-                    value={field.value} onChange={field.onChange} />
+                    value={field.value ?? false} onChange={field.onChange} />
                 )} />
                 <Controller control={control} name="acuerdo_conservacion" render={({ field }) => (
                   <RadioSiNo name="acuerdo_conservacion" label="Acuerdo de conservación"
-                    value={field.value} onChange={field.onChange} />
+                    value={field.value ?? false} onChange={field.onChange} />
                 )} />
               </div>
 
