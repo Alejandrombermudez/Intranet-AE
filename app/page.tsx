@@ -146,7 +146,7 @@ export default function LandingPage() {
       <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/30" style={{ zIndex: 1 }} />
 
       {/* ── ZONA IZQUIERDA: Identidad ── */}
-      <div className="relative flex-1 flex flex-col justify-center items-center lg:items-end px-8 py-14 sm:px-12 lg:px-12 xl:px-20 lg:py-12 min-h-[55vh] lg:min-h-screen" style={{ zIndex: 2 }}>
+      <div className="relative flex-1 flex flex-col justify-center items-center px-8 py-14 sm:px-12 lg:px-12 xl:px-20 lg:py-12 min-h-[55vh] lg:min-h-screen" style={{ zIndex: 2 }}>
 
         {/* Línea de acento */}
         <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-70" />
@@ -201,7 +201,7 @@ export default function LandingPage() {
 
       {/* ── ZONA DERECHA: Card Glassmorphism ── */}
       <div
-        className="relative flex-1 flex items-center justify-center lg:justify-start px-8 py-10 sm:px-12 lg:px-12 xl:px-20 lg:py-12 min-h-[50vh] lg:min-h-screen"
+        className="relative flex-1 flex items-center justify-center px-8 py-10 sm:px-12 lg:px-12 xl:px-20 lg:py-12 min-h-[50vh] lg:min-h-screen"
         style={{ zIndex: 2 }}
       >
         <div className="w-full max-w-md xl:max-w-lg backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-8 xl:p-10">
