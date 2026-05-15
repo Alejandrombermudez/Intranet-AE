@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
   ArrowLeft, Leaf, Trees, ShieldCheck, ChevronRight,
-  Loader2, Pencil, ClipboardCheck, CheckCircle2,
+  Loader2, Pencil, ClipboardCheck, CheckCircle2, CalendarDays,
 } from 'lucide-react'
+import { MisSesiones } from '@/app/components/MisSesiones'
 
 const PRIMARY = '#0d7377'
 
@@ -157,7 +158,8 @@ function CompletitudList<T extends { id: string; nombre_propietario: string; mun
 export default function RASHubPage() {
   const router = useRouter()
   const [authReady, setAuthReady] = useState(false)
-  const [activeTab, setActiveTab] = useState<'modulos' | 'completitud'>('modulos')
+  const [activeTab, setActiveTab] = useState<'modulos' | 'completitud' | 'mis-sesiones'>('modulos')
+  const [token, setToken] = useState<string | null>(null)
   const [subTab, setSubTab] = useState<'restauracion' | 'conservacion'>('restauracion')
   const [loadingComp, setLoadingComp] = useState(false)
   const [siembraFamilias, setSiembraFamilias] = useState<SiembraFamilia[]>([])
@@ -165,13 +167,18 @@ export default function RASHubPage() {
   const [compLoaded, setCompLoaded] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
+      // Obtener access_token para las API routes del módulo
+      const { data: { session } } = await supabase.auth.getSession()
+      setToken(session?.access_token ?? null)
       const { data: profile } = await supabase
-        .schema('people').from('user_profiles').select('is_admin, department').eq('email', user.email).single()
+        .schema('people').from('user_profiles').select('is_admin, department').eq('email', user.email!).single()
       if (!profile?.is_admin && profile?.department !== 'RAS') { router.push('/'); return }
       setAuthReady(true)
-    })
+    }
+    init()
   }, [router])
 
   const handleCompletitudTab = async () => {
@@ -248,6 +255,15 @@ export default function RASHubPage() {
                 : 'border-transparent text-stone-400 hover:text-stone-700'
             }`}>
             <ClipboardCheck size={14} /> Completitud
+          </button>
+          <button
+            onClick={() => setActiveTab('mis-sesiones')}
+            className={`flex items-center gap-1.5 pb-3 px-2 text-sm font-bold border-b-2 transition-colors ${
+              activeTab === 'mis-sesiones'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-stone-400 hover:text-stone-700'
+            }`}>
+            <CalendarDays size={14} /> Mis Sesiones
           </button>
         </div>
 
@@ -327,6 +343,11 @@ export default function RASHubPage() {
               />
             )}
           </div>
+        )}
+
+        {/* ── Panel Mis Sesiones ── */}
+        {activeTab === 'mis-sesiones' && token && (
+          <MisSesiones token={token} />
         )}
 
       </main>

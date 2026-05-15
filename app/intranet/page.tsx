@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import type { UserProfile } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
+import { MisSesiones } from '@/app/components/MisSesiones'
 import { VEHICLES } from '@/lib/vehicles'
 import {
   ArrowLeft, ShieldCheck, Shield, Pencil, Check, X,
@@ -1203,7 +1204,8 @@ export default function IntranetPage() {
   const [loading, setLoading] = useState(true)
   const [editingEmail, setEditingEmail] = useState<string | null>(null)
   const [toast, setToast] = useState<{ type: 'ok' | 'error'; msg: string } | null>(null)
-  const [activeTab, setActiveTab] = useState<'usuarios' | 'modulo'>('usuarios')
+  const [activeTab, setActiveTab] = useState<'usuarios' | 'modulo' | 'mis-sesiones'>('usuarios')
+  const [token, setToken] = useState<string | null>(null)
   const [inspections, setInspections] = useState<InspectionStat[]>([])
   const [statsLoading, setStatsLoading] = useState(false)
   const [statsLoaded, setStatsLoaded] = useState(false)
@@ -1212,6 +1214,9 @@ export default function IntranetPage() {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
+      // Obtener el access_token para las API routes (no modifica el flujo de auth)
+      const { data: { session } } = await supabase.auth.getSession()
+      setToken(session?.access_token ?? null)
 
       const { data: profile } = await supabase
         .schema('people').from('user_profiles').select('is_admin, department').eq('email', user.email).single()
@@ -1223,6 +1228,7 @@ export default function IntranetPage() {
       // No-admin: redirigir si tiene módulo propio con página dedicada
       if (!profile.is_admin) {
         if (profile.department === 'RAS') { router.push('/intranet/ras'); return }
+        if (profile.department === 'Ejecutivo') { router.push('/intranet/ejecutivo'); return }
         setActiveTab('modulo')
       }
 
@@ -1330,7 +1336,7 @@ export default function IntranetPage() {
             <div className="shrink-0 w-[80px]" />
           </div>
 
-          {/* Tabs — solo para admins */}
+          {/* Tabs — admins */}
           {myProfile?.is_admin && (
             <div className="flex items-center gap-1 mt-4 border-t border-stone-100 pt-4">
               {[
@@ -1346,6 +1352,28 @@ export default function IntranetPage() {
                   {tab.icon} {tab.label}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Tabs — usuarios no-admin con módulo */}
+          {!myProfile?.is_admin && myProfile?.department && (
+            <div className="flex items-center gap-1 mt-4 border-t border-stone-100 pt-4">
+              <button onClick={() => setActiveTab('modulo')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                  activeTab === 'modulo'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+                }`}>
+                <BarChart2 size={14} /> {myProfile.department}
+              </button>
+              <button onClick={() => setActiveTab('mis-sesiones')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                  activeTab === 'mis-sesiones'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+                }`}>
+                <CalendarDays size={14} /> Mis Sesiones
+              </button>
             </div>
           )}
         </div>
@@ -1408,6 +1436,11 @@ export default function IntranetPage() {
         {activeTab === 'modulo' && myProfile?.department &&
           myProfile.department !== 'Financiero' && myProfile.department !== 'RAS' && (
           <ModuloEnConstruccion department={myProfile.department} />
+        )}
+
+        {/* ── Tab Mis Sesiones (usuarios no-admin) ── */}
+        {activeTab === 'mis-sesiones' && token && (
+          <MisSesiones token={token} />
         )}
 
       </main>

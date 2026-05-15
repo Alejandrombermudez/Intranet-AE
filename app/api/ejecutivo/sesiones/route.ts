@@ -1,0 +1,61 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+
+async function authCheck(req: NextRequest) {
+  const supabase = createServerSupabaseClient()
+  const token = req.headers.get('authorization')?.replace('Bearer ', '') ?? null
+  if (!token) return { error: 'No autenticado', status: 401 as const, supabase, profile: null }
+  const { data: { user } } = await supabase.auth.getUser(token)
+  if (!user?.email) return { error: 'No autenticado', status: 401 as const, supabase, profile: null }
+  const { data: profile } = await supabase.schema('people').from('user_profiles')
+    .select('id, is_admin, department').eq('email', user.email).single()
+  return { error: null, status: 200 as const, supabase, profile }
+}
+
+const isEjecutivo = (p: { is_admin: boolean; department: string | null } | null) =>
+  !!p?.is_admin || p?.department === 'Ejecutivo'
+
+export async function GET(req: NextRequest) {
+  const { error, status, supabase, profile } = await authCheck(req)
+  if (error) return NextResponse.json({ error }, { status })
+  if (!isEjecutivo(profile)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+
+  const personaId = req.nextUrl.searchParams.get('persona_id')
+  if (!personaId) return NextResponse.json({ error: 'persona_id requerido' }, { status: 400 })
+
+  const { data, error: dbErr } = await supabase
+    .schema('ejecutivo').from('sesiones')
+    .select(`
+      *,
+      indicaciones(*),
+      persona:persona_id(id, full_name, email, department),
+      ejecutivo:ejecutivo_id(id, full_name, email)
+    `)
+    .eq('persona_id', personaId)
+    .order('fecha', { ascending: false })
+    .order('orden', { referencedTable: 'indicaciones', ascending: true })
+
+  if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
+  return NextResponse.json(data ?? [])
+}
+
+export async function POST(req: NextRequest) {
+  const { error, status, supabase, profile } = await authCheck(req)
+  if (error) return NextResponse.json({ error }, { status })
+  if (!isEjecutivo(profile)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+
+  const body = await req.json()
+  const { persona_id, titulo, fecha, notas } = body
+  if (!persona_id || !titulo || !fecha) {
+    return NextResponse.json({ error: 'persona_id, titulo y fecha son requeridos' }, { status: 400 })
+  }
+
+  const { data, error: dbErr } = await supabase
+    .schema('ejecutivo').from('sesiones')
+    .insert({ ejecutivo_id: profile!.id, persona_id, titulo, fecha, notas: notas ?? null })
+    .select()
+    .single()
+
+  if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
+  return NextResponse.json(data, { status: 201 })
+}

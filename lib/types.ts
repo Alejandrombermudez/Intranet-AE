@@ -74,3 +74,44 @@ export function formatPurpose(project: string, activity: string): string {
   }
   return trimmedActivity
 }
+
+// ─── Ejecutivo — Sesiones e Indicaciones ─────────────────────────────────────
+
+export type EstadoIndicacion = 'pendiente' | 'hecho' | 'cancelado'
+
+export interface Indicacion {
+  id: string
+  sesion_id: string
+  descripcion: string
+  plataforma: string | null
+  estado: EstadoIndicacion
+  orden: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Sesion {
+  id: string
+  ejecutivo_id: string
+  persona_id: string
+  titulo: string
+  fecha: string
+  notas: string | null
+  created_at: string
+  updated_at: string
+  indicaciones?: Indicacion[]
+}
+
+export interface SesionConPersona extends Sesion {
+  persona: { id: string; full_name: string | null; email: string; department: string | null }
+  ejecutivo: { id: string; full_name: string | null; email: string }
+  indicaciones: Indicacion[]
+}
+
+export interface IntranetUser {
+  id: string
+  email: string
+  full_name: string | null
+  department: string | null
+  role: string | null
+}
