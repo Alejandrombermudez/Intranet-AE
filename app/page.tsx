@@ -428,7 +428,7 @@ export default function LandingPage() {
                         ? 'bg-amber-500/20 text-amber-300'
                         : 'bg-emerald-500/20 text-emerald-300'
                     }`}>
-                      {entry.tipo === 'launch' ? '🚀 Lanzamiento' : 'Mejoras'}
+                      {entry.tipo === 'launch' ? 'Lanzamiento' : 'Mejoras'}
                     </span>
                   </div>
                   <ul className="space-y-1.5">
