@@ -145,19 +145,17 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Copyright + versión */}
-        <div className="relative z-10 mt-auto pt-16 lg:pt-12 flex items-center justify-between">
-          <p className="text-stone-700 text-xs">
+        {/* Copyright */}
+        <div className="relative z-10 mt-auto pt-16 lg:pt-12">
+          <p className="text-stone-500 text-sm">
             © {new Date().getFullYear()} Amazonia Emprende
           </p>
-          <span className="text-[10px] font-mono text-stone-600 bg-stone-800/40 px-2 py-0.5 rounded-full border border-stone-700/40">
-            v1.1
-          </span>
         </div>
       </div>
 
       {/* ── LADO DERECHO: Login / Bienvenida + Servicios ── */}
-      <div className="flex-1 bg-stone-50 flex flex-col justify-center px-8 py-14 lg:px-16">
+      <div className="flex-1 bg-stone-50 flex flex-col px-8 py-10 lg:px-16">
+        <div className="flex-1 flex items-center justify-center">
         <div className="max-w-sm mx-auto w-full">
 
           {/* ─── Card dinámica: Login ó Bienvenida ─── */}
@@ -355,6 +353,14 @@ export default function LandingPage() {
           )}
 
           </div>
+        </div>
+        </div>
+
+        {/* Versión — esquina inferior derecha */}
+        <div className="flex justify-end pb-2 pr-2">
+          <span className="text-xs font-mono text-stone-400 bg-stone-100 px-2.5 py-1 rounded-full border border-stone-200">
+            v1.1
+          </span>
         </div>
       </div>
 
