@@ -39,10 +39,17 @@ export async function GET(req: NextRequest) {
     `)
     .eq('persona_id', personaId)
     .order('fecha', { ascending: false })
-    .order('orden', { referencedTable: 'indicaciones', ascending: true })
 
-  if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
-  return NextResponse.json(data ?? [])
+  if (dbErr) {
+    console.error('[GET /api/ejecutivo/sesiones]', dbErr)
+    return NextResponse.json({ error: dbErr.message }, { status: 500 })
+  }
+
+  const sorted = (data ?? []).map(s => ({
+    ...s,
+    indicaciones: [...(s.indicaciones ?? [])].sort((a, b) => a.orden - b.orden),
+  }))
+  return NextResponse.json(sorted)
 }
 
 export async function POST(req: NextRequest) {

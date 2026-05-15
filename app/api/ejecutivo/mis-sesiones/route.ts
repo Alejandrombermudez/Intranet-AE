@@ -22,8 +22,15 @@ export async function GET(req: NextRequest) {
     `)
     .eq('persona_id', profile.id)
     .order('fecha', { ascending: false })
-    .order('orden', { referencedTable: 'indicaciones', ascending: true })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data ?? [])
+  if (error) {
+    console.error('[GET /api/ejecutivo/mis-sesiones]', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  const sorted = (data ?? []).map(s => ({
+    ...s,
+    indicaciones: [...(s.indicaciones ?? [])].sort((a, b) => a.orden - b.orden),
+  }))
+  return NextResponse.json(sorted)
 }
