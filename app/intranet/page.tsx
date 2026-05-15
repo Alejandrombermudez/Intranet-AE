@@ -1218,8 +1218,14 @@ export default function IntranetPage() {
       const { data: { session } } = await supabase.auth.getSession()
       setToken(session?.access_token ?? null)
 
-      const { data: profile } = await supabase
-        .schema('people').from('user_profiles').select('is_admin, department').eq('email', user.email).single()
+      // Usar /api/users/me (service_role) — evita restricciones de schemas expuestos en PostgREST
+      let profile: { is_admin: boolean; department: string | null } | null = null
+      if (session?.access_token) {
+        const res = await fetch('/api/users/me', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+        if (res.ok) profile = await res.json()
+      }
 
       if (!profile?.is_admin && !profile?.department) { router.push('/'); return }
 
@@ -1247,8 +1253,15 @@ export default function IntranetPage() {
   }, [activeTab, currentUser, myProfile])
 
   const loadUsers = async () => {
-    const { data } = await supabase.schema('people').from('user_profiles').select('*').order('last_login', { ascending: false })
-    setUsers(data ?? [])
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return
+    const res = await fetch('/api/users', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setUsers(data ?? [])
+    }
   }
 
   const loadStats = async () => {

@@ -267,22 +267,28 @@ export default function EjecutivoPage() {
   // ── Auth ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    const init = async () => {
+      // getUser() valida el JWT con el servidor (más seguro que solo getSession)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/'); return }
+      const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/'); return }
       setToken(session.access_token)
 
-      const { data: profile } = await supabase
-        .schema('people').from('user_profiles')
-        .select('id, is_admin, department')
-        .eq('email', session.user.email!)
-        .single()
+      // Usar /api/users/me (service_role) — evita restricciones de schemas expuestos en PostgREST
+      const res = await fetch('/api/users/me', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (!res.ok) { router.push('/intranet'); return }
+      const profile = await res.json()
 
       if (!profile?.is_admin && profile?.department !== 'Ejecutivo') {
         router.push('/intranet'); return
       }
       setMyProfileId(profile.id)
       setReady(true)
-    })
+    }
+    init()
   }, [router])
 
   // ── Carga de usuarios ───────────────────────────────────────────────────────

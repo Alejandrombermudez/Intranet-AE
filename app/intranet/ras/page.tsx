@@ -173,8 +173,14 @@ export default function RASHubPage() {
       // Obtener access_token para las API routes del módulo
       const { data: { session } } = await supabase.auth.getSession()
       setToken(session?.access_token ?? null)
-      const { data: profile } = await supabase
-        .schema('people').from('user_profiles').select('is_admin, department').eq('email', user.email!).single()
+      // Usar /api/users/me (service_role) — evita restricciones de schemas expuestos en PostgREST
+      let profile: { is_admin: boolean; department: string | null } | null = null
+      if (session?.access_token) {
+        const res = await fetch('/api/users/me', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+        if (res.ok) profile = await res.json()
+      }
       if (!profile?.is_admin && profile?.department !== 'RAS') { router.push('/'); return }
       setAuthReady(true)
     }

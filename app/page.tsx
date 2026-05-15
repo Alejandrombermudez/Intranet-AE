@@ -18,19 +18,30 @@ export default function LandingPage() {
 
   // Verificar sesión al montar
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user: u } }) => {
+    const init = async () => {
+      const { data: { user: u } } = await supabase.auth.getUser()
       setUser(u)
-      if (u?.email) {
-        const { data: profile } = await supabase
-          .schema('people').from('user_profiles')
-          .select('is_admin, department')
-          .eq('email', u.email)
-          .single()
-        setIsAdmin(profile?.is_admin ?? false)
-        setDepartment(profile?.department ?? null)
+      if (u) {
+        // Usar /api/users/me (service_role) para evitar restricciones de schemas expuestos
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+          try {
+            const res = await fetch('/api/users/me', {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            })
+            if (res.ok) {
+              const profile = await res.json()
+              setIsAdmin(profile?.is_admin ?? false)
+              setDepartment(profile?.department ?? null)
+            }
+          } catch {
+            // perfil no disponible — botón Intranet no aparece
+          }
+        }
       }
       setAuthLoading(false)
-    })
+    }
+    init()
   }, [])
 
   const handleMicrosoftLogin = async () => {
@@ -140,7 +151,7 @@ export default function LandingPage() {
             © {new Date().getFullYear()} Amazonia Emprende
           </p>
           <span className="text-[10px] font-mono text-stone-600 bg-stone-800/40 px-2 py-0.5 rounded-full border border-stone-700/40">
-            v1.0
+            v1.1
           </span>
         </div>
       </div>
