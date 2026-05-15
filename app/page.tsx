@@ -154,22 +154,11 @@ export default function LandingPage() {
         {/* Borde inferior mobile */}
         <div className="absolute bottom-0 left-0 w-full h-px bg-white/10 lg:hidden" />
 
-        <div className="relative max-w-lg">
-
-          {/* Logo */}
-          <div className="mb-10">
-            <Image
-              src="/icon-512.png"
-              alt="Amazonia Emprende"
-              width={64}
-              height={64}
-              className="rounded-2xl shadow-lg"
-            />
-          </div>
+        <div className="relative max-w-md">
 
           {/* Label + Título */}
-          <div className="mb-5">
-            <p className="text-primary uppercase tracking-[0.25em] text-xs font-bold mb-4">
+          <div className="mb-4">
+            <p className="text-primary uppercase tracking-[0.25em] text-xs font-bold mb-3">
               Amazonia Emprende
             </p>
             <h1 className="text-5xl lg:text-6xl font-black text-white leading-[1.05] tracking-tight">
@@ -179,29 +168,26 @@ export default function LandingPage() {
           </div>
 
           {/* Divisor */}
-          <div className="w-10 h-1 bg-primary rounded-full mb-6" />
+          <div className="w-10 h-1 bg-primary rounded-full mb-5" />
 
-          {/* Descripción */}
-          <p className="text-white/60 text-base leading-relaxed mb-8 max-w-sm">
-            Plataforma de gestión interna para el equipo de Amazonia Emprende.
-            Administra la flota vehicular, monitorea procesos de restauración
-            ambiental y coordina el trabajo de campo desde un solo lugar.
+          {/* Descripción ampliada */}
+          <p className="text-white/58 text-[15px] leading-relaxed mb-8 max-w-sm">
+            Sistema de gestión interna para el equipo de Amazonia Emprende.
+            Reserva vehículos corporativos, registra inspecciones de recepción
+            y devolución, monitorea el avance de familias en procesos de
+            restauración y conservación ambiental, y coordina el seguimiento
+            ejecutivo del trabajo de campo — todo con acceso Microsoft 365.
           </p>
 
-          {/* Feature bullets */}
-          <div className="space-y-3">
-            {[
-              'Calendario de reservas en tiempo real',
-              'Validación de reservas de vehículos',
-              'Acceso exclusivo con Microsoft 365',
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-primary/25 flex items-center justify-center shrink-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                </div>
-                <span className="text-white/50 text-sm">{item}</span>
-              </div>
-            ))}
+          {/* Logo centrado */}
+          <div className="flex justify-center">
+            <Image
+              src="/icon-512.png"
+              alt="Amazonia Emprende"
+              width={72}
+              height={72}
+              className="rounded-2xl shadow-lg opacity-80"
+            />
           </div>
         </div>
 
@@ -442,7 +428,7 @@ export default function LandingPage() {
                         ? 'bg-amber-500/20 text-amber-300'
                         : 'bg-emerald-500/20 text-emerald-300'
                     }`}>
-                      {entry.tipo === 'launch' ? '🚀 Lanzamiento' : '⚡ Mejoras'}
+                      {entry.tipo === 'launch' ? '🚀 Lanzamiento' : 'Mejoras'}
                     </span>
                   </div>
                   <ul className="space-y-1.5">
