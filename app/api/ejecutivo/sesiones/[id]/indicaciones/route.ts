@@ -15,6 +15,8 @@ async function authCheck(req: NextRequest) {
 const isEjecutivo = (p: { is_admin: boolean; department: string | null } | null) =>
   !!p?.is_admin || p?.department === 'Ejecutivo'
 
+const BLOQUES_VALIDOS = ['ejecutivo', 'colaborador']
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error, status, supabase, profile } = await authCheck(req)
   if (error) return NextResponse.json({ error }, { status })
@@ -22,8 +24,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id: sesionId } = await params
   const body = await req.json()
-  const { descripcion, plataforma, orden } = body
+  const { descripcion, plataforma, orden, bloque = 'ejecutivo' } = body
+
   if (!descripcion) return NextResponse.json({ error: 'descripcion es requerida' }, { status: 400 })
+  if (!BLOQUES_VALIDOS.includes(bloque)) return NextResponse.json({ error: 'bloque inválido' }, { status: 400 })
 
   let resolvedOrden = orden ?? 0
   if (orden === undefined) {
@@ -31,6 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .schema('ejecutivo').from('indicaciones')
       .select('orden')
       .eq('sesion_id', sesionId)
+      .eq('bloque', bloque)
       .order('orden', { ascending: false })
       .limit(1)
     resolvedOrden = existing && existing.length > 0 ? (existing[0].orden + 1) : 0
@@ -38,7 +43,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data, error: dbErr } = await supabase
     .schema('ejecutivo').from('indicaciones')
-    .insert({ sesion_id: sesionId, descripcion, plataforma: plataforma ?? null, orden: resolvedOrden })
+    .insert({
+      sesion_id: sesionId,
+      bloque,
+      descripcion,
+      plataforma: plataforma ?? null,
+      orden: resolvedOrden,
+    })
     .select()
     .single()
 
@@ -49,13 +60,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error, status, supabase, profile } = await authCheck(req)
   if (error) return NextResponse.json({ error }, { status })
-  if (!isEjecutivo(profile)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  if (!profile) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
   const { id: sesionId } = await params
   const { data, error: dbErr } = await supabase
     .schema('ejecutivo').from('indicaciones')
     .select('*')
     .eq('sesion_id', sesionId)
+    .order('bloque', { ascending: true })
     .order('orden', { ascending: true })
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })

@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase'
 import {
   ArrowLeft, Loader2, Plus, Trash2, CalendarDays,
   Clock, CheckCircle2, XCircle, Search, ChevronRight,
-  X, Users, BookOpen,
+  X, Users, BookOpen, Briefcase, User, Lock, CheckCheck,
+  Ticket,
 } from 'lucide-react'
 import type { IntranetUser, SesionConPersona, Indicacion, EstadoIndicacion } from '@/lib/types'
 
@@ -30,21 +31,17 @@ function formatFecha(fecha: string) {
   })
 }
 
-const NEXT_ESTADO: Record<EstadoIndicacion, EstadoIndicacion> = {
-  pendiente: 'hecho',
-  hecho: 'cancelado',
-  cancelado: 'pendiente',
-}
+// ─── Configuración de estados por bloque ──────────────────────────────────────
 
-const ESTADO_CONFIG: Record<EstadoIndicacion, { label: string; className: string; icon: ReactNode }> = {
+const ESTADO_EJECUTIVO_CONFIG: Record<string, { label: string; className: string; icon: ReactNode }> = {
   pendiente: {
     label: 'Pendiente',
-    className: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
+    className: 'bg-amber-100 text-amber-700 hover:bg-amber-200',
     icon: <Clock size={11} />,
   },
   hecho: {
     label: 'Hecho',
-    className: 'bg-green-100 text-green-700 hover:bg-green-200',
+    className: 'bg-teal-100 text-teal-700 hover:bg-teal-200',
     icon: <CheckCircle2 size={11} />,
   },
   cancelado: {
@@ -54,31 +51,55 @@ const ESTADO_CONFIG: Record<EstadoIndicacion, { label: string; className: string
   },
 }
 
-// ─── Subcomponentes ───────────────────────────────────────────────────────────
+const NEXT_ESTADO_EJECUTIVO: Record<string, EstadoIndicacion> = {
+  pendiente: 'hecho',
+  hecho: 'cancelado',
+  cancelado: 'pendiente',
+}
 
-function IndicacionItem({
-  ind,
-  token,
-  onUpdate,
-  onDelete,
+const ESTADO_COLABORADOR_CONFIG: Record<string, { label: string; className: string; icon: ReactNode }> = {
+  pendiente: {
+    label: 'Pendiente',
+    className: 'bg-stone-100 text-stone-500',
+    icon: <Clock size={11} />,
+  },
+  marcado: {
+    label: 'Realizado ✓',
+    className: 'bg-amber-100 text-amber-700',
+    icon: <CheckCircle2 size={11} />,
+  },
+  confirmado: {
+    label: 'Confirmado',
+    className: 'bg-violet-100 text-violet-700',
+    icon: <CheckCheck size={11} />,
+  },
+  cancelado: {
+    label: 'Cancelado',
+    className: 'bg-stone-100 text-stone-400',
+    icon: <XCircle size={11} />,
+  },
+}
+
+// ─── IndicacionItem Ejecutivo ──────────────────────────────────────────────────
+
+function IndicacionItemEjecutivo({
+  ind, token, onUpdate, onDelete,
 }: {
-  ind: Indicacion
-  token: string
-  onUpdate: (updated: Indicacion) => void
-  onDelete: (id: string) => void
+  ind: Indicacion; token: string
+  onUpdate: (u: Indicacion) => void; onDelete: (id: string) => void
 }) {
   const [saving, setSaving] = useState(false)
 
   const cycleEstado = async () => {
-    const nuevoEstado = NEXT_ESTADO[ind.estado]
+    const next = NEXT_ESTADO_EJECUTIVO[ind.estado] ?? 'pendiente'
     const prev = ind.estado
-    onUpdate({ ...ind, estado: nuevoEstado })
+    onUpdate({ ...ind, estado: next })
     setSaving(true)
     try {
       const res = await fetch(`/api/ejecutivo/indicaciones/${ind.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ estado: nuevoEstado }),
+        body: JSON.stringify({ estado: next }),
       })
       if (!res.ok) onUpdate({ ...ind, estado: prev })
     } catch {
@@ -96,7 +117,7 @@ function IndicacionItem({
     })
   }
 
-  const cfg = ESTADO_CONFIG[ind.estado]
+  const cfg = ESTADO_EJECUTIVO_CONFIG[ind.estado] ?? ESTADO_EJECUTIVO_CONFIG.pendiente
 
   return (
     <div className="flex items-start gap-2 py-1.5 group/ind">
@@ -120,7 +141,7 @@ function IndicacionItem({
       <button
         onClick={handleDelete}
         className="opacity-0 group-hover/ind:opacity-100 text-stone-300 hover:text-red-400 transition-all shrink-0"
-        title="Eliminar indicación"
+        title="Eliminar"
       >
         <X size={14} />
       </button>
@@ -128,25 +149,111 @@ function IndicacionItem({
   )
 }
 
+// ─── IndicacionItem Colaborador ────────────────────────────────────────────────
+
+function IndicacionItemColaborador({
+  ind, token, onUpdate, onDelete,
+}: {
+  ind: Indicacion; token: string
+  onUpdate: (u: Indicacion) => void; onDelete: (id: string) => void
+}) {
+  const [saving, setSaving] = useState(false)
+
+  const confirmar = async () => {
+    if (ind.estado !== 'marcado' || saving) return
+    const prev = ind.estado
+    onUpdate({ ...ind, estado: 'confirmado' })
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/ejecutivo/indicaciones/${ind.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ estado: 'confirmado' }),
+      })
+      if (!res.ok) onUpdate({ ...ind, estado: prev })
+    } catch {
+      onUpdate({ ...ind, estado: prev })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    onDelete(ind.id)
+    await fetch(`/api/ejecutivo/indicaciones/${ind.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  }
+
+  const cfg = ESTADO_COLABORADOR_CONFIG[ind.estado] ?? ESTADO_COLABORADOR_CONFIG.pendiente
+
+  return (
+    <div className="flex items-start gap-2 py-1.5 group/ind">
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0 mt-0.5 ${cfg.className}`}>
+        {cfg.icon}
+        {cfg.label}
+      </span>
+      <span className={`text-sm text-stone-700 flex-1 leading-snug ${ind.estado === 'cancelado' ? 'line-through text-stone-400' : ind.estado === 'confirmado' ? 'text-stone-400' : ''}`}>
+        {ind.descripcion}
+      </span>
+      {ind.plataforma && (
+        <span className="text-[11px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono whitespace-nowrap shrink-0">
+          {ind.plataforma}
+        </span>
+      )}
+      {/* Botón confirmar: solo visible cuando colaborador ya marcó como realizado */}
+      {ind.estado === 'marcado' && (
+        <button
+          onClick={confirmar}
+          disabled={saving}
+          title="Confirmar como completado"
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-violet-600 text-white hover:bg-violet-700 transition-colors shrink-0 whitespace-nowrap"
+        >
+          {saving ? <Loader2 size={10} className="animate-spin" /> : <CheckCheck size={10} />}
+          Confirmar
+        </button>
+      )}
+      <button
+        onClick={handleDelete}
+        className="opacity-0 group-hover/ind:opacity-100 text-stone-300 hover:text-red-400 transition-all shrink-0"
+        title="Eliminar"
+      >
+        <X size={14} />
+      </button>
+    </div>
+  )
+}
+
+// ─── SesionCard ───────────────────────────────────────────────────────────────
+
 function SesionCard({
-  sesion,
-  token,
-  onDelete,
-  onAddIndicacion,
-  onUpdateIndicacion,
-  onDeleteIndicacion,
+  sesion, token, myProfileId,
+  onDelete, onClose,
+  onAddIndicacion, onUpdateIndicacion, onDeleteIndicacion,
 }: {
   sesion: SesionConPersona
   token: string
+  myProfileId: string
   onDelete: (id: string) => void
-  onAddIndicacion: (sesionId: string) => void
+  onClose: (id: string) => void
+  onAddIndicacion: (sesionId: string, bloque: 'ejecutivo' | 'colaborador') => void
   onUpdateIndicacion: (ind: Indicacion) => void
   onDeleteIndicacion: (sesionId: string, indId: string) => void
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmClose, setConfirmClose] = useState(false)
 
-  const hechos = sesion.indicaciones.filter(i => i.estado === 'hecho').length
+  const indsEjecutivo = sesion.indicaciones.filter(i => i.bloque === 'ejecutivo')
+  const indsColaborador = sesion.indicaciones.filter(i => i.bloque === 'colaborador')
+
+  const hechos = [
+    ...indsEjecutivo.filter(i => i.estado === 'hecho'),
+    ...indsColaborador.filter(i => i.estado === 'confirmado'),
+  ].length
   const total = sesion.indicaciones.length
+
+  const esTicket = sesion.iniciado_por !== sesion.ejecutivo_id
 
   const handleDelete = async () => {
     if (!confirmDelete) { setConfirmDelete(true); return }
@@ -157,63 +264,143 @@ function SesionCard({
     })
   }
 
+  const handleClose = async () => {
+    if (!confirmClose) { setConfirmClose(true); return }
+    onClose(sesion.id)
+    await fetch(`/api/ejecutivo/sesiones/${sesion.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ cerrada: true }),
+    })
+  }
+
+  const cardBg = sesion.cerrada ? 'bg-stone-50' : 'bg-white'
+
   return (
-    <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5">
-      <div className="flex items-start gap-3">
-        <CalendarDays size={16} className="mt-0.5 shrink-0" style={{ color: PRIMARY }} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="font-bold text-stone-900 text-sm leading-snug">{sesion.titulo}</p>
-              <p className="text-xs text-stone-400 mt-0.5">{formatFecha(sesion.fecha)}</p>
+    <div className={`${cardBg} rounded-xl border border-stone-200 shadow-sm overflow-hidden`}>
+      {/* Header sesión */}
+      <div className="p-4 pb-3">
+        <div className="flex items-start gap-3">
+          <CalendarDays size={16} className="mt-0.5 shrink-0" style={{ color: PRIMARY }} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 flex-wrap">
+              <div className="flex items-start gap-2 flex-wrap">
+                <p className="font-bold text-stone-900 text-sm leading-snug">{sesion.titulo}</p>
+                {esTicket && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-violet-100 text-violet-600 px-1.5 py-0.5 rounded-full shrink-0">
+                    <Ticket size={9} /> TICKET
+                  </span>
+                )}
+                {sesion.cerrada && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-stone-200 text-stone-500 px-1.5 py-0.5 rounded-full shrink-0">
+                    <Lock size={9} /> CERRADA
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {total > 0 && (
+                  <span className="text-xs text-stone-400 mr-1">{hechos}/{total}</span>
+                )}
+                {!sesion.cerrada && (
+                  <button
+                    onClick={handleClose}
+                    onMouseLeave={() => setConfirmClose(false)}
+                    className={`p-1.5 rounded-lg transition-colors text-xs font-semibold flex items-center gap-1 ${confirmClose ? 'bg-amber-100 text-amber-600' : 'text-stone-300 hover:text-amber-500 hover:bg-amber-50'}`}
+                    title={confirmClose ? 'Confirmar cierre' : 'Cerrar sesión'}
+                  >
+                    <Lock size={13} />
+                  </button>
+                )}
+                <button
+                  onClick={handleDelete}
+                  onMouseLeave={() => setConfirmDelete(false)}
+                  className={`p-1.5 rounded-lg transition-colors ${confirmDelete ? 'bg-red-100 text-red-500' : 'text-stone-300 hover:text-red-400 hover:bg-red-50'}`}
+                  title={confirmDelete ? 'Confirmar eliminación' : 'Eliminar sesión'}
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {total > 0 && (
-                <span className="text-xs text-stone-400 mr-1">{hechos}/{total}</span>
-              )}
-              <button
-                onClick={handleDelete}
-                onMouseLeave={() => setConfirmDelete(false)}
-                className={`p-1.5 rounded-lg transition-colors ${confirmDelete ? 'bg-red-100 text-red-500' : 'text-stone-300 hover:text-red-400 hover:bg-red-50'}`}
-                title={confirmDelete ? 'Confirmar eliminación' : 'Eliminar sesión'}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
+            <p className="text-xs text-stone-400 mt-0.5">{formatFecha(sesion.fecha)}</p>
+            {sesion.notas && (
+              <p className="text-xs text-stone-500 italic mt-1.5 leading-relaxed">{sesion.notas}</p>
+            )}
           </div>
-
-          {sesion.notas && (
-            <p className="text-xs text-stone-500 italic mt-2 leading-relaxed line-clamp-2">{sesion.notas}</p>
-          )}
-
-          {sesion.indicaciones.length > 0 && (
-            <div className="mt-3 border-t border-stone-100 pt-3 space-y-0.5">
-              {sesion.indicaciones.map(ind => (
-                <IndicacionItem
-                  key={ind.id}
-                  ind={ind}
-                  token={token}
-                  onUpdate={onUpdateIndicacion}
-                  onDelete={(id) => onDeleteIndicacion(sesion.id, id)}
-                />
-              ))}
-            </div>
-          )}
-
-          <button
-            onClick={() => onAddIndicacion(sesion.id)}
-            className="mt-3 flex items-center gap-1 text-xs font-semibold transition-colors"
-            style={{ color: PRIMARY }}
-          >
-            <Plus size={13} /> Agregar indicación
-          </button>
         </div>
+      </div>
+
+      {/* Bloque Ejecutivo */}
+      <div className="border-t border-stone-100 mx-4" />
+      <div className="px-4 pt-3 pb-2">
+        <div className="flex items-center gap-1.5 mb-2">
+          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-teal-50 rounded-md">
+            <Briefcase size={11} className="text-teal-600" />
+            <span className="text-[11px] font-bold text-teal-700 uppercase tracking-wide">Ejecutivo</span>
+          </div>
+        </div>
+        {indsEjecutivo.length > 0 ? (
+          <div className="space-y-0.5 mb-2">
+            {indsEjecutivo.map(ind => (
+              <IndicacionItemEjecutivo
+                key={ind.id}
+                ind={ind}
+                token={token}
+                onUpdate={onUpdateIndicacion}
+                onDelete={(id) => onDeleteIndicacion(sesion.id, id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-stone-300 mb-2">Sin tareas para el ejecutivo.</p>
+        )}
+        {!sesion.cerrada && (
+          <button
+            onClick={() => onAddIndicacion(sesion.id, 'ejecutivo')}
+            className="flex items-center gap-1 text-xs font-semibold text-teal-600 hover:text-teal-800 transition-colors"
+          >
+            <Plus size={12} /> Agregar tarea ejecutivo
+          </button>
+        )}
+      </div>
+
+      {/* Bloque Colaborador */}
+      <div className="border-t border-stone-100 mx-4 mt-1" />
+      <div className="px-4 pt-3 pb-4">
+        <div className="flex items-center gap-1.5 mb-2">
+          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-violet-50 rounded-md">
+            <User size={11} className="text-violet-600" />
+            <span className="text-[11px] font-bold text-violet-700 uppercase tracking-wide">Colaborador</span>
+          </div>
+        </div>
+        {indsColaborador.length > 0 ? (
+          <div className="space-y-0.5 mb-2">
+            {indsColaborador.map(ind => (
+              <IndicacionItemColaborador
+                key={ind.id}
+                ind={ind}
+                token={token}
+                onUpdate={onUpdateIndicacion}
+                onDelete={(id) => onDeleteIndicacion(sesion.id, id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-stone-300 mb-2">Sin tareas para el colaborador.</p>
+        )}
+        {!sesion.cerrada && (
+          <button
+            onClick={() => onAddIndicacion(sesion.id, 'colaborador')}
+            className="flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors"
+          >
+            <Plus size={12} /> Agregar tarea colaborador
+          </button>
+        )}
       </div>
     </div>
   )
 }
 
-// ─── Modales ──────────────────────────────────────────────────────────────────
+// ─── Modal ────────────────────────────────────────────────────────────────────
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
@@ -260,7 +447,8 @@ export default function EjecutivoPage() {
   const [sesionForm, setSesionForm] = useState({ titulo: '', fecha: new Date().toISOString().split('T')[0], notas: '' })
   const [savingSession, setSavingSession] = useState(false)
 
-  const [indicacionModalSesionId, setIndicacionModalSesionId] = useState<string | null>(null)
+  // indicacionModal: { sesionId, bloque }
+  const [indicacionModal, setIndicacionModal] = useState<{ sesionId: string; bloque: 'ejecutivo' | 'colaborador' } | null>(null)
   const [indForm, setIndForm] = useState({ descripcion: '', plataforma: '' })
   const [savingInd, setSavingInd] = useState(false)
 
@@ -268,14 +456,12 @@ export default function EjecutivoPage() {
 
   useEffect(() => {
     const init = async () => {
-      // getUser() valida el JWT con el servidor (más seguro que solo getSession)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/'); return }
       setToken(session.access_token)
 
-      // Usar /api/users/me (service_role) — evita restricciones de schemas expuestos en PostgREST
       const res = await fetch('/api/users/me', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
@@ -329,9 +515,10 @@ export default function EjecutivoPage() {
   cutoff.setDate(cutoff.getDate() - 90)
   const cutoffStr = cutoff.toISOString().split('T')[0]
 
-  const filteredSessions = sessions.filter(s =>
-    activeTab === 'activas' ? s.fecha >= cutoffStr : s.fecha < cutoffStr
-  )
+  const filteredSessions = sessions.filter(s => {
+    if (activeTab === 'activas') return !s.cerrada && s.fecha >= cutoffStr
+    return s.cerrada || s.fecha < cutoffStr
+  })
 
   // ── Crear sesión ────────────────────────────────────────────────────────────
 
@@ -362,22 +549,26 @@ export default function EjecutivoPage() {
   // ── Crear indicación ────────────────────────────────────────────────────────
 
   const handleCreateIndicacion = async () => {
-    if (!indicacionModalSesionId || !indForm.descripcion || !token) return
+    if (!indicacionModal || !indForm.descripcion || !token) return
     setSavingInd(true)
     try {
-      const res = await fetch(`/api/ejecutivo/sesiones/${indicacionModalSesionId}/indicaciones`, {
+      const res = await fetch(`/api/ejecutivo/sesiones/${indicacionModal.sesionId}/indicaciones`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ descripcion: indForm.descripcion, plataforma: indForm.plataforma || null }),
+        body: JSON.stringify({
+          descripcion: indForm.descripcion,
+          plataforma: indForm.plataforma || null,
+          bloque: indicacionModal.bloque,
+        }),
       })
       if (res.ok) {
         const newInd = await res.json()
         setSessions(prev => prev.map(s =>
-          s.id === indicacionModalSesionId
+          s.id === indicacionModal.sesionId
             ? { ...s, indicaciones: [...s.indicaciones, newInd] }
             : s
         ))
-        setIndicacionModalSesionId(null)
+        setIndicacionModal(null)
         setIndForm({ descripcion: '', plataforma: '' })
       }
     } finally {
@@ -385,7 +576,7 @@ export default function EjecutivoPage() {
     }
   }
 
-  // ── Actualizar indicación (estado inline) ───────────────────────────────────
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleUpdateIndicacion = (updated: Indicacion) => {
     setSessions(prev => prev.map(s => ({
@@ -406,7 +597,9 @@ export default function EjecutivoPage() {
     setSessions(prev => prev.filter(s => s.id !== sesionId))
   }
 
-  // ── Filtro de búsqueda de usuarios ─────────────────────────────────────────
+  const handleCloseSession = (sesionId: string) => {
+    setSessions(prev => prev.map(s => s.id === sesionId ? { ...s, cerrada: true } : s))
+  }
 
   const filteredUsers = users.filter(u => {
     const q = search.toLowerCase()
@@ -426,6 +619,10 @@ export default function EjecutivoPage() {
     )
   }
 
+  const indicacionModalTitle = indicacionModal?.bloque === 'colaborador'
+    ? 'Agregar tarea — Colaborador'
+    : 'Agregar tarea — Ejecutivo'
+
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col">
 
@@ -441,7 +638,7 @@ export default function EjecutivoPage() {
           <div className="w-px h-5 bg-stone-200" />
           <BookOpen size={16} style={{ color: PRIMARY }} />
           <span className="font-bold text-stone-900 text-sm">Panel Ejecutivo</span>
-          <span className="text-stone-300 text-xs ml-1">— Seguimiento de Reuniones</span>
+          <span className="text-stone-300 text-xs ml-1">— Seguimiento de Sesiones</span>
         </div>
       </header>
 
@@ -624,8 +821,13 @@ export default function EjecutivoPage() {
                       key={s.id}
                       sesion={s}
                       token={token!}
+                      myProfileId={myProfileId!}
                       onDelete={handleDeleteSession}
-                      onAddIndicacion={setIndicacionModalSesionId}
+                      onClose={handleCloseSession}
+                      onAddIndicacion={(sesionId, bloque) => {
+                        setIndicacionModal({ sesionId, bloque })
+                        setIndForm({ descripcion: '', plataforma: '' })
+                      }}
                       onUpdateIndicacion={handleUpdateIndicacion}
                       onDeleteIndicacion={handleDeleteIndicacion}
                     />
@@ -681,7 +883,7 @@ export default function EjecutivoPage() {
               <textarea
                 value={sesionForm.notas}
                 onChange={e => setSesionForm(p => ({ ...p, notas: e.target.value }))}
-                placeholder="Contexto general de la reunión..."
+                placeholder="Contexto general de la sesión..."
                 rows={3}
                 className={`${inputCls()} resize-none`}
               />
@@ -708,9 +910,19 @@ export default function EjecutivoPage() {
       )}
 
       {/* Modal: Nueva Indicación */}
-      {indicacionModalSesionId && (
-        <Modal title="Agregar Indicación" onClose={() => setIndicacionModalSesionId(null)}>
+      {indicacionModal && (
+        <Modal title={indicacionModalTitle} onClose={() => setIndicacionModal(null)}>
           <div className="space-y-4">
+            <div className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold ${
+              indicacionModal.bloque === 'colaborador'
+                ? 'bg-violet-50 text-violet-700'
+                : 'bg-teal-50 text-teal-700'
+            }`}>
+              {indicacionModal.bloque === 'colaborador'
+                ? <><User size={12} /> Tarea para el colaborador</>
+                : <><Briefcase size={12} /> Tarea para el ejecutivo</>
+              }
+            </div>
             <div>
               <label className={labelCls()}>Descripción <span className="text-red-400">*</span></label>
               <textarea
@@ -734,7 +946,7 @@ export default function EjecutivoPage() {
             </div>
             <div className="flex gap-2 pt-1">
               <button
-                onClick={() => setIndicacionModalSesionId(null)}
+                onClick={() => setIndicacionModal(null)}
                 className="flex-1 py-2 rounded-lg border border-stone-200 text-sm font-semibold text-stone-500 hover:bg-stone-50 transition-colors"
               >
                 Cancelar
@@ -742,8 +954,10 @@ export default function EjecutivoPage() {
               <button
                 onClick={handleCreateIndicacion}
                 disabled={savingInd || !indForm.descripcion}
-                className="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
-                style={{ backgroundColor: PRIMARY }}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold text-white transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 ${
+                  indicacionModal.bloque === 'colaborador' ? 'bg-violet-600 hover:bg-violet-700' : ''
+                }`}
+                style={indicacionModal.bloque !== 'colaborador' ? { backgroundColor: PRIMARY } : {}}
               >
                 {savingInd ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                 Agregar

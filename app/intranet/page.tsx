@@ -1199,7 +1199,7 @@ function FinancieroModule({ inspections, loading }: { inspections: InspectionSta
 export default function IntranetPage() {
   const router = useRouter()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [myProfile, setMyProfile] = useState<{ is_admin: boolean; department: string | null } | null>(null)
+  const [myProfile, setMyProfile] = useState<{ id: string; is_admin: boolean; department: string | null } | null>(null)
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [editingEmail, setEditingEmail] = useState<string | null>(null)
@@ -1219,7 +1219,7 @@ export default function IntranetPage() {
       setToken(session?.access_token ?? null)
 
       // Usar /api/users/me (service_role) — evita restricciones de schemas expuestos en PostgREST
-      let profile: { is_admin: boolean; department: string | null } | null = null
+      let profile: { id: string; is_admin: boolean; department: string | null } | null = null
       if (session?.access_token) {
         const res = await fetch('/api/users/me', {
           headers: { Authorization: `Bearer ${session.access_token}` },
@@ -1229,7 +1229,7 @@ export default function IntranetPage() {
 
       if (!profile?.is_admin && !profile?.department) { router.push('/'); return }
 
-      setMyProfile({ is_admin: profile.is_admin, department: profile.department ?? null })
+      setMyProfile({ id: profile.id, is_admin: profile.is_admin, department: profile.department ?? null })
 
       // No-admin: redirigir si tiene módulo propio con página dedicada
       if (!profile.is_admin) {
@@ -1461,8 +1461,8 @@ export default function IntranetPage() {
         )}
 
         {/* ── Tab Mis Sesiones (usuarios no-admin) ── */}
-        {activeTab === 'mis-sesiones' && token && (
-          <MisSesiones token={token} />
+        {activeTab === 'mis-sesiones' && token && myProfile?.id && (
+          <MisSesiones token={token} myProfileId={myProfile.id} />
         )}
 
       </main>

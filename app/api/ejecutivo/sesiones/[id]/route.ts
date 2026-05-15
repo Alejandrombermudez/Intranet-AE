@@ -26,6 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.titulo !== undefined) updates.titulo = body.titulo
   if (body.fecha !== undefined) updates.fecha = body.fecha
   if (body.notas !== undefined) updates.notas = body.notas
+  if (body.cerrada !== undefined) updates.cerrada = Boolean(body.cerrada)
 
   const { data, error: dbErr } = await supabase
     .schema('ejecutivo').from('sesiones')

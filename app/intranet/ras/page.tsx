@@ -160,6 +160,7 @@ export default function RASHubPage() {
   const [authReady, setAuthReady] = useState(false)
   const [activeTab, setActiveTab] = useState<'modulos' | 'completitud' | 'mis-sesiones'>('modulos')
   const [token, setToken] = useState<string | null>(null)
+  const [myProfileId, setMyProfileId] = useState<string | null>(null)
   const [subTab, setSubTab] = useState<'restauracion' | 'conservacion'>('restauracion')
   const [loadingComp, setLoadingComp] = useState(false)
   const [siembraFamilias, setSiembraFamilias] = useState<SiembraFamilia[]>([])
@@ -174,7 +175,7 @@ export default function RASHubPage() {
       const { data: { session } } = await supabase.auth.getSession()
       setToken(session?.access_token ?? null)
       // Usar /api/users/me (service_role) — evita restricciones de schemas expuestos en PostgREST
-      let profile: { is_admin: boolean; department: string | null } | null = null
+      let profile: { id: string; is_admin: boolean; department: string | null } | null = null
       if (session?.access_token) {
         const res = await fetch('/api/users/me', {
           headers: { Authorization: `Bearer ${session.access_token}` },
@@ -182,6 +183,7 @@ export default function RASHubPage() {
         if (res.ok) profile = await res.json()
       }
       if (!profile?.is_admin && profile?.department !== 'RAS') { router.push('/'); return }
+      if (profile?.id) setMyProfileId(profile.id)
       setAuthReady(true)
     }
     init()
@@ -352,8 +354,8 @@ export default function RASHubPage() {
         )}
 
         {/* ── Panel Mis Sesiones ── */}
-        {activeTab === 'mis-sesiones' && token && (
-          <MisSesiones token={token} />
+        {activeTab === 'mis-sesiones' && token && myProfileId && (
+          <MisSesiones token={token} myProfileId={myProfileId} />
         )}
 
       </main>

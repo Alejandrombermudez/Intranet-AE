@@ -18,10 +18,16 @@ const isEjecutivo = (p: { is_admin: boolean; department: string | null } | null)
 export async function GET(req: NextRequest) {
   const { error, status, supabase, profile } = await authCheck(req)
   if (error) return NextResponse.json({ error }, { status })
-  if (!isEjecutivo(profile)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  if (!profile) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
   const personaId = req.nextUrl.searchParams.get('persona_id')
   if (!personaId) return NextResponse.json({ error: 'persona_id requerido' }, { status: 400 })
+
+  // El ejecutivo puede ver sesiones de cualquier persona.
+  // Un colaborador solo puede ver sus propias sesiones.
+  if (!isEjecutivo(profile) && profile.id !== personaId) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  }
 
   const { data, error: dbErr } = await supabase
     .schema('ejecutivo').from('sesiones')
@@ -42,17 +48,48 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { error, status, supabase, profile } = await authCheck(req)
   if (error) return NextResponse.json({ error }, { status })
-  if (!isEjecutivo(profile)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  if (!profile) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
   const body = await req.json()
-  const { persona_id, titulo, fecha, notas } = body
-  if (!persona_id || !titulo || !fecha) {
-    return NextResponse.json({ error: 'persona_id, titulo y fecha son requeridos' }, { status: 400 })
+  const { as_ticket, persona_id, titulo, fecha, notas } = body
+
+  if (!titulo || !fecha) {
+    return NextResponse.json({ error: 'titulo y fecha son requeridos' }, { status: 400 })
+  }
+
+  let ejecutivoId: string
+  let personaId: string
+
+  if (as_ticket) {
+    // Colaborador abre un ticket hacia el ejecutivo
+    personaId = profile.id
+    // Auto-detectar el ejecutivo de la organización
+    const { data: ejecutivo } = await supabase.schema('people').from('user_profiles')
+      .select('id')
+      .or('department.eq.Ejecutivo,is_admin.eq.true')
+      .neq('id', profile.id)
+      .limit(1)
+      .single()
+    if (!ejecutivo) return NextResponse.json({ error: 'No se encontró ejecutivo en la organización' }, { status: 404 })
+    ejecutivoId = ejecutivo.id
+  } else {
+    // Ejecutivo crea sesión para un colaborador
+    if (!isEjecutivo(profile)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    if (!persona_id) return NextResponse.json({ error: 'persona_id requerido' }, { status: 400 })
+    ejecutivoId = profile.id
+    personaId = persona_id
   }
 
   const { data, error: dbErr } = await supabase
     .schema('ejecutivo').from('sesiones')
-    .insert({ ejecutivo_id: profile!.id, persona_id, titulo, fecha, notas: notas ?? null })
+    .insert({
+      iniciado_por: profile.id,
+      ejecutivo_id: ejecutivoId,
+      persona_id: personaId,
+      titulo,
+      fecha,
+      notas: notas ?? null,
+    })
     .select()
     .single()
 
