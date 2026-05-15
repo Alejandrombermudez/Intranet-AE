@@ -146,7 +146,7 @@ export default function LandingPage() {
       <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/30" style={{ zIndex: 1 }} />
 
       {/* ── ZONA IZQUIERDA: Identidad ── */}
-      <div className="relative flex-1 flex flex-col justify-center px-8 py-14 sm:px-12 lg:px-16 lg:py-12 min-h-[55vh] lg:min-h-screen" style={{ zIndex: 2 }}>
+      <div className="relative flex-1 flex flex-col justify-center items-center lg:items-end px-8 py-14 sm:px-12 lg:px-12 xl:px-20 lg:py-12 min-h-[55vh] lg:min-h-screen" style={{ zIndex: 2 }}>
 
         {/* Línea de acento */}
         <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-70" />
@@ -154,24 +154,24 @@ export default function LandingPage() {
         {/* Borde inferior mobile */}
         <div className="absolute bottom-0 left-0 w-full h-px bg-white/10 lg:hidden" />
 
-        <div className="relative max-w-md">
+        <div className="relative w-full max-w-md xl:max-w-lg">
 
           {/* Label + Título */}
-          <div className="mb-4">
-            <p className="text-primary uppercase tracking-[0.25em] text-xs font-bold mb-3">
+          <div className="mb-5">
+            <p className="text-primary uppercase tracking-[0.25em] text-xs font-bold mb-4">
               Amazonia Emprende
             </p>
-            <h1 className="text-5xl lg:text-6xl font-black text-white leading-[1.05] tracking-tight">
+            <h1 className="text-5xl sm:text-6xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-black text-white leading-[1.02] tracking-tight">
               Intranet<br />
               <span className="text-white/45">Corporativa</span>
             </h1>
           </div>
 
           {/* Divisor */}
-          <div className="w-10 h-1 bg-primary rounded-full mb-5" />
+          <div className="w-12 h-1 bg-primary rounded-full mb-6" />
 
           {/* Descripción ampliada */}
-          <p className="text-white/58 text-[15px] leading-relaxed mb-8 max-w-sm">
+          <p className="text-white/60 text-base lg:text-base xl:text-lg leading-relaxed mb-10">
             Sistema de gestión interna para el equipo de Amazonia Emprende.
             Reserva vehículos corporativos, registra inspecciones de recepción
             y devolución, monitorea el avance de familias en procesos de
@@ -180,19 +180,19 @@ export default function LandingPage() {
           </p>
 
           {/* Logo centrado */}
-          <div className="flex justify-center">
+          <div className="w-full flex justify-center">
             <Image
               src="/icon-512.png"
               alt="Amazonia Emprende"
-              width={72}
-              height={72}
-              className="rounded-2xl shadow-lg opacity-80"
+              width={84}
+              height={84}
+              className="rounded-2xl shadow-xl opacity-85"
             />
           </div>
         </div>
 
         {/* Copyright */}
-        <div className="relative mt-auto pt-8">
+        <div className="relative w-full max-w-md xl:max-w-lg mt-auto pt-10">
           <p className="text-white/30 text-sm">
             © {new Date().getFullYear()} Amazonia Emprende
           </p>
@@ -201,10 +201,10 @@ export default function LandingPage() {
 
       {/* ── ZONA DERECHA: Card Glassmorphism ── */}
       <div
-        className="relative flex-1 flex items-center justify-center px-8 py-10 sm:px-12 lg:px-16 lg:py-12 min-h-[50vh] lg:min-h-screen"
+        className="relative flex-1 flex items-center justify-center lg:justify-start px-8 py-10 sm:px-12 lg:px-12 xl:px-20 lg:py-12 min-h-[50vh] lg:min-h-screen"
         style={{ zIndex: 2 }}
       >
-        <div className="w-full max-w-md backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-8">
+        <div className="w-full max-w-md xl:max-w-lg backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-8 xl:p-10">
 
           {/* Cargando sesión */}
           {authLoading && (
@@ -401,17 +401,17 @@ export default function LandingPage() {
             onClick={() => setShowChangelog(v => !v)}
             className="w-full flex items-center justify-between px-3 py-2.5 mt-5 rounded-xl bg-white/[0.07] hover:bg-white/10 border border-white/10 transition-all"
           >
-            <span className="flex items-center gap-2 text-xs font-bold text-white/50">
-              <Sparkles size={12} className="text-primary" />
+            <span className="flex items-center gap-2 text-xs font-bold text-white/65">
+              <Sparkles size={12} className="text-white/70" />
               Novedades del sistema
             </span>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-primary bg-primary/20 px-2 py-0.5 rounded-full border border-primary/30">
+              <span className="text-[10px] font-mono text-white/85 bg-white/15 px-2 py-0.5 rounded-full border border-white/20">
                 v1.1
               </span>
               <ChevronDown
                 size={13}
-                className={`text-white/35 transition-transform duration-200 ${showChangelog ? 'rotate-180' : ''}`}
+                className={`text-white/50 transition-transform duration-200 ${showChangelog ? 'rotate-180' : ''}`}
               />
             </div>
           </button>
@@ -421,8 +421,8 @@ export default function LandingPage() {
               {CHANGELOG.map((entry, ei) => (
                 <div key={entry.version} className={ei > 0 ? 'pt-3 border-t border-white/10' : ''}>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-mono text-xs font-black text-primary">{entry.version}</span>
-                    <span className="text-[10px] text-white/30">{entry.date}</span>
+                    <span className="font-mono text-xs font-black text-white/85">{entry.version}</span>
+                    <span className="text-[10px] text-white/40">{entry.date}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
                       entry.tipo === 'launch'
                         ? 'bg-amber-500/20 text-amber-300'
@@ -433,8 +433,8 @@ export default function LandingPage() {
                   </div>
                   <ul className="space-y-1.5">
                     {entry.cambios.map((c, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-[11px] text-white/45">
-                        <span className="text-primary mt-px shrink-0">›</span>
+                      <li key={i} className="flex items-start gap-1.5 text-[11px] text-white/55">
+                        <span className="text-white/50 mt-px shrink-0">›</span>
                         {c}
                       </li>
                     ))}
