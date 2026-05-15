@@ -1356,7 +1356,16 @@ export default function IntranetPage() {
                 { key: 'usuarios' as const, label: 'Usuarios', icon: <Users size={14} /> },
                 ...(myProfile.department ? [{ key: 'modulo' as const, label: myProfile.department, icon: <BarChart2 size={14} /> }] : []),
               ].map((tab) => (
-                <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                <button key={tab.key} onClick={() => {
+                  // Módulos con página dedicada: navegar directamente en vez de renderizar inline
+                  if (tab.key === 'modulo' && myProfile?.department === 'Ejecutivo') {
+                    router.push('/intranet/ejecutivo'); return
+                  }
+                  if (tab.key === 'modulo' && myProfile?.department === 'RAS') {
+                    router.push('/intranet/ras'); return
+                  }
+                  setActiveTab(tab.key)
+                }}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
                     activeTab === tab.key
                       ? 'bg-primary text-white shadow-sm'
