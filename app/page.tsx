@@ -134,10 +134,15 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Copyright */}
-        <p className="relative z-10 mt-auto pt-16 text-stone-700 text-xs lg:pt-12">
-          © {new Date().getFullYear()} Amazonia Emprende
-        </p>
+        {/* Copyright + versión */}
+        <div className="relative z-10 mt-auto pt-16 lg:pt-12 flex items-center justify-between">
+          <p className="text-stone-700 text-xs">
+            © {new Date().getFullYear()} Amazonia Emprende
+          </p>
+          <span className="text-[10px] font-mono text-stone-600 bg-stone-800/40 px-2 py-0.5 rounded-full border border-stone-700/40">
+            v1.0
+          </span>
+        </div>
       </div>
 
       {/* ── LADO DERECHO: Login / Bienvenida + Servicios ── */}
