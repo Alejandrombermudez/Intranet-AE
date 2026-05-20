@@ -40,9 +40,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   } else {
     // Bloque colaborador: transiciones permitidas según rol
     if (body.estado !== undefined) {
-      if (!ejecutivo) {
-        // Colaborador solo puede marcar pendiente → marcado
-        // Verificar que es el persona_id de la sesión
+      if (body.estado === 'marcado') {
+        // 'marcado' solo lo puede hacer la persona de la sesión (sea ejecutivo o no)
         const { data: sesion } = await supabase
           .schema('ejecutivo').from('sesiones')
           .select('persona_id')
@@ -51,15 +50,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (sesion?.persona_id !== profile.id) {
           return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
         }
-        if (body.estado !== 'marcado') {
-          return NextResponse.json({ error: 'Solo puedes marcar la tarea como realizada' }, { status: 403 })
-        }
-      } else {
-        // Ejecutivo puede confirmar o cancelar tareas del colaborador
+      } else if (ejecutivo) {
+        // Ejecutivo puede confirmar, cancelar o resetear a pendiente
         const estadosEjecutivo = ['confirmado', 'cancelado', 'pendiente']
         if (!estadosEjecutivo.includes(body.estado)) {
           return NextResponse.json({ error: 'Transición de estado no válida' }, { status: 400 })
         }
+      } else {
+        // Colaborador no-ejecutivo no puede poner otros estados
+        return NextResponse.json({ error: 'Solo puedes marcar la tarea como realizada' }, { status: 403 })
       }
     } else if (!ejecutivo) {
       // Colaborador no puede editar descripción/plataforma

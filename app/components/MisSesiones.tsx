@@ -206,46 +206,50 @@ function SesionCardColaborador({
             <p className="text-xs text-stone-500 italic px-4 pt-3 pb-1 leading-relaxed">{sesion.notas}</p>
           )}
 
-          {/* Bloque ejecutivo: siempre read-only */}
-          <div className="px-4 pt-3 pb-3">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-1 h-4 bg-teal-400 rounded-full" />
-              <Briefcase size={12} className="text-teal-600" />
-              <span className="text-[11px] font-bold text-teal-700 uppercase tracking-widest">Ejecutivo</span>
-            </div>
-            {indsEjecutivo.length === 0 ? (
-              <p className="text-xs text-stone-300 mb-1">Sin tareas del ejecutivo.</p>
-            ) : (
-              <div className="space-y-2">
-                {indsEjecutivo.map(ind => (
-                  <IndicacionEjecutivoRO key={ind.id} ind={ind} />
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Bloques Ejecutivo + Mis tareas — dos columnas */}
+          <div className="flex divide-x divide-stone-100">
 
-          {/* Bloque colaborador: interactivo (puede marcar) */}
-          <div className="border-t border-stone-100" />
-          <div className="px-4 pt-3 pb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-1 h-4 bg-violet-400 rounded-full" />
-              <User size={12} className="text-violet-600" />
-              <span className="text-[11px] font-bold text-violet-700 uppercase tracking-widest">Mis tareas</span>
-            </div>
-            {indsColaborador.length === 0 ? (
-              <p className="text-xs text-stone-300">Sin tareas asignadas.</p>
-            ) : (
-              <div className="space-y-2">
-                {indsColaborador.map(ind => (
-                  <IndicacionColaboradorInteractiva
-                    key={ind.id}
-                    ind={ind}
-                    token={token}
-                    onUpdate={handleUpdateInd}
-                  />
-                ))}
+            {/* Columna Ejecutivo: read-only */}
+            <div className="flex-1 min-w-0 px-4 pt-3 pb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1 h-4 bg-teal-400 rounded-full" />
+                <Briefcase size={12} className="text-teal-600" />
+                <span className="text-[11px] font-bold text-teal-700 uppercase tracking-widest">Ejecutivo</span>
               </div>
-            )}
+              {indsEjecutivo.length === 0 ? (
+                <p className="text-xs text-stone-300">Sin tareas.</p>
+              ) : (
+                <div className="space-y-2">
+                  {indsEjecutivo.map(ind => (
+                    <IndicacionEjecutivoRO key={ind.id} ind={ind} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Columna Mis tareas: interactivo */}
+            <div className="flex-1 min-w-0 px-4 pt-3 pb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1 h-4 bg-violet-400 rounded-full" />
+                <User size={12} className="text-violet-600" />
+                <span className="text-[11px] font-bold text-violet-700 uppercase tracking-widest">Mis tareas</span>
+              </div>
+              {indsColaborador.length === 0 ? (
+                <p className="text-xs text-stone-300">Sin tareas asignadas.</p>
+              ) : (
+                <div className="space-y-2">
+                  {indsColaborador.map(ind => (
+                    <IndicacionColaboradorInteractiva
+                      key={ind.id}
+                      ind={ind}
+                      token={token}
+                      onUpdate={handleUpdateInd}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       )}

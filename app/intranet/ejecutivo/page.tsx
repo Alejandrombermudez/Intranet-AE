@@ -372,70 +372,74 @@ function SesionCard({
         </div>
       </div>
 
-      {/* Bloque Ejecutivo */}
+      {/* Bloques Ejecutivo + Colaborador — dos columnas */}
       <div className="border-t border-stone-100" />
-      <div className="px-4 pt-3 pb-3">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-1 h-4 bg-teal-400 rounded-full" />
-          <Briefcase size={12} className="text-teal-600" />
-          <span className="text-[11px] font-bold text-teal-700 uppercase tracking-widest">Ejecutivo</span>
-        </div>
-        {indsEjecutivo.length > 0 ? (
-          <div className="space-y-2 mb-3">
-            {indsEjecutivo.map(ind => (
-              <IndicacionItemEjecutivo
-                key={ind.id}
-                ind={ind}
-                token={token}
-                onUpdate={onUpdateIndicacion}
-                onDelete={(id) => onDeleteIndicacion(sesion.id, id)}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-stone-300 mb-3">Sin tareas para el ejecutivo.</p>
-        )}
-        {!sesion.cerrada && (
-          <button
-            onClick={() => onAddIndicacion(sesion.id, 'ejecutivo')}
-            className="flex items-center gap-1.5 text-xs font-semibold text-teal-600 hover:text-teal-800 hover:bg-teal-50 px-2 py-1 rounded-md transition-colors"
-          >
-            <Plus size={12} /> Agregar tarea
-          </button>
-        )}
-      </div>
+      <div className="flex divide-x divide-stone-100">
 
-      {/* Bloque Colaborador */}
-      <div className="border-t border-stone-100" />
-      <div className="px-4 pt-3 pb-4">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-1 h-4 bg-violet-400 rounded-full" />
-          <User size={12} className="text-violet-600" />
-          <span className="text-[11px] font-bold text-violet-700 uppercase tracking-widest">Colaborador</span>
-        </div>
-        {indsColaborador.length > 0 ? (
-          <div className="space-y-2 mb-3">
-            {indsColaborador.map(ind => (
-              <IndicacionItemColaborador
-                key={ind.id}
-                ind={ind}
-                token={token}
-                onUpdate={onUpdateIndicacion}
-                onDelete={(id) => onDeleteIndicacion(sesion.id, id)}
-              />
-            ))}
+        {/* Columna Ejecutivo */}
+        <div className="flex-1 min-w-0 px-4 pt-3 pb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-1 h-4 bg-teal-400 rounded-full" />
+            <Briefcase size={12} className="text-teal-600" />
+            <span className="text-[11px] font-bold text-teal-700 uppercase tracking-widest">Ejecutivo</span>
           </div>
-        ) : (
-          <p className="text-xs text-stone-300 mb-3">Sin tareas para el colaborador.</p>
-        )}
-        {!sesion.cerrada && (
-          <button
-            onClick={() => onAddIndicacion(sesion.id, 'colaborador')}
-            className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-800 hover:bg-violet-50 px-2 py-1 rounded-md transition-colors"
-          >
-            <Plus size={12} /> Agregar tarea
-          </button>
-        )}
+          {indsEjecutivo.length > 0 ? (
+            <div className="space-y-2 mb-3">
+              {indsEjecutivo.map(ind => (
+                <IndicacionItemEjecutivo
+                  key={ind.id}
+                  ind={ind}
+                  token={token}
+                  onUpdate={onUpdateIndicacion}
+                  onDelete={(id) => onDeleteIndicacion(sesion.id, id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-stone-300 mb-3">Sin tareas.</p>
+          )}
+          {!sesion.cerrada && (
+            <button
+              onClick={() => onAddIndicacion(sesion.id, 'ejecutivo')}
+              className="flex items-center gap-1.5 text-xs font-semibold text-teal-600 hover:text-teal-800 hover:bg-teal-50 px-2 py-1 rounded-md transition-colors"
+            >
+              <Plus size={12} /> Agregar
+            </button>
+          )}
+        </div>
+
+        {/* Columna Colaborador */}
+        <div className="flex-1 min-w-0 px-4 pt-3 pb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-1 h-4 bg-violet-400 rounded-full" />
+            <User size={12} className="text-violet-600" />
+            <span className="text-[11px] font-bold text-violet-700 uppercase tracking-widest">Colaborador</span>
+          </div>
+          {indsColaborador.length > 0 ? (
+            <div className="space-y-2 mb-3">
+              {indsColaborador.map(ind => (
+                <IndicacionItemColaborador
+                  key={ind.id}
+                  ind={ind}
+                  token={token}
+                  onUpdate={onUpdateIndicacion}
+                  onDelete={(id) => onDeleteIndicacion(sesion.id, id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-stone-300 mb-3">Sin tareas.</p>
+          )}
+          {!sesion.cerrada && (
+            <button
+              onClick={() => onAddIndicacion(sesion.id, 'colaborador')}
+              className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-800 hover:bg-violet-50 px-2 py-1 rounded-md transition-colors"
+            >
+              <Plus size={12} /> Agregar
+            </button>
+          )}
+        </div>
+
       </div>
     </div>
   )
