@@ -78,8 +78,8 @@ export function formatPurpose(project: string, activity: string): string {
 // ─── Ejecutivo — Sesiones e Indicaciones ─────────────────────────────────────
 
 // Bloque ejecutivo: pendiente | hecho | cancelado
-// Bloque colaborador: pendiente | marcado (colaborador hecho) | confirmado (ejecutivo confirma) | cancelado
-export type EstadoIndicacion = 'pendiente' | 'hecho' | 'marcado' | 'confirmado' | 'cancelado'
+// Bloque colaborador: pendiente | marcado | confirmado | rechazado | cancelado
+export type EstadoIndicacion = 'pendiente' | 'hecho' | 'marcado' | 'confirmado' | 'cancelado' | 'rechazado'
 
 export interface Indicacion {
   id: string
@@ -88,6 +88,7 @@ export interface Indicacion {
   descripcion: string
   plataforma: string | null
   estado: EstadoIndicacion
+  nota: string | null
   orden: number
   created_at: string
   updated_at: string

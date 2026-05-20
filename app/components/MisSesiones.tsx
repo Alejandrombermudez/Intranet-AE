@@ -32,10 +32,11 @@ const ESTADO_EJECUTIVO_CONFIG: Record<string, { label: string; className: string
 }
 
 const ESTADO_COLABORADOR_CONFIG: Record<string, { label: string; className: string; icon: ReactNode }> = {
-  pendiente: { label: 'Pendiente', className: 'bg-stone-100 text-stone-500', icon: <Clock size={11} /> },
-  marcado: { label: 'En revisión', className: 'bg-amber-100 text-amber-700', icon: <CheckCircle2 size={11} /> },
-  confirmado: { label: 'Confirmado', className: 'bg-violet-100 text-violet-700', icon: <CheckCheck size={11} /> },
-  cancelado: { label: 'Cancelado', className: 'bg-stone-100 text-stone-400', icon: <XCircle size={11} /> },
+  pendiente:  { label: 'Pendiente',   className: 'bg-stone-100 text-stone-500',  icon: <Clock size={11} /> },
+  marcado:    { label: 'En revisión', className: 'bg-amber-100 text-amber-700',  icon: <CheckCircle2 size={11} /> },
+  confirmado: { label: 'Confirmado',  className: 'bg-violet-100 text-violet-700',icon: <CheckCheck size={11} /> },
+  cancelado:  { label: 'Cancelado',   className: 'bg-stone-100 text-stone-400',  icon: <XCircle size={11} /> },
+  rechazado:  { label: 'Rechazado',   className: 'bg-red-100 text-red-500',      icon: <XCircle size={11} /> },
 }
 
 // ─── Indicación read-only (bloque ejecutivo) ──────────────────────────────────
@@ -43,6 +44,7 @@ const ESTADO_COLABORADOR_CONFIG: Record<string, { label: string; className: stri
 function IndicacionEjecutivoRO({ ind }: { ind: Indicacion }) {
   const cfg = ESTADO_EJECUTIVO_CONFIG[ind.estado] ?? ESTADO_EJECUTIVO_CONFIG.pendiente
   const borde = BORDE_EJECUTIVO[ind.estado] ?? 'border-l-stone-200'
+  const terminada = ind.estado === 'cancelado'
   return (
     <div className={`rounded-lg border border-stone-100 border-l-2 ${borde} p-2.5 bg-white`}>
       <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -55,9 +57,14 @@ function IndicacionEjecutivoRO({ ind }: { ind: Indicacion }) {
           </span>
         )}
       </div>
-      <p className={`text-sm leading-snug ${ind.estado === 'cancelado' ? 'line-through text-stone-400' : 'text-stone-700'}`}>
+      <p className={`text-sm leading-snug ${terminada ? 'line-through text-stone-400' : 'text-stone-700'}`}>
         {ind.descripcion}
       </p>
+      {ind.nota && (
+        <p className="text-[11px] text-stone-400 mt-1.5 italic border-l-2 border-stone-200 pl-2 leading-relaxed">
+          {ind.nota}
+        </p>
+      )}
     </div>
   )
 }
@@ -92,7 +99,8 @@ function IndicacionColaboradorInteractiva({
 
   const cfg = ESTADO_COLABORADOR_CONFIG[ind.estado] ?? ESTADO_COLABORADOR_CONFIG.pendiente
   const borde = BORDE_COLABORADOR[ind.estado] ?? 'border-l-stone-200'
-  const clickable = ind.estado === 'pendiente'
+  const clickable = ind.estado === 'pendiente' || ind.estado === 'rechazado'
+  const terminada = ind.estado === 'cancelado' || ind.estado === 'confirmado'
 
   return (
     <div className={`rounded-lg border border-stone-100 border-l-2 ${borde} p-2.5 bg-white transition-all`}>
@@ -100,11 +108,13 @@ function IndicacionColaboradorInteractiva({
         <button
           onClick={clickable ? marcarHecho : undefined}
           disabled={saving || !clickable}
-          title={clickable ? 'Marcar como realizado' : undefined}
+          title={clickable ? (ind.estado === 'rechazado' ? 'Volver a enviar' : 'Marcar como realizado') : undefined}
           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all ${cfg.className} ${clickable ? 'cursor-pointer hover:opacity-80 active:scale-95 shadow-sm' : 'cursor-default'}`}
         >
           {saving ? <Loader2 size={11} className="animate-spin" /> : cfg.icon}
-          {clickable ? '¡Listo! Marcar ✓' : cfg.label}
+          {ind.estado === 'pendiente' ? '¡Listo! Marcar ✓'
+           : ind.estado === 'rechazado' ? 'Rechazado — Reenviar ↩'
+           : cfg.label}
         </button>
         {ind.plataforma && (
           <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono">
@@ -113,12 +123,17 @@ function IndicacionColaboradorInteractiva({
         )}
       </div>
       <p className={`text-sm leading-snug ${
-        ind.estado === 'cancelado' ? 'line-through text-stone-400'
-        : ind.estado === 'confirmado' ? 'text-stone-400'
+        terminada ? 'line-through text-stone-400'
+        : ind.estado === 'rechazado' ? 'text-stone-600'
         : 'text-stone-700'
       }`}>
         {ind.descripcion}
       </p>
+      {ind.nota && (
+        <p className={`text-[11px] mt-1.5 italic border-l-2 pl-2 leading-relaxed ${ind.estado === 'rechazado' ? 'text-red-400 border-red-200' : 'text-stone-400 border-stone-200'}`}>
+          {ind.nota}
+        </p>
+      )}
     </div>
   )
 }

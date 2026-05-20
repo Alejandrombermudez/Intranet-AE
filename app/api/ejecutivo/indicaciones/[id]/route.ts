@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // Bloque colaborador: transiciones permitidas según rol
     if (body.estado !== undefined) {
       if (body.estado === 'marcado') {
-        // 'marcado' solo lo puede hacer la persona de la sesión (sea ejecutivo o no)
+        // 'marcado' solo lo puede hacer la persona (desde pendiente o rechazado)
         const { data: sesion } = await supabase
           .schema('ejecutivo').from('sesiones')
           .select('persona_id')
@@ -51,8 +51,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
         }
       } else if (ejecutivo) {
-        // Ejecutivo puede confirmar, cancelar o resetear a pendiente
-        const estadosEjecutivo = ['confirmado', 'cancelado', 'pendiente']
+        // Ejecutivo puede confirmar, rechazar (con nota), cancelar o resetear a pendiente
+        const estadosEjecutivo = ['confirmado', 'rechazado', 'cancelado', 'pendiente']
         if (!estadosEjecutivo.includes(body.estado)) {
           return NextResponse.json({ error: 'Transición de estado no válida' }, { status: 400 })
         }
@@ -71,6 +71,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.plataforma !== undefined) updates.plataforma = body.plataforma
   if (body.orden !== undefined) updates.orden = body.orden
   if (body.estado !== undefined) updates.estado = body.estado
+  if (body.nota !== undefined) updates.nota = body.nota ?? null
 
   const { data, error: dbErr } = await supabase
     .schema('ejecutivo').from('indicaciones')

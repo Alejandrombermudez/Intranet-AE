@@ -62,12 +62,18 @@ const ESTADO_EJECUTIVO_CONFIG: Record<string, { label: string; className: string
     className: 'bg-stone-100 text-stone-400 hover:bg-stone-200',
     icon: <XCircle size={11} />,
   },
+  rechazado: {
+    label: 'Rechazado',
+    className: 'bg-red-100 text-red-500 hover:bg-red-200',
+    icon: <XCircle size={11} />,
+  },
 }
 
 const NEXT_ESTADO_EJECUTIVO: Record<string, EstadoIndicacion> = {
   pendiente: 'hecho',
-  hecho: 'cancelado',
+  hecho: 'pendiente',
   cancelado: 'pendiente',
+  rechazado: 'pendiente',
 }
 
 const ESTADO_COLABORADOR_CONFIG: Record<string, { label: string; className: string; icon: ReactNode }> = {
@@ -91,6 +97,46 @@ const ESTADO_COLABORADOR_CONFIG: Record<string, { label: string; className: stri
     className: 'bg-stone-100 text-stone-400',
     icon: <XCircle size={11} />,
   },
+  rechazado: {
+    label: 'Rechazado',
+    className: 'bg-red-100 text-red-500',
+    icon: <XCircle size={11} />,
+  },
+}
+
+// ─── Glass Modal ─────────────────────────────────────────────────────────────
+
+function GlassModal({
+  title, confirmLabel, confirmClass = 'bg-red-500 hover:bg-red-600',
+  onConfirm, onCancel, saving = false, children,
+}: {
+  title: string; confirmLabel: string; confirmClass?: string
+  onConfirm: () => void; onCancel: () => void; saving?: boolean; children?: ReactNode
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/25 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white/90 backdrop-blur-xl border border-white/60 shadow-2xl rounded-2xl p-6 w-full max-w-sm z-10">
+        <p className="font-bold text-stone-900 text-base mb-4">{title}</p>
+        {children}
+        <div className="flex gap-2 mt-5">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2 rounded-xl border border-stone-200 text-sm font-semibold text-stone-600 hover:bg-stone-50 transition-colors"
+          >
+            No, cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={saving}
+            className={`flex-1 py-2 rounded-xl text-sm font-bold text-white transition-colors ${confirmClass} disabled:opacity-60`}
+          >
+            {saving ? <Loader2 size={14} className="animate-spin mx-auto" /> : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ─── IndicacionItem Ejecutivo ──────────────────────────────────────────────────
@@ -102,6 +148,8 @@ function IndicacionItemEjecutivo({
   onUpdate: (u: Indicacion) => void; onDelete: (id: string) => void
 }) {
   const [saving, setSaving] = useState(false)
+  const [cancelModal, setCancelModal] = useState(false)
+  const [cancelNota, setCancelNota] = useState('')
 
   const cycleEstado = async () => {
     const next = NEXT_ESTADO_EJECUTIVO[ind.estado] ?? 'pendiente'
@@ -122,6 +170,26 @@ function IndicacionItemEjecutivo({
     }
   }
 
+  const handleCancelar = async () => {
+    const prev = ind.estado
+    onUpdate({ ...ind, estado: 'cancelado', nota: cancelNota || null })
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/ejecutivo/indicaciones/${ind.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ estado: 'cancelado', nota: cancelNota || null }),
+      })
+      if (!res.ok) onUpdate({ ...ind, estado: prev })
+    } catch {
+      onUpdate({ ...ind, estado: prev })
+    } finally {
+      setSaving(false)
+      setCancelModal(false)
+      setCancelNota('')
+    }
+  }
+
   const handleDelete = async () => {
     onDelete(ind.id)
     await fetch(`/api/ejecutivo/indicaciones/${ind.id}`, {
@@ -132,38 +200,75 @@ function IndicacionItemEjecutivo({
 
   const cfg = ESTADO_EJECUTIVO_CONFIG[ind.estado] ?? ESTADO_EJECUTIVO_CONFIG.pendiente
   const borde = BORDE_EJECUTIVO[ind.estado] ?? 'border-l-stone-200'
+  const terminada = ind.estado === 'cancelado' || ind.estado === 'rechazado'
 
   return (
-    <div className={`group/ind rounded-lg border border-stone-100 border-l-2 ${borde} p-2.5 bg-white hover:border-stone-200 hover:shadow-sm transition-all`}>
-      <div className="flex items-center justify-between gap-2 mb-1.5">
-        <button
-          onClick={cycleEstado}
-          disabled={saving}
-          title="Cambiar estado (clic para rotar)"
-          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer active:scale-95 ${cfg.className}`}
-        >
-          {saving ? <Loader2 size={11} className="animate-spin" /> : cfg.icon}
-          {cfg.label}
-        </button>
-        <div className="flex items-center gap-1.5">
-          {ind.plataforma && (
-            <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono">
-              {ind.plataforma}
-            </span>
-          )}
+    <>
+      <div className={`group/ind rounded-lg border border-stone-100 border-l-2 ${borde} p-2.5 bg-white hover:border-stone-200 hover:shadow-sm transition-all`}>
+        <div className="flex items-center justify-between gap-2 mb-1.5">
           <button
-            onClick={handleDelete}
-            className="opacity-0 group-hover/ind:opacity-100 text-stone-300 hover:text-red-400 transition-all"
-            title="Eliminar"
+            onClick={cycleEstado}
+            disabled={saving || terminada}
+            title={terminada ? undefined : 'Cambiar estado'}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all ${terminada ? 'cursor-default' : 'cursor-pointer active:scale-95'} ${cfg.className}`}
           >
-            <X size={13} />
+            {saving ? <Loader2 size={11} className="animate-spin" /> : cfg.icon}
+            {cfg.label}
           </button>
+          <div className="flex items-center gap-1.5">
+            {ind.plataforma && (
+              <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono">
+                {ind.plataforma}
+              </span>
+            )}
+            {!terminada && (
+              <button
+                onClick={() => setCancelModal(true)}
+                className="opacity-0 group-hover/ind:opacity-100 text-stone-300 hover:text-orange-400 transition-all text-[10px] font-semibold"
+                title="Cancelar tarea"
+              >
+                Cancelar
+              </button>
+            )}
+            <button
+              onClick={handleDelete}
+              className="opacity-0 group-hover/ind:opacity-100 text-stone-300 hover:text-red-400 transition-all"
+              title="Eliminar"
+            >
+              <X size={13} />
+            </button>
+          </div>
         </div>
+        <p className={`text-sm leading-snug ${terminada ? 'line-through text-stone-400' : 'text-stone-700'}`}>
+          {ind.descripcion}
+        </p>
+        {ind.nota && (
+          <p className="text-[11px] text-stone-400 mt-1.5 italic border-l-2 border-stone-200 pl-2 leading-relaxed">
+            {ind.nota}
+          </p>
+        )}
       </div>
-      <p className={`text-sm leading-snug ${ind.estado === 'cancelado' ? 'line-through text-stone-400' : 'text-stone-700'}`}>
-        {ind.descripcion}
-      </p>
-    </div>
+
+      {cancelModal && (
+        <GlassModal
+          title="Cancelar tarea"
+          confirmLabel="Sí, cancelar"
+          confirmClass="bg-orange-500 hover:bg-orange-600"
+          saving={saving}
+          onConfirm={handleCancelar}
+          onCancel={() => { setCancelModal(false); setCancelNota('') }}
+        >
+          <p className="text-sm text-stone-500 mb-3">Puedes dejar una nota explicando el motivo (opcional).</p>
+          <textarea
+            value={cancelNota}
+            onChange={e => setCancelNota(e.target.value)}
+            placeholder="Razón de cancelación..."
+            rows={3}
+            className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"
+          />
+        </GlassModal>
+      )}
+    </>
   )
 }
 
@@ -204,45 +309,161 @@ function IndicacionItemColaborador({
     })
   }
 
+  const [rejectModal, setRejectModal] = useState(false)
+  const [rejectNota, setRejectNota] = useState('')
+  const [cancelModal, setCancelModal] = useState(false)
+  const [cancelNota, setCancelNota] = useState('')
+
+  const rechazar = async () => {
+    const prev = ind.estado
+    onUpdate({ ...ind, estado: 'rechazado', nota: rejectNota || null })
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/ejecutivo/indicaciones/${ind.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ estado: 'rechazado', nota: rejectNota || null }),
+      })
+      if (!res.ok) onUpdate({ ...ind, estado: prev })
+    } catch {
+      onUpdate({ ...ind, estado: prev })
+    } finally {
+      setSaving(false)
+      setRejectModal(false)
+      setRejectNota('')
+    }
+  }
+
+  const cancelar = async () => {
+    const prev = ind.estado
+    onUpdate({ ...ind, estado: 'cancelado', nota: cancelNota || null })
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/ejecutivo/indicaciones/${ind.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ estado: 'cancelado', nota: cancelNota || null }),
+      })
+      if (!res.ok) onUpdate({ ...ind, estado: prev })
+    } catch {
+      onUpdate({ ...ind, estado: prev })
+    } finally {
+      setSaving(false)
+      setCancelModal(false)
+      setCancelNota('')
+    }
+  }
+
   const cfg = ESTADO_COLABORADOR_CONFIG[ind.estado] ?? ESTADO_COLABORADOR_CONFIG.pendiente
   const borde = BORDE_COLABORADOR[ind.estado] ?? 'border-l-stone-200'
+  const terminada = ind.estado === 'cancelado' || ind.estado === 'confirmado'
 
   return (
-    <div className={`group/ind rounded-lg border border-stone-100 border-l-2 ${borde} p-2.5 bg-white hover:border-stone-200 hover:shadow-sm transition-all`}>
-      <div className="flex items-center justify-between gap-2 mb-1.5">
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${cfg.className}`}>
-          {cfg.icon} {cfg.label}
-        </span>
-        <div className="flex items-center gap-1.5">
-          {ind.estado === 'marcado' && (
+    <>
+      <div className={`group/ind rounded-lg border border-stone-100 border-l-2 ${borde} p-2.5 bg-white hover:border-stone-200 hover:shadow-sm transition-all`}>
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${cfg.className}`}>
+            {cfg.icon} {cfg.label}
+          </span>
+          <div className="flex items-center gap-1.5">
+            {ind.estado === 'marcado' && (
+              <>
+                <button
+                  onClick={confirmar}
+                  disabled={saving}
+                  title="Confirmar como completado"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-violet-600 text-white hover:bg-violet-700 active:scale-95 transition-all whitespace-nowrap"
+                >
+                  {saving ? <Loader2 size={10} className="animate-spin" /> : <CheckCheck size={10} />}
+                  Confirmar ✓
+                </button>
+                <button
+                  onClick={() => setRejectModal(true)}
+                  disabled={saving}
+                  title="Rechazar"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-500 hover:bg-red-100 active:scale-95 transition-all whitespace-nowrap"
+                >
+                  <XCircle size={10} /> Rechazar
+                </button>
+              </>
+            )}
+            {ind.plataforma && (
+              <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono">
+                {ind.plataforma}
+              </span>
+            )}
+            {!terminada && ind.estado !== 'marcado' && (
+              <button
+                onClick={() => setCancelModal(true)}
+                className="opacity-0 group-hover/ind:opacity-100 text-stone-300 hover:text-orange-400 transition-all text-[10px] font-semibold"
+                title="Cancelar tarea"
+              >
+                Cancelar
+              </button>
+            )}
             <button
-              onClick={confirmar}
-              disabled={saving}
-              title="Confirmar como completado"
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-violet-600 text-white hover:bg-violet-700 active:scale-95 transition-all whitespace-nowrap"
+              onClick={handleDelete}
+              className="opacity-0 group-hover/ind:opacity-100 text-stone-300 hover:text-red-400 transition-all"
+              title="Eliminar"
             >
-              {saving ? <Loader2 size={10} className="animate-spin" /> : <CheckCheck size={10} />}
-              Confirmar ✓
+              <X size={13} />
             </button>
-          )}
-          {ind.plataforma && (
-            <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono">
-              {ind.plataforma}
-            </span>
-          )}
-          <button
-            onClick={handleDelete}
-            className="opacity-0 group-hover/ind:opacity-100 text-stone-300 hover:text-red-400 transition-all"
-            title="Eliminar"
-          >
-            <X size={13} />
-          </button>
+          </div>
         </div>
+        <p className={`text-sm leading-snug ${
+          terminada ? 'line-through text-stone-400'
+          : ind.estado === 'rechazado' ? 'text-stone-500'
+          : 'text-stone-700'
+        }`}>
+          {ind.descripcion}
+        </p>
+        {ind.nota && (
+          <p className="text-[11px] text-stone-400 mt-1.5 italic border-l-2 border-stone-200 pl-2 leading-relaxed">
+            {ind.nota}
+          </p>
+        )}
       </div>
-      <p className={`text-sm leading-snug ${ind.estado === 'cancelado' ? 'line-through text-stone-400' : ind.estado === 'confirmado' ? 'text-stone-400' : 'text-stone-700'}`}>
-        {ind.descripcion}
-      </p>
-    </div>
+
+      {rejectModal && (
+        <GlassModal
+          title="Rechazar tarea"
+          confirmLabel="Rechazar"
+          confirmClass="bg-red-500 hover:bg-red-600"
+          saving={saving}
+          onConfirm={rechazar}
+          onCancel={() => { setRejectModal(false); setRejectNota('') }}
+        >
+          <p className="text-sm text-stone-500 mb-3">Explica al colaborador por qué no se acepta esta tarea.</p>
+          <textarea
+            value={rejectNota}
+            onChange={e => setRejectNota(e.target.value)}
+            placeholder="Razón del rechazo..."
+            rows={3}
+            className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-red-200 resize-none"
+          />
+        </GlassModal>
+      )}
+
+      {cancelModal && (
+        <GlassModal
+          title="Cancelar tarea"
+          confirmLabel="Sí, cancelar"
+          confirmClass="bg-orange-500 hover:bg-orange-600"
+          saving={saving}
+          onConfirm={cancelar}
+          onCancel={() => { setCancelModal(false); setCancelNota('') }}
+        >
+          <p className="text-sm text-stone-500 mb-3">Puedes dejar una nota explicando el motivo (opcional).</p>
+          <textarea
+            value={cancelNota}
+            onChange={e => setCancelNota(e.target.value)}
+            placeholder="Razón de cancelación..."
+            rows={3}
+            className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+          />
+        </GlassModal>
+      )}
+    </>
   )
 }
 
@@ -262,8 +483,9 @@ function SesionCard({
   onUpdateIndicacion: (ind: Indicacion) => void
   onDeleteIndicacion: (sesionId: string, indId: string) => void
 }) {
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [confirmClose, setConfirmClose] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showCloseModal, setShowCloseModal] = useState(false)
+  const [actioning, setActioning] = useState(false)
 
   const indsEjecutivo = sesion.indicaciones.filter(i => i.bloque === 'ejecutivo')
   const indsColaborador = sesion.indicaciones.filter(i => i.bloque === 'colaborador')
@@ -277,22 +499,26 @@ function SesionCard({
   const esTicket = sesion.iniciado_por !== sesion.ejecutivo_id
 
   const handleDelete = async () => {
-    if (!confirmDelete) { setConfirmDelete(true); return }
+    setActioning(true)
     onDelete(sesion.id)
     await fetch(`/api/ejecutivo/sesiones/${sesion.id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     })
+    setActioning(false)
+    setShowDeleteModal(false)
   }
 
   const handleClose = async () => {
-    if (!confirmClose) { setConfirmClose(true); return }
+    setActioning(true)
     onClose(sesion.id)
     await fetch(`/api/ejecutivo/sesiones/${sesion.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ cerrada: true }),
     })
+    setActioning(false)
+    setShowCloseModal(false)
   }
 
   const cardBg = sesion.cerrada ? 'bg-stone-50' : 'bg-white'
@@ -321,35 +547,19 @@ function SesionCard({
               <div className="flex items-center gap-1 shrink-0">
                 {!sesion.cerrada && (
                   <button
-                    onClick={handleClose}
-                    onMouseLeave={() => setConfirmClose(false)}
-                    className="transition-all"
-                    title={confirmClose ? 'Clic para confirmar' : 'Cerrar sesión'}
+                    onClick={() => setShowCloseModal(true)}
+                    className="p-1.5 rounded-lg text-stone-300 hover:text-amber-500 hover:bg-amber-50 transition-colors"
+                    title="Mover al histórico"
                   >
-                    {confirmClose
-                      ? <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-100 px-2 py-1 rounded-lg">
-                          <Lock size={11} /> ¿Cerrar?
-                        </span>
-                      : <span className="block p-1.5 rounded-lg text-stone-300 hover:text-amber-500 hover:bg-amber-50 transition-colors">
-                          <Lock size={13} />
-                        </span>
-                    }
+                    <Lock size={13} />
                   </button>
                 )}
                 <button
-                  onClick={handleDelete}
-                  onMouseLeave={() => setConfirmDelete(false)}
-                  className="transition-all"
-                  title={confirmDelete ? 'Clic para confirmar' : 'Eliminar sesión'}
+                  onClick={() => setShowDeleteModal(true)}
+                  className="p-1.5 rounded-lg text-stone-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+                  title="Eliminar sesión"
                 >
-                  {confirmDelete
-                    ? <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-500 bg-red-50 px-2 py-1 rounded-lg">
-                        <Trash2 size={11} /> ¿Eliminar?
-                      </span>
-                    : <span className="block p-1.5 rounded-lg text-stone-300 hover:text-red-400 hover:bg-red-50 transition-colors">
-                        <Trash2 size={13} />
-                      </span>
-                  }
+                  <Trash2 size={13} />
                 </button>
               </div>
             </div>
@@ -441,6 +651,32 @@ function SesionCard({
         </div>
 
       </div>
+
+      {showDeleteModal && (
+        <GlassModal
+          title="¿Eliminar esta sesión?"
+          confirmLabel="Sí, eliminar"
+          confirmClass="bg-red-500 hover:bg-red-600"
+          saving={actioning}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteModal(false)}
+        >
+          <p className="text-sm text-stone-500 mb-2">Se eliminarán también todas sus indicaciones. Esta acción no se puede deshacer.</p>
+        </GlassModal>
+      )}
+
+      {showCloseModal && (
+        <GlassModal
+          title="¿Mover al histórico?"
+          confirmLabel="Sí, cerrar"
+          confirmClass="bg-amber-500 hover:bg-amber-600"
+          saving={actioning}
+          onConfirm={handleClose}
+          onCancel={() => setShowCloseModal(false)}
+        >
+          <p className="text-sm text-stone-500 mb-2">La sesión quedará cerrada y visible en el histórico. No se podrán agregar más tareas.</p>
+        </GlassModal>
+      )}
     </div>
   )
 }
