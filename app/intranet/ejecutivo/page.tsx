@@ -13,6 +13,19 @@ import type { IntranetUser, SesionConPersona, Indicacion, EstadoIndicacion } fro
 
 const PRIMARY = '#0d7377'
 
+const BORDE_EJECUTIVO: Record<string, string> = {
+  pendiente: 'border-l-amber-300',
+  hecho:     'border-l-teal-400',
+  cancelado: 'border-l-stone-200',
+}
+
+const BORDE_COLABORADOR: Record<string, string> = {
+  pendiente: 'border-l-stone-300',
+  marcado:   'border-l-amber-300',
+  confirmado:'border-l-violet-300',
+  cancelado: 'border-l-stone-100',
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getInitials(name: string | null, email: string) {
@@ -118,33 +131,38 @@ function IndicacionItemEjecutivo({
   }
 
   const cfg = ESTADO_EJECUTIVO_CONFIG[ind.estado] ?? ESTADO_EJECUTIVO_CONFIG.pendiente
+  const borde = BORDE_EJECUTIVO[ind.estado] ?? 'border-l-stone-200'
 
   return (
-    <div className="flex items-start gap-2 py-1.5 group/ind">
-      <button
-        onClick={cycleEstado}
-        disabled={saving}
-        title="Cambiar estado"
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 mt-0.5 ${cfg.className}`}
-      >
-        {saving ? <Loader2 size={11} className="animate-spin" /> : cfg.icon}
-        {cfg.label}
-      </button>
-      <span className={`text-sm text-stone-700 flex-1 leading-snug ${ind.estado === 'cancelado' ? 'line-through text-stone-400' : ''}`}>
+    <div className={`group/ind rounded-lg border border-stone-100 border-l-2 ${borde} p-2.5 bg-white hover:border-stone-200 hover:shadow-sm transition-all`}>
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <button
+          onClick={cycleEstado}
+          disabled={saving}
+          title="Cambiar estado (clic para rotar)"
+          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer active:scale-95 ${cfg.className}`}
+        >
+          {saving ? <Loader2 size={11} className="animate-spin" /> : cfg.icon}
+          {cfg.label}
+        </button>
+        <div className="flex items-center gap-1.5">
+          {ind.plataforma && (
+            <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono">
+              {ind.plataforma}
+            </span>
+          )}
+          <button
+            onClick={handleDelete}
+            className="opacity-0 group-hover/ind:opacity-100 text-stone-300 hover:text-red-400 transition-all"
+            title="Eliminar"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      </div>
+      <p className={`text-sm leading-snug ${ind.estado === 'cancelado' ? 'line-through text-stone-400' : 'text-stone-700'}`}>
         {ind.descripcion}
-      </span>
-      {ind.plataforma && (
-        <span className="text-[11px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono whitespace-nowrap shrink-0">
-          {ind.plataforma}
-        </span>
-      )}
-      <button
-        onClick={handleDelete}
-        className="opacity-0 group-hover/ind:opacity-100 text-stone-300 hover:text-red-400 transition-all shrink-0"
-        title="Eliminar"
-      >
-        <X size={14} />
-      </button>
+      </p>
     </div>
   )
 }
@@ -187,40 +205,43 @@ function IndicacionItemColaborador({
   }
 
   const cfg = ESTADO_COLABORADOR_CONFIG[ind.estado] ?? ESTADO_COLABORADOR_CONFIG.pendiente
+  const borde = BORDE_COLABORADOR[ind.estado] ?? 'border-l-stone-200'
 
   return (
-    <div className="flex items-start gap-2 py-1.5 group/ind">
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0 mt-0.5 ${cfg.className}`}>
-        {cfg.icon}
-        {cfg.label}
-      </span>
-      <span className={`text-sm text-stone-700 flex-1 leading-snug ${ind.estado === 'cancelado' ? 'line-through text-stone-400' : ind.estado === 'confirmado' ? 'text-stone-400' : ''}`}>
-        {ind.descripcion}
-      </span>
-      {ind.plataforma && (
-        <span className="text-[11px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono whitespace-nowrap shrink-0">
-          {ind.plataforma}
+    <div className={`group/ind rounded-lg border border-stone-100 border-l-2 ${borde} p-2.5 bg-white hover:border-stone-200 hover:shadow-sm transition-all`}>
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${cfg.className}`}>
+          {cfg.icon} {cfg.label}
         </span>
-      )}
-      {/* Botón confirmar: solo visible cuando colaborador ya marcó como realizado */}
-      {ind.estado === 'marcado' && (
-        <button
-          onClick={confirmar}
-          disabled={saving}
-          title="Confirmar como completado"
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-violet-600 text-white hover:bg-violet-700 transition-colors shrink-0 whitespace-nowrap"
-        >
-          {saving ? <Loader2 size={10} className="animate-spin" /> : <CheckCheck size={10} />}
-          Confirmar
-        </button>
-      )}
-      <button
-        onClick={handleDelete}
-        className="opacity-0 group-hover/ind:opacity-100 text-stone-300 hover:text-red-400 transition-all shrink-0"
-        title="Eliminar"
-      >
-        <X size={14} />
-      </button>
+        <div className="flex items-center gap-1.5">
+          {ind.estado === 'marcado' && (
+            <button
+              onClick={confirmar}
+              disabled={saving}
+              title="Confirmar como completado"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-violet-600 text-white hover:bg-violet-700 active:scale-95 transition-all whitespace-nowrap"
+            >
+              {saving ? <Loader2 size={10} className="animate-spin" /> : <CheckCheck size={10} />}
+              Confirmar ✓
+            </button>
+          )}
+          {ind.plataforma && (
+            <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono">
+              {ind.plataforma}
+            </span>
+          )}
+          <button
+            onClick={handleDelete}
+            className="opacity-0 group-hover/ind:opacity-100 text-stone-300 hover:text-red-400 transition-all"
+            title="Eliminar"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      </div>
+      <p className={`text-sm leading-snug ${ind.estado === 'cancelado' ? 'line-through text-stone-400' : ind.estado === 'confirmado' ? 'text-stone-400' : 'text-stone-700'}`}>
+        {ind.descripcion}
+      </p>
     </div>
   )
 }
@@ -298,26 +319,37 @@ function SesionCard({
                 )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                {total > 0 && (
-                  <span className="text-xs text-stone-400 mr-1">{hechos}/{total}</span>
-                )}
                 {!sesion.cerrada && (
                   <button
                     onClick={handleClose}
                     onMouseLeave={() => setConfirmClose(false)}
-                    className={`p-1.5 rounded-lg transition-colors text-xs font-semibold flex items-center gap-1 ${confirmClose ? 'bg-amber-100 text-amber-600' : 'text-stone-300 hover:text-amber-500 hover:bg-amber-50'}`}
-                    title={confirmClose ? 'Confirmar cierre' : 'Cerrar sesión'}
+                    className="transition-all"
+                    title={confirmClose ? 'Clic para confirmar' : 'Cerrar sesión'}
                   >
-                    <Lock size={13} />
+                    {confirmClose
+                      ? <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-100 px-2 py-1 rounded-lg">
+                          <Lock size={11} /> ¿Cerrar?
+                        </span>
+                      : <span className="block p-1.5 rounded-lg text-stone-300 hover:text-amber-500 hover:bg-amber-50 transition-colors">
+                          <Lock size={13} />
+                        </span>
+                    }
                   </button>
                 )}
                 <button
                   onClick={handleDelete}
                   onMouseLeave={() => setConfirmDelete(false)}
-                  className={`p-1.5 rounded-lg transition-colors ${confirmDelete ? 'bg-red-100 text-red-500' : 'text-stone-300 hover:text-red-400 hover:bg-red-50'}`}
-                  title={confirmDelete ? 'Confirmar eliminación' : 'Eliminar sesión'}
+                  className="transition-all"
+                  title={confirmDelete ? 'Clic para confirmar' : 'Eliminar sesión'}
                 >
-                  <Trash2 size={13} />
+                  {confirmDelete
+                    ? <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-500 bg-red-50 px-2 py-1 rounded-lg">
+                        <Trash2 size={11} /> ¿Eliminar?
+                      </span>
+                    : <span className="block p-1.5 rounded-lg text-stone-300 hover:text-red-400 hover:bg-red-50 transition-colors">
+                        <Trash2 size={13} />
+                      </span>
+                  }
                 </button>
               </div>
             </div>
@@ -325,21 +357,31 @@ function SesionCard({
             {sesion.notas && (
               <p className="text-xs text-stone-500 italic mt-1.5 leading-relaxed">{sesion.notas}</p>
             )}
+            {total > 0 && (
+              <div className="flex items-center gap-2 mt-2.5">
+                <div className="flex-1 h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-teal-400 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.round((hechos / total) * 100)}%` }}
+                  />
+                </div>
+                <span className="text-[11px] text-stone-400 font-medium shrink-0">{hechos}/{total}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Bloque Ejecutivo */}
-      <div className="border-t border-stone-100 mx-4" />
-      <div className="px-4 pt-3 pb-2">
-        <div className="flex items-center gap-1.5 mb-2">
-          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-teal-50 rounded-md">
-            <Briefcase size={11} className="text-teal-600" />
-            <span className="text-[11px] font-bold text-teal-700 uppercase tracking-wide">Ejecutivo</span>
-          </div>
+      <div className="border-t border-stone-100" />
+      <div className="px-4 pt-3 pb-3">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-1 h-4 bg-teal-400 rounded-full" />
+          <Briefcase size={12} className="text-teal-600" />
+          <span className="text-[11px] font-bold text-teal-700 uppercase tracking-widest">Ejecutivo</span>
         </div>
         {indsEjecutivo.length > 0 ? (
-          <div className="space-y-0.5 mb-2">
+          <div className="space-y-2 mb-3">
             {indsEjecutivo.map(ind => (
               <IndicacionItemEjecutivo
                 key={ind.id}
@@ -351,29 +393,28 @@ function SesionCard({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-stone-300 mb-2">Sin tareas para el ejecutivo.</p>
+          <p className="text-xs text-stone-300 mb-3">Sin tareas para el ejecutivo.</p>
         )}
         {!sesion.cerrada && (
           <button
             onClick={() => onAddIndicacion(sesion.id, 'ejecutivo')}
-            className="flex items-center gap-1 text-xs font-semibold text-teal-600 hover:text-teal-800 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-teal-600 hover:text-teal-800 hover:bg-teal-50 px-2 py-1 rounded-md transition-colors"
           >
-            <Plus size={12} /> Agregar tarea ejecutivo
+            <Plus size={12} /> Agregar tarea
           </button>
         )}
       </div>
 
       {/* Bloque Colaborador */}
-      <div className="border-t border-stone-100 mx-4 mt-1" />
+      <div className="border-t border-stone-100" />
       <div className="px-4 pt-3 pb-4">
-        <div className="flex items-center gap-1.5 mb-2">
-          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-violet-50 rounded-md">
-            <User size={11} className="text-violet-600" />
-            <span className="text-[11px] font-bold text-violet-700 uppercase tracking-wide">Colaborador</span>
-          </div>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-1 h-4 bg-violet-400 rounded-full" />
+          <User size={12} className="text-violet-600" />
+          <span className="text-[11px] font-bold text-violet-700 uppercase tracking-widest">Colaborador</span>
         </div>
         {indsColaborador.length > 0 ? (
-          <div className="space-y-0.5 mb-2">
+          <div className="space-y-2 mb-3">
             {indsColaborador.map(ind => (
               <IndicacionItemColaborador
                 key={ind.id}
@@ -385,14 +426,14 @@ function SesionCard({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-stone-300 mb-2">Sin tareas para el colaborador.</p>
+          <p className="text-xs text-stone-300 mb-3">Sin tareas para el colaborador.</p>
         )}
         {!sesion.cerrada && (
           <button
             onClick={() => onAddIndicacion(sesion.id, 'colaborador')}
-            className="flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-800 hover:bg-violet-50 px-2 py-1 rounded-md transition-colors"
           >
-            <Plus size={12} /> Agregar tarea colaborador
+            <Plus size={12} /> Agregar tarea
           </button>
         )}
       </div>

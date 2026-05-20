@@ -10,6 +10,19 @@ import type { SesionConPersona, Indicacion, EstadoIndicacion } from '@/lib/types
 
 const PRIMARY = '#0d7377'
 
+const BORDE_EJECUTIVO: Record<string, string> = {
+  pendiente: 'border-l-amber-300',
+  hecho:     'border-l-teal-400',
+  cancelado: 'border-l-stone-200',
+}
+
+const BORDE_COLABORADOR: Record<string, string> = {
+  pendiente: 'border-l-stone-300',
+  marcado:   'border-l-amber-300',
+  confirmado:'border-l-violet-300',
+  cancelado: 'border-l-stone-100',
+}
+
 // ─── Configuración de estados (read-only y colaborador) ──────────────────────
 
 const ESTADO_EJECUTIVO_CONFIG: Record<string, { label: string; className: string; icon: ReactNode }> = {
@@ -29,19 +42,22 @@ const ESTADO_COLABORADOR_CONFIG: Record<string, { label: string; className: stri
 
 function IndicacionEjecutivoRO({ ind }: { ind: Indicacion }) {
   const cfg = ESTADO_EJECUTIVO_CONFIG[ind.estado] ?? ESTADO_EJECUTIVO_CONFIG.pendiente
+  const borde = BORDE_EJECUTIVO[ind.estado] ?? 'border-l-stone-200'
   return (
-    <div className="flex items-start gap-2 py-1.5">
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0 mt-0.5 ${cfg.className}`}>
-        {cfg.icon} {cfg.label}
-      </span>
-      <span className={`text-sm text-stone-700 flex-1 leading-snug ${ind.estado === 'cancelado' ? 'line-through text-stone-400' : ''}`}>
-        {ind.descripcion}
-      </span>
-      {ind.plataforma && (
-        <span className="text-[11px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono whitespace-nowrap shrink-0">
-          {ind.plataforma}
+    <div className={`rounded-lg border border-stone-100 border-l-2 ${borde} p-2.5 bg-white`}>
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${cfg.className}`}>
+          {cfg.icon} {cfg.label}
         </span>
-      )}
+        {ind.plataforma && (
+          <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono">
+            {ind.plataforma}
+          </span>
+        )}
+      </div>
+      <p className={`text-sm leading-snug ${ind.estado === 'cancelado' ? 'line-through text-stone-400' : 'text-stone-700'}`}>
+        {ind.descripcion}
+      </p>
     </div>
   )
 }
@@ -75,31 +91,34 @@ function IndicacionColaboradorInteractiva({
   }
 
   const cfg = ESTADO_COLABORADOR_CONFIG[ind.estado] ?? ESTADO_COLABORADOR_CONFIG.pendiente
+  const borde = BORDE_COLABORADOR[ind.estado] ?? 'border-l-stone-200'
   const clickable = ind.estado === 'pendiente'
 
   return (
-    <div className="flex items-start gap-2 py-1.5">
-      <button
-        onClick={clickable ? marcarHecho : undefined}
-        disabled={saving || !clickable}
-        title={clickable ? 'Marcar como realizado' : undefined}
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0 mt-0.5 transition-colors ${cfg.className} ${clickable ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
-      >
-        {saving ? <Loader2 size={11} className="animate-spin" /> : cfg.icon}
-        {cfg.label}
-      </button>
-      <span className={`text-sm flex-1 leading-snug ${
+    <div className={`rounded-lg border border-stone-100 border-l-2 ${borde} p-2.5 bg-white transition-all`}>
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <button
+          onClick={clickable ? marcarHecho : undefined}
+          disabled={saving || !clickable}
+          title={clickable ? 'Marcar como realizado' : undefined}
+          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all ${cfg.className} ${clickable ? 'cursor-pointer hover:opacity-80 active:scale-95 shadow-sm' : 'cursor-default'}`}
+        >
+          {saving ? <Loader2 size={11} className="animate-spin" /> : cfg.icon}
+          {clickable ? '¡Listo! Marcar ✓' : cfg.label}
+        </button>
+        {ind.plataforma && (
+          <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono">
+            {ind.plataforma}
+          </span>
+        )}
+      </div>
+      <p className={`text-sm leading-snug ${
         ind.estado === 'cancelado' ? 'line-through text-stone-400'
         : ind.estado === 'confirmado' ? 'text-stone-400'
         : 'text-stone-700'
       }`}>
         {ind.descripcion}
-      </span>
-      {ind.plataforma && (
-        <span className="text-[11px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-mono whitespace-nowrap shrink-0">
-          {ind.plataforma}
-        </span>
-      )}
+      </p>
     </div>
   )
 }
@@ -165,7 +184,15 @@ function SesionCardColaborador({
             Con: <span className="font-medium">{sesion.ejecutivo.full_name ?? sesion.ejecutivo.email}</span>
           </p>
           {total > 0 && (
-            <p className="text-xs text-stone-400 mt-0.5">{hechos}/{total} completadas</p>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex-1 h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-teal-400 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.round((hechos / total) * 100)}%` }}
+                />
+              </div>
+              <span className="text-[11px] text-stone-400 font-medium shrink-0">{hechos}/{total}</span>
+            </div>
           )}
         </div>
         <span className="text-stone-400 shrink-0 mt-0.5">
@@ -180,17 +207,16 @@ function SesionCardColaborador({
           )}
 
           {/* Bloque ejecutivo: siempre read-only */}
-          <div className="px-4 pt-3 pb-2">
-            <div className="flex items-center gap-1.5 mb-2">
-              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-teal-50 rounded-md">
-                <Briefcase size={11} className="text-teal-600" />
-                <span className="text-[11px] font-bold text-teal-700 uppercase tracking-wide">Ejecutivo</span>
-              </div>
+          <div className="px-4 pt-3 pb-3">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1 h-4 bg-teal-400 rounded-full" />
+              <Briefcase size={12} className="text-teal-600" />
+              <span className="text-[11px] font-bold text-teal-700 uppercase tracking-widest">Ejecutivo</span>
             </div>
             {indsEjecutivo.length === 0 ? (
-              <p className="text-xs text-stone-300 mb-1">Sin tareas para el ejecutivo.</p>
+              <p className="text-xs text-stone-300 mb-1">Sin tareas del ejecutivo.</p>
             ) : (
-              <div className="space-y-0.5">
+              <div className="space-y-2">
                 {indsEjecutivo.map(ind => (
                   <IndicacionEjecutivoRO key={ind.id} ind={ind} />
                 ))}
@@ -199,19 +225,17 @@ function SesionCardColaborador({
           </div>
 
           {/* Bloque colaborador: interactivo (puede marcar) */}
-          <div className="border-t border-stone-100 mx-4 my-1" />
-          <div className="px-4 pt-2 pb-4">
-            <div className="flex items-center gap-1.5 mb-2">
-              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-violet-50 rounded-md">
-                <User size={11} className="text-violet-600" />
-                <span className="text-[11px] font-bold text-violet-700 uppercase tracking-wide">Mis tareas</span>
-              </div>
-              <span className="text-[10px] text-stone-400">— haz clic en "Pendiente" para marcar como realizado</span>
+          <div className="border-t border-stone-100" />
+          <div className="px-4 pt-3 pb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1 h-4 bg-violet-400 rounded-full" />
+              <User size={12} className="text-violet-600" />
+              <span className="text-[11px] font-bold text-violet-700 uppercase tracking-widest">Mis tareas</span>
             </div>
             {indsColaborador.length === 0 ? (
               <p className="text-xs text-stone-300">Sin tareas asignadas.</p>
             ) : (
-              <div className="space-y-0.5">
+              <div className="space-y-2">
                 {indsColaborador.map(ind => (
                   <IndicacionColaboradorInteractiva
                     key={ind.id}
