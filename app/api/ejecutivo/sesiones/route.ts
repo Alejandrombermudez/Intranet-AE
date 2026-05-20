@@ -23,20 +23,14 @@ export async function GET(req: NextRequest) {
   const personaId = req.nextUrl.searchParams.get('persona_id')
   if (!personaId) return NextResponse.json({ error: 'persona_id requerido' }, { status: 400 })
 
-  // El ejecutivo puede ver sesiones de cualquier persona.
-  // Un colaborador solo puede ver sus propias sesiones.
   if (!isEjecutivo(profile) && profile.id !== personaId) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 
-  const { data, error: dbErr } = await supabase
+  // 1) Sesiones + indicaciones (mismo schema, sin cross-schema join)
+  const { data: sesiones, error: dbErr } = await supabase
     .schema('ejecutivo').from('sesiones')
-    .select(`
-      *,
-      indicaciones(*),
-      persona:persona_id(id, full_name, email, department),
-      ejecutivo:ejecutivo_id(id, full_name, email)
-    `)
+    .select(`*, indicaciones(*)`)
     .eq('persona_id', personaId)
     .order('fecha', { ascending: false })
 
@@ -45,11 +39,35 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: dbErr.message }, { status: 500 })
   }
 
-  const sorted = (data ?? []).map(s => ({
+  // 2) Cargar perfiles de usuarios involucrados (persona + ejecutivos) por separado
+  const userIds = new Set<string>()
+  for (const s of sesiones ?? []) {
+    userIds.add(s.persona_id)
+    userIds.add(s.ejecutivo_id)
+  }
+
+  let usersById: Record<string, { id: string; full_name: string | null; email: string; department: string | null }> = {}
+  if (userIds.size > 0) {
+    const { data: users, error: usersErr } = await supabase
+      .schema('people').from('user_profiles')
+      .select('id, full_name, email, department')
+      .in('id', Array.from(userIds))
+    if (usersErr) {
+      console.error('[GET /api/ejecutivo/sesiones] users', usersErr)
+      return NextResponse.json({ error: usersErr.message }, { status: 500 })
+    }
+    usersById = Object.fromEntries((users ?? []).map(u => [u.id, u]))
+  }
+
+  // 3) Merge en JS + ordenar indicaciones
+  const result = (sesiones ?? []).map(s => ({
     ...s,
     indicaciones: [...(s.indicaciones ?? [])].sort((a, b) => a.orden - b.orden),
+    persona: usersById[s.persona_id] ?? { id: s.persona_id, full_name: null, email: '', department: null },
+    ejecutivo: usersById[s.ejecutivo_id] ?? { id: s.ejecutivo_id, full_name: null, email: '', department: null },
   }))
-  return NextResponse.json(sorted)
+
+  return NextResponse.json(result)
 }
 
 export async function POST(req: NextRequest) {
@@ -68,9 +86,7 @@ export async function POST(req: NextRequest) {
   let personaId: string
 
   if (as_ticket) {
-    // Colaborador abre un ticket hacia el ejecutivo
     personaId = profile.id
-    // Auto-detectar el ejecutivo de la organización
     const { data: ejecutivo } = await supabase.schema('people').from('user_profiles')
       .select('id')
       .or('department.eq.Ejecutivo,is_admin.eq.true')
@@ -80,7 +96,6 @@ export async function POST(req: NextRequest) {
     if (!ejecutivo) return NextResponse.json({ error: 'No se encontró ejecutivo en la organización' }, { status: 404 })
     ejecutivoId = ejecutivo.id
   } else {
-    // Ejecutivo crea sesión para un colaborador
     if (!isEjecutivo(profile)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     if (!persona_id) return NextResponse.json({ error: 'persona_id requerido' }, { status: 400 })
     ejecutivoId = profile.id
@@ -100,6 +115,9 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
+  if (dbErr) {
+    console.error('[POST /api/ejecutivo/sesiones]', dbErr)
+    return NextResponse.json({ error: dbErr.message }, { status: 500 })
+  }
   return NextResponse.json(data, { status: 201 })
 }
