@@ -188,21 +188,33 @@ Agregar la nueva tabla en la sección correspondiente del archivo `SUPABASE_SCHE
 
 ---
 
-## Referencia rápida — schemas activos
+## Referencia rápida — schemas activos (Mayo 2026)
 
 ```
-public.consentimientos
-people.user_profiles
-fleet.vehicle_reservations
-fleet.vehicle_inspections
-siembra.familias
-siembra.predios
-siembra.evaluaciones_campo
-siembra.monitoreos
-siembra.camaras_trampa
-siembra.fotos_predio
-ras.familias
-ras.monitoreos
-ras.camaras_trampa
-ras.fotos_predio
+public.consentimientos          ← 4 filas
+public.proyecciones             ← 3 filas
+people.user_profiles            ← 13 filas
+fleet.vehicle_reservations      ← 30 filas
+fleet.vehicle_inspections       ← 3 filas
+fleet.vehicle_documents         ← 4 filas (una por vehículo, fechas pendientes de llenar)
+ejecutivo.sesiones              ← 1 fila
+ejecutivo.indicaciones          ← 2 filas (nota + rechazado activos)
+siembra.predios                 ← 6 filas
+siembra.familias                ← 9 filas
+siembra.evaluaciones_campo      ← 10 filas
+siembra.monitoreos              ← 1 fila
+siembra.camaras_trampa          ← 0 filas
+siembra.fotos_camara            ← 0 filas
+siembra.fotos_predio            ← 9 filas
+ras.familias                    ← 17 filas
+ras.monitoreos                  ← 0 filas
+ras.camaras_trampa              ← 0 filas
+ras.fotos_camara                ← 0 filas
+ras.fotos_predio                ← 0 filas
+
+⏳ PENDIENTE (ver pending.sql + juridica/CONTEXTO_MODULO_JURIDICO.md):
+juridica.aliados                ← schema nuevo
+juridica.antecedentes           ← schema nuevo
+juridica.analisis_juridico      ← schema nuevo
+siembra.familias.aliado_id      ← columna FK nueva
 ```

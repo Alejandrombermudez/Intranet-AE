@@ -3,7 +3,9 @@
 > **Última actualización:** Mayo 2026 | Proyecto Supabase: `lbxysovesmbgesxooghw`
 > Para seguimiento de migraciones SQL ver `docs/sql/`
 >
-> **Última migración:** `docs/sql/migration_campo_multizona.sql` — agrega columnas multi-zona + RLS anon a `siembra.evaluaciones_campo` para la PWA offline
+> **Última migración ejecutada:** `migration_ejecutivo_v2.sql` + creación de `fleet.vehicle_documents` (Mayo 2026)
+>
+> **Pendiente:** `docs/sql/migration_modulo_juridico.sql` — schema `juridica` (3 tablas) + columna `siembra.familias.aliado_id`. Contexto funcional en `juridica/CONTEXTO_MODULO_JURIDICO.md`.
 
 ---
 
@@ -12,11 +14,13 @@
 | Schema | Módulo | Estado |
 |--------|--------|--------|
 | `auth` | Autenticación *(Supabase managed)* | ✅ Gestionado por Supabase |
-| `public` | Tablas transversales (`consentimientos`) | ✅ En uso |
-| `people` | Gestión de usuarios | ⚠️ Pendiente SQL — ver `docs/sql/pending.sql` |
-| `fleet` | Flota vehicular | ⚠️ Pendiente SQL — ver `docs/sql/pending.sql` |
-| `siembra` | Módulo Restauración / Siembra | ⚠️ Ejecutar `migration_encuesta_predial.sql` + `migration_campo_multizona.sql` |
+| `public` | Tablas transversales (`consentimientos`, `proyecciones`) | ✅ En uso |
+| `people` | Gestión de usuarios | ✅ Migrado y en producción |
+| `fleet` | Flota vehicular | ✅ En producción — `vehicle_documents` creada (4 filas) |
+| `ejecutivo` | Módulo ejecutivo | ✅ En producción — columna `nota` y estado `rechazado` activos |
+| `siembra` | Módulo Restauración / Siembra | ✅ Ejecutado en producción |
 | `ras` | Módulo Conservación | ✅ Ejecutado en producción |
+| `juridica` | Módulo Jurídico (Fase 1) | ⏳ Pendiente — ver `juridica/CONTEXTO_MODULO_JURIDICO.md` |
 | `storage` | Buckets *(Supabase managed)* | ✅ Buckets creados |
 
 ```js
@@ -26,7 +30,7 @@ const sb = createClient(
   'https://lbxysovesmbgesxooghw.supabase.co',
   process.env.SUPABASE_SERVICE_ROLE_KEY  // clave en .env
 )
-// Schema custom (people, fleet, siembra, ras)
+// Schema custom (people, fleet, siembra, ras, ejecutivo)
 const { data } = await sb.schema('people').from('user_profiles').select('*')
 console.log(JSON.stringify(data, null, 2))
 ```
@@ -45,25 +49,91 @@ node _query.mjs
 | `ras-shapefiles` | Conservación | Polígonos .zip (finca + área en conservación) |
 | `ras-fotos-camara` | Conservación | Fotos de cámaras trampa |
 | `inspection-photos` | Flota | Fotos de inspecciones vehiculares |
+| `campo-fotos` | PWA Campo (familias-res) | Fotos y firmas de evaluaciones AE-CAMPO-001 |
 
 ---
 
 ## Schema `public` — Tablas generales
 
-### `user_profiles` — Usuarios de la intranet (13 filas)
+### `consentimientos` — Tratamiento de datos (4 filas)
+| Columna | Tipo |
+|---------|------|
+| `id` | uuid PK |
+| `nombre` | text |
+| `apellido` | text |
+| `cedula` | text |
+| `celular` | text |
+| `correo` | text |
+| `acepta_tratamiento` | boolean |
+| `acepta_politicas` | boolean |
+| `created_at` | timestamptz |
+
+### `proyecciones` — Metas por proyecto (3 filas)
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `nombre` | text | Ej: "Fase I · 2026–2030" |
+| `subtitulo` | text | |
+| `descripcion` | text | |
+| `year_inicio` / `year_fin` | integer | |
+| `ha_objetivo` / `ha_ejecutado` | numeric | |
+| `ha_conservacion` / `ha_restauracion` | numeric | |
+| `plantulas_objetivo` / `plantulas_ejecutadas` | integer | |
+| `familias_vinculadas` | integer | |
+| `municipios_clave` | text[] | |
+| `color` | text | HEX para UI |
+| `shapefile_url` | text | |
+| `orden` | integer | orden en UI |
+| `activo` | boolean | |
+| `created_at` | timestamptz | |
+
+**Fases activas (Mayo 2026):**
+- Fase I · 2026–2030 — Piedemonte Andino-Amazónico — 13.000 ha objetivo / 980 ejecutadas
+- Fase II · 2030–2035 — Cuencas del Caguán — 140.000 ha objetivo / 1.840 ejecutadas
+- Fase III · 2035–2050 — Corredor Chiribiquete — 750.000 ha objetivo / 0 ejecutadas
+
+---
+
+## Schema `people` — Usuarios
+
+### `people.user_profiles` — Perfiles internos (13 filas)
 | Columna | Tipo | Notas |
 |---------|------|-------|
 | `id` | uuid PK | |
 | `email` | text | único |
 | `full_name` | text | |
 | `role` | text | |
-| `department` | text | |
+| `department` | text | `RAS` \| `Ejecutivo` \| `Financiero` \| null |
 | `is_admin` | boolean | acceso total al panel admin |
 | `can_access_intranet` | boolean | acceso al módulo propio sin ser admin |
 | `last_login` | timestamptz | |
 | `created_at` | timestamptz | |
 
-### `vehicle_reservations` — Reservas de vehículos (28 filas)
+**Usuarios activos (Mayo 2026):**
+
+| Email | Nombre | Departamento | Admin |
+|-------|--------|-------------|-------|
+| tecnologia@amazoniaemprende.com | Alejandro Bermudez | Ejecutivo | ✅ |
+| mariafernanda@amazoniaemprende.com | Maria Fernanda Alvarez | Financiero | ✅ |
+| julioandres@amazoniaemprende.com | Julio Andrés Rozo Grisales | Ejecutivo | ✅ |
+| juliehernandez@amazoniaemprende.com | Julie Hernandez | RAS | ✅ |
+| profesional.restauracion@... | Profesional Restauración | RAS | ❌ |
+| logistica@amazoniaemprende.com | Katys Blanquicet | Financiero | ❌ |
+| comunicaciones@amazoniaemprende.com | Comunicaciones AE | — | ❌ |
+| nataliavalderrama@... | Natalia Valderrama | — | ❌ |
+| monicasarmiento@... | Monica Sarmiento | — | ❌ |
+| finanzas@amazoniaemprende.com | Rocío Ruíz | — | ❌ |
+| *(3 cuentas Gmail externas)* | sin perfil | — | ❌ (sin acceso) |
+
+> Los 3 usuarios con email Gmail (deivyortizvalderrama, jv200769, dussanherediay) no tienen perfil completo ni acceso a la intranet. Se registraron vía OAuth pero no fueron habilitados.
+
+**Trigger:** `on_auth_user_created` y `on_auth_user_signed_in` sobre `auth.users` → sincroniza a `people.user_profiles`.
+
+---
+
+## Schema `fleet` — Flota vehicular
+
+### `fleet.vehicle_reservations` — Reservas (30 filas)
 | Columna | Tipo | Notas |
 |---------|------|-------|
 | `id` | uuid PK | |
@@ -76,7 +146,9 @@ node _query.mjs
 | `purpose` | text | formato `[Proyecto] Actividad` |
 | `created_at` | timestamptz | |
 
-### `vehicle_inspections` — Inspecciones vehiculares (2 filas)
+**Vehículos activos:** Chevrolet Samurai, Camioneta Foton (bloqueada lun-mar), Susuki DR 150, Yamaha XTZ-150.
+
+### `fleet.vehicle_inspections` — Inspecciones (3 filas)
 | Columna | Tipo | Notas |
 |---------|------|-------|
 | `id` | uuid PK | |
@@ -96,7 +168,7 @@ node _query.mjs
 | `created_at` | timestamptz | |
 | `updated_at` | timestamptz | auto-actualizado por trigger |
 
-### `vehicle_documents` — Documentos de vehículos
+### `fleet.vehicle_documents` — Documentos por vehículo (4 filas)
 | Columna | Tipo |
 |---------|------|
 | `id` | uuid PK |
@@ -107,163 +179,45 @@ node _query.mjs
 | `updated_at` | timestamptz |
 | `updated_by` | text |
 
-### `consentimientos` — Módulo financiero (4 filas)
-| Columna | Tipo |
-|---------|------|
-| `id` | uuid PK |
-| `nombre` | text |
-| `apellido` | text |
-| `cedula` | text |
-| `celular` | text |
-| `correo` | text |
-| `acepta_tratamiento` | boolean |
-| `acepta_politicas` | boolean |
-| `created_at` | timestamptz |
+**Vehículos registrados:** Chevrolet Samurai, Camioneta Foton, Susuki DR 150, Yamaha XTZ-150. Las fechas de SOAT y Tecnomecánica están en null — se deben llenar desde el panel admin (`/intranet/admin`).
 
-### `proyecciones` — Metas por proyecto
+---
+
+## Schema `ejecutivo` — Módulo ejecutivo
+
+### `ejecutivo.sesiones` — Sesiones de seguimiento (1 fila)
 | Columna | Tipo | Notas |
 |---------|------|-------|
 | `id` | uuid PK | |
-| `nombre` | text | |
-| `subtitulo` | text | |
+| `iniciado_por` | uuid FK → people.user_profiles | usuario que crea la sesión |
+| `ejecutivo_id` | uuid FK → people.user_profiles | ejecutivo de la sesión |
+| `persona_id` | uuid FK → people.user_profiles | persona a quien va dirigida |
+| `titulo` | text | |
+| `fecha` | date | |
+| `notas` | text | notas generales de la sesión |
+| `cerrada` | boolean | false = activa |
+| `created_at` / `updated_at` | timestamptz | |
+
+### `ejecutivo.indicaciones` — Ítems de acción (2 filas)
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `sesion_id` | uuid FK → sesiones | |
+| `bloque` | text | `ejecutivo` \| `colaborador` |
 | `descripcion` | text | |
-| `year_inicio` / `year_fin` | integer | |
-| `ha_objetivo` / `ha_ejecutado` | numeric | |
-| `ha_conservacion` / `ha_restauracion` | numeric | |
-| `plantulas_objetivo` / `plantulas_ejecutadas` | integer | |
-| `familias_vinculadas` | integer | |
-| `municipios_clave` | text[] | |
-| `color` | text | HEX para UI |
-| `shapefile_url` | text | |
-| `orden` | integer | orden en UI |
-| `activo` | boolean | |
-| `created_at` | timestamptz | |
+| `plataforma` | text | Slack, Notion, WhatsApp, etc. |
+| `estado` | text | ver flujo abajo |
+| `orden` | integer | |
+| `created_at` / `updated_at` | timestamptz | |
+| `nota` | text | Razón de rechazo o cancelación (nullable) |
 
-### Tablas beta / en uso limitado
-| Tabla | Descripción |
-|-------|-------------|
-| `siembra.familias` | Familia en restauración: encuesta predial completa (~90 columnas) |
-| `siembra.monitoreos` | Eventos de monitoreo (fecha + % supervivencia) |
-| `siembra.camaras_trampa` | Cámaras trampa (nombre, lat, lon) |
-| `siembra.fotos_camara` | Fotos de cámaras trampa |
-| `siembra.evaluaciones_campo` | Evaluaciones AE-CAMPO-001 (áreas de siembra) |
+**Flujo de estados por bloque:**
+- `bloque = ejecutivo`: `pendiente` → `hecho` → `cancelado`
+- `bloque = colaborador`: `pendiente` → `marcado` (colaborador marca hecho) → `confirmado` (ejecutivo confirma) | `cancelado`
+- `rechazado` también disponible tras ejecutar v2
 
-### Nuevas columnas en `siembra.familias` (migración Abril 2026)
 
-Agrupadas por sección de la **Encuesta de caracterización predial**:
-
-| Sección | Columnas clave |
-|---------|---------------|
-| §1 Datos Generales | `encuesta_no`, `fecha_encuesta`, `encuestador`, `tipo_encuestado` |
-| §2 Datos del Predio | `estrato_paisaje`, `latitud`, `longitud`, `altitud_msnm`, `anio_adquisicion`, `distancia_cabecera_km`, `tipo_via[]`, `tipo_acceso_predio[]`, `servicios_domiciliarios[]`, `fuente_agua[]`, `senal_telefonica` |
-| §3 Vivienda | `material_techo`, `material_paredes`, `material_piso`, `num_habitaciones`, `personas_vivienda`, `tipo_cocina[]`, `tipo_bano[]`, `disposicion_excretas`, `disposicion_aguas_servidas`, `manejo_basuras[]` |
-| §4 Núcleo Familiar | `poblacion_tendencia`, `acceso_salud`, `regimen_salud`, `puesto_salud`, `acceso_educacion`, `distancia_educacion_km`, `tiempo_llegada_region`, `razon_llegada`, `miembros_familia` (JSONB) |
-| §5 Valorización | `ha_total`, `valor_comercial_ha`, `tendencia_area`, `cambio_area_ha`, `intencion_vender`, `causas_venta[]`, `medio_transporte_produccion`, `transporte_propio`, `valor_transporte`, `problemas_mercado`, `nivel_ingresos` |
-| §6 Cultivos | `cultivos` (JSONB — array de filas por cultivo) |
-| §6 Ganadería | `tiene_ganaderia`, `tipo_tenencia_ganado`, `orientacion_ganaderia[]`, `num_cabezas_ganado`, `ha_ganaderia`, `tipos_pasto[]`, `litros_leche_dia`, `tanque_enfriamiento`, `destino_leche[]`, `precio_leche_litro`, `sistema_alimentacion_ganado`, `especies_forrajeras`, `uso_fertilizacion_ganado[]`, `manejo_praderas[]`, `infraestructura_ganadera[]`, `material_postes`, `ha_pasto_ultimo_anio`, `origen_nuevos_pastos[]` + 10 booleanos de ganadería regenerativa + `otras_especies_pecuarias` (JSONB) |
-| §7 Tecnología | `instalaciones_maquinaria`, `tiene_tractor`, `tiene_camion`, `manejo_suelo_fertilizacion`, `tipo_fertilizacion[]`, `cobertura_arborea`, `practica_podas`, `practica_raleo`, `control_malezas[]`, `manejo_agua_cultivo`, `problemas_manejo[]`, `especies_variedades`, `lleva_registros_productividad`, `interes_capacitacion`, `temas_capacitacion` |
-| §8 Bosque & Clima | `aprovecha_bosque`, `productos_forestales`, `capacitacion_ambiente`, `entidad_capacitacion`, `especies_bosque_predio`, `especies_fauna_predio`, `estudio_academico`, `disminucion_especies`, `especies_afectadas`, `cambios_caudal`, `cambio_cobertura_ha`, `causa_cambio_cobertura[]`, `problemas_agropecuarios[]` |
-| §9 Relaciones | `programas_gubernamentales`, `beneficios_programas`, `impacto_programa`, `opinion_productores`, `aliado_cooperativa`, `nombre_cooperativa`, `beneficio_cooperativa`, `calificacion_gremios`, `observaciones_generales` |
-
-> **Nota:** Ningún campo es obligatorio (todos `NULL` por defecto).
-
-### SQL ejecutado
-
-```sql
-CREATE SCHEMA IF NOT EXISTS siembra;
-
-CREATE TABLE siembra.familias (
-  id                         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  -- Identificación
-  nombre_propietario         TEXT NOT NULL,
-  tipo_documento             TEXT,                       -- CC / NUIP / CE / TI / PP / NIT
-  numero_documento           TEXT,
-  telefono                   TEXT,
-  nucleo                     TEXT,                       -- Ej: "Piedemonte"
-  departamento               TEXT,
-  municipio                  TEXT NOT NULL,
-  vereda                     TEXT,
-  nombre_finca               TEXT,
-  -- Hogar & Economía
-  adultos                    INT DEFAULT 0,
-  ninos                      INT DEFAULT 0,
-  cant_mujeres               INT DEFAULT 0,
-  cant_hombres               INT DEFAULT 0,
-  actividad_economica        TEXT,
-  tiene_espacio_vegetal      BOOLEAN DEFAULT FALSE,
-  empleos_locales            INT DEFAULT 0,
-  -- Predio & Inventario forestal
-  ha_potreros                NUMERIC,
-  ha_bosque                  NUMERIC,
-  ha_otras                   NUMERIC,
-  bajo_conservacion          BOOLEAN DEFAULT FALSE,
-  num_individuos             INT DEFAULT 0,              -- árboles en inventario
-  num_especies_inventario    INT DEFAULT 0,              -- especies identificadas (≠ especies sembradas)
-  area_bosque_recorrida      NUMERIC,                    -- ha encuestadas en inventario
-  distancia_florencia_km     NUMERIC,
-  tiempo_florencia_min       INT,
-  -- Restauración
-  plan_restauracion          TEXT,
-  ha_restauracion            NUMERIC,
-  parcelas_monitoreo         INT,
-  plantulas_sembradas        INT,
-  especies_sembradas         INT,
-  -- Archivos
-  shapefile_finca_url        TEXT,
-  shapefile_restauracion_url TEXT,
-  shapefile_arboles_url      TEXT,
-  documento_acuerdo_url      TEXT,
-  -- Auditoría
-  created_by                 TEXT,
-  created_at                 TIMESTAMPTZ DEFAULT NOW(),
-  updated_at                 TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE siembra.monitoreos (
-  id                UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  familia_id        UUID REFERENCES siembra.familias(id) ON DELETE CASCADE,
-  fecha             DATE NOT NULL,
-  supervivencia_pct NUMERIC CHECK (supervivencia_pct BETWEEN 0 AND 100),
-  created_at        TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE siembra.camaras_trampa (
-  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  familia_id UUID REFERENCES siembra.familias(id) ON DELETE CASCADE,
-  nombre     TEXT NOT NULL,
-  latitud    NUMERIC NOT NULL,
-  longitud   NUMERIC NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE siembra.fotos_camara (
-  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  camara_id  UUID REFERENCES siembra.camaras_trampa(id) ON DELETE CASCADE,
-  url        TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE siembra.familias       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE siembra.monitoreos     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE siembra.camaras_trampa ENABLE ROW LEVEL SECURITY;
-ALTER TABLE siembra.fotos_camara   ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "read_familias"     ON siembra.familias       FOR SELECT TO authenticated USING (true);
-CREATE POLICY "insert_familias"   ON siembra.familias       FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "delete_familias"   ON siembra.familias       FOR DELETE TO authenticated USING (true);
-CREATE POLICY "read_monitoreos"   ON siembra.monitoreos     FOR SELECT TO authenticated USING (true);
-CREATE POLICY "insert_monitoreos" ON siembra.monitoreos     FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "read_camaras"      ON siembra.camaras_trampa FOR SELECT TO authenticated USING (true);
-CREATE POLICY "insert_camaras"    ON siembra.camaras_trampa FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "read_fotos"        ON siembra.fotos_camara   FOR SELECT TO authenticated USING (true);
-CREATE POLICY "insert_fotos"      ON siembra.fotos_camara   FOR INSERT TO authenticated WITH CHECK (true);
-
--- IMPORTANTE: Supabase no otorga permisos automáticamente en schemas distintos de public.
--- Sin estos GRANTs se produce "permission denied for table X" aunque las políticas RLS existan.
-GRANT USAGE ON SCHEMA siembra TO anon, authenticated, service_role;
-GRANT SELECT, INSERT, DELETE ON ALL TABLES IN SCHEMA siembra TO authenticated, service_role;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA siembra TO authenticated, service_role;
-```
+**Índices:** `idx_sesiones_ejecutivo`, `idx_sesiones_persona`, `idx_sesiones_iniciado`, `idx_sesiones_fecha`, `idx_indicaciones_sesion`, `idx_indicaciones_bloque`.
 
 ---
 
@@ -271,20 +225,20 @@ GRANT USAGE ON ALL SEQUENCES IN SCHEMA siembra TO authenticated, service_role;
 
 ### Diagrama de relaciones
 ```
-predios
-  └── familias (FK: predio_id)
-        ├── monitoreos
-        ├── camaras_trampa
-        │     └── fotos_camara
-        └── fotos_predio
-  └── evaluaciones_campo (FK: predio_id, familia_id)
+predios (6 filas)
+  ├── familias (9 filas, FK: predio_id)
+  │     ├── monitoreos (1 fila)
+  │     ├── camaras_trampa (0 filas)
+  │     │     └── fotos_camara (0 filas)
+  │     └── fotos_predio (9 filas)
+  └── evaluaciones_campo (10 filas, FK: predio_id)
 ```
 
-### `siembra.predios` — Predios registrados en campo
+### `siembra.predios` — Predios registrados en campo (6 filas)
 | Columna | Tipo | Notas |
 |---------|------|-------|
 | `id` | uuid PK | |
-| `local_id` | text | ID generado offline en app móvil |
+| `local_id` | text | ID generado offline en PWA |
 | `nombre_predio` | text | |
 | `nombre_propietario` | text | |
 | `municipio` | text | |
@@ -294,19 +248,23 @@ predios
 | `contacto` | text | |
 | `num_zonas` | integer | zonas de restauración |
 | `created_by` | text | |
-| `sync_origin` | text | `web` \| `mobile` |
+| `sync_origin` | text | `web` \| `mobile` \| `pwa` |
 | `created_at` / `updated_at` | timestamptz | |
+
+> Todos los predios actuales tienen `sync_origin = 'pwa'` (cargados desde la app offline).
 
 ### `siembra.familias` — Encuesta socioeconómica completa (9 filas)
 
-> Tabla principal del módulo. Contiene la encuesta de caracterización completa.
-> Las columnas `sec_*` guardan snapshots JSON de cada sección del formulario móvil.
+> Tabla principal del módulo. Contiene la encuesta de caracterización predial completa.
+> Las columnas `sec_*` guardan snapshots JSON de cada sección del formulario móvil (PWA familias-res).
+> La mayoría de los registros actuales tienen `predio_id` vinculado y campos `sec_*` en JSONB.
 
 **Identificación**
 | Columna | Tipo |
 |---------|------|
 | `id` | uuid PK |
 | `predio_id` | uuid FK → predios |
+| `local_id` | text | ID offline de dispositivo |
 | `nombre_propietario` | text |
 | `tipo_documento` | text |
 | `numero_documento` | text |
@@ -454,6 +412,7 @@ predios
 | `cambios_caudal` | boolean |
 | `cambio_cobertura_ha` | numeric |
 | `causa_cambio_cobertura` | text[] |
+| `problemas_agropecuarios` | text[] |
 
 **Restauración**
 | Columna | Tipo |
@@ -466,7 +425,6 @@ predios
 **Asociatividad & Programas**
 | Columna | Tipo |
 |---------|------|
-| `problemas_agropecuarios` | text[] |
 | `programas_gubernamentales` / `beneficios_programas` / `impacto_programa` | text |
 | `opinion_productores` / `aliado_cooperativa` | boolean |
 | `nombre_cooperativa` / `beneficio_cooperativa` / `calificacion_gremios` | text |
@@ -480,23 +438,33 @@ predios
 | `shapefile_arboles_url` | text |
 | `documento_acuerdo_url` | text |
 
+**Snapshots de sección (PWA)**
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `sec_general` | jsonb | §1 Datos Generales completo |
+| `sec_vivienda` | jsonb | §3 Vivienda |
+| `sec_familia` | jsonb | §4 Núcleo Familiar |
+| `sec_economia` | jsonb | §5 Valorización |
+| `sec_cultivos` | jsonb | §6 Cultivos (array) |
+| `sec_ganaderia` | jsonb | §6 Ganadería |
+| `sec_tecnologia` | jsonb | §7 Tecnología |
+| `sec_bosque` | jsonb | §8 Bosque & Clima |
+
 **Sincronización & Auditoría**
 | Columna | Tipo | Notas |
 |---------|------|-------|
-| `local_id` | text | ID offline del dispositivo |
-| `sync_origin` | text | `web` \| `mobile` |
+| `sync_origin` | text | `web` \| `mobile` \| `pwa` |
 | `step_completed` | integer | sección del form completada |
-| `sec_general` … `sec_bosque` | jsonb | snapshots de sección por sección |
 | `created_by` | text | |
 | `created_at` / `updated_at` | timestamptz | |
 
-### `siembra.evaluaciones_campo` — Evaluación técnica de predio
-> Formulario de evaluación en campo (suelo, vegetación, acceso, riesgos).
-> Vinculado tanto a `predios` como a `familias`.
+### `siembra.evaluaciones_campo` — Evaluación técnica de predio (10 filas)
+> Formulario AE-CAMPO-001 de evaluación en campo. Vinculado a `predios` (no a `familias` directamente).
+> Todos los registros actuales provienen de la PWA (`sync_origin = 'pwa'`).
 
 | Grupo | Columnas clave |
 |-------|---------------|
-| Identificación | `id`, `familia_id`, `predio_id`, `nombre_predio`, `codigo_formato`, `version` |
+| Identificación | `id`, `predio_id`, `familia_id`, `nombre_predio`, `codigo_formato`, `version` |
 | Visita | `fecha_visita`, `evaluador_1`, `evaluador_2`, `codigo_predio`, `num_zonas`, `num_zonas_eval` |
 | Conectividad | `senal_celular_eval`, `operador_celular`, `area_zonas_ha`, `tiempo_desde_via` |
 | Social | `disposicion_propietario`, `observaciones_sociales`, `mano_obra_disponible`, `experiencia_restauracion` |
@@ -508,10 +476,10 @@ predios
 | Fotos | `foto_suelo_url`, `foto_drenaje_url`, `foto_pendiente_url`, `foto_erosion_url`, `foto_via_url` |
 | Firmas | `firma_eval1_url`, `firma_eval2_url`, `firma_prop_url` |
 | Datos JSON | `zonas_data`, `seccion_1_data`, `seccion_2_data`, `seccion_6_data` (jsonb) |
-| Sync | `local_id`, `sync_origin`, `step_completed` |
+| PWA/Sync | `local_id`, `sync_origin`, `step_completed`, `num_zonas_eval` |
 | Auditoría | `created_by`, `created_at`, `updated_at` |
 
-### `siembra.monitoreos`
+### `siembra.monitoreos` (1 fila)
 | Columna | Tipo |
 |---------|------|
 | `id` | uuid PK |
@@ -520,7 +488,7 @@ predios
 | `supervivencia_pct` | numeric (0–100) |
 | `created_at` | timestamptz |
 
-### `siembra.camaras_trampa`
+### `siembra.camaras_trampa` (0 filas)
 | Columna | Tipo |
 |---------|------|
 | `id` | uuid PK |
@@ -529,7 +497,7 @@ predios
 | `latitud` / `longitud` | numeric |
 | `created_at` | timestamptz |
 
-### `siembra.fotos_camara`
+### `siembra.fotos_camara` (0 filas)
 | Columna | Tipo |
 |---------|------|
 | `id` | uuid PK |
@@ -537,7 +505,7 @@ predios
 | `url` | text |
 | `created_at` | timestamptz |
 
-### `siembra.fotos_predio` — Fotos por categoría
+### `siembra.fotos_predio` (9 filas)
 | Columna | Tipo | Notas |
 |---------|------|-------|
 | `id` | uuid PK | |
@@ -552,10 +520,10 @@ predios
 ### Diagrama de relaciones
 ```
 familias (17 filas)
-  ├── monitoreos
-  ├── camaras_trampa
-  │     └── fotos_camara
-  └── fotos_predio
+  ├── monitoreos (0 filas)
+  ├── camaras_trampa (0 filas)
+  │     └── fotos_camara (0 filas)
+  └── fotos_predio (0 filas)
 ```
 
 ### `ras.familias` — Familias en conservación (17 filas)
@@ -598,7 +566,7 @@ familias (17 filas)
 | `area_bosque_recorrida` | numeric |
 | `otros_indices` | text |
 
-**Restauración** *(columnas heredadas — no aplican en conservación pero existen en la tabla)*
+**Restauración** *(columnas heredadas — no aplican típicamente en conservación)*
 | Columna | Tipo |
 |---------|------|
 | `plan_restauracion` | text |
@@ -622,23 +590,8 @@ familias (17 filas)
 | `created_by` | text |
 | `created_at` / `updated_at` | timestamptz |
 
-### `ras.monitoreos`
-| Columna | Tipo |
-|---------|------|
-| `id` | uuid PK |
-| `familia_id` | uuid FK → familias |
-| `fecha` | date |
-| `supervivencia_pct` | numeric (0–100) |
-| `created_at` | timestamptz |
-
-### `ras.camaras_trampa`
-*(misma estructura que `siembra.camaras_trampa`)*
-
-### `ras.fotos_camara`
-*(misma estructura que `siembra.fotos_camara`)*
-
-### `ras.fotos_predio`
-*(misma estructura que `siembra.fotos_predio` — tabla existe, sin filas aún)*
+### `ras.monitoreos`, `ras.camaras_trampa`, `ras.fotos_camara`, `ras.fotos_predio`
+*(misma estructura que sus homólogos en `siembra` — actualmente sin filas)*
 
 ---
 
@@ -646,17 +599,19 @@ familias (17 filas)
 
 | Ruta | Tabla(s) |
 |------|----------|
-| `/calendar` | `vehicle_reservations` |
-| `/validar-reserva` | `vehicle_inspections`, `vehicle_reservations` |
-| `/consentimiento` | `consentimientos` |
-| `/intranet` | `user_profiles`, stats |
-| `/intranet/ras/siembra` | `siembra.familias` |
+| `/calendar` | `fleet.vehicle_reservations` |
+| `/validar-reserva` | `fleet.vehicle_inspections`, `fleet.vehicle_reservations` |
+| `/consentimiento` | `public.consentimientos` |
+| `/intranet` | `people.user_profiles`, stats |
+| `/intranet/ras/siembra` | `siembra.familias`, `siembra.predios` |
 | `/intranet/ras/siembra/nueva` | `siembra.familias`, `siembra.predios` |
 | `/intranet/ras/conservacion` | `ras.familias` |
 | `/intranet/ras/conservacion/nueva` | `ras.familias` |
+| `/intranet/ejecutivo` | `ejecutivo.sesiones`, `ejecutivo.indicaciones`, `people.user_profiles` |
+| `/intranet/admin` | `people.user_profiles`, `fleet.vehicle_documents`, `public.consentimientos` |
 
 ---
 
 ## Pendiente de ejecutar en Supabase
 
-Ver [`docs/sql/pending.sql`](docs/sql/pending.sql) — solo contiene items no verificados.
+Ver [`docs/sql/pending.sql`](docs/sql/pending.sql) — detalle de lo que falta y el historial de lo ejecutado.
