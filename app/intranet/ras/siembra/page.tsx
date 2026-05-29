@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
   ArrowLeft, Plus, Loader2, Leaf, MapPin, Trees,
-  CalendarDays, ChevronRight, Trash2, AlertTriangle, Pencil,
+  CalendarDays, ChevronRight, Trash2, AlertTriangle, Pencil, Archive,
 } from 'lucide-react'
 
 const PRIMARY = '#0d7377'
@@ -75,6 +75,7 @@ export default function SiembraListPage() {
         .schema('siembra')
         .from('familias')
         .select('id, nombre_propietario, municipio, vereda, nombre_finca, ha_restauracion, created_at')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
 
       setFamilias(data ?? [])
@@ -114,12 +115,19 @@ export default function SiembraListPage() {
               </p>
             </div>
 
-            <Link href="/intranet/ras/siembra/nueva"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all shrink-0 shadow-sm hover:shadow-md"
-              style={{ backgroundColor: PRIMARY }}>
-              <Plus size={16} />
-              <span className="hidden sm:block">Nueva Familia</span>
-            </Link>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link href="/intranet/ras/siembra/eliminadas"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border-2 border-stone-200 text-stone-500 hover:border-red-300 hover:text-red-500 transition-all">
+                <Archive size={16} />
+                <span className="hidden sm:block">Eliminadas</span>
+              </Link>
+              <Link href="/intranet/ras/siembra/nueva"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all shadow-sm hover:shadow-md"
+                style={{ backgroundColor: PRIMARY }}>
+                <Plus size={16} />
+                <span className="hidden sm:block">Nueva Familia</span>
+              </Link>
+            </div>
           </div>
         </div>
       </header>
@@ -206,7 +214,7 @@ export default function SiembraListPage() {
                           {isConfirming ? (
                             <div className="flex items-center gap-2 whitespace-nowrap">
                               <AlertTriangle size={13} className="text-red-500 shrink-0" />
-                              <span className="text-xs font-bold text-red-600">¿Eliminar?</span>
+                              <span className="text-xs font-bold text-red-600">¿Mover a eliminadas?</span>
                               <button onClick={() => setConfirmId(null)} disabled={isDeleting}
                                 className="px-2 py-1 text-xs font-bold rounded-lg border border-stone-300 text-stone-600 hover:bg-stone-100 transition-colors disabled:opacity-50">
                                 No

@@ -27,6 +27,8 @@ async function authCheck(req: NextRequest) {
 }
 
 // ─── DELETE ───────────────────────────────────────────────────────────────────
+// Por defecto: soft delete (deleted_at = now()).
+// Con ?hard=true: eliminación permanente con limpieza de storage.
 
 export async function DELETE(
   req: NextRequest,
@@ -42,13 +44,24 @@ export async function DELETE(
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
     const supabase = auth.supabase
 
-    // Obtener URLs de archivos antes de eliminar
+    const hard = req.nextUrl.searchParams.get('hard') === 'true'
+
+    if (!hard) {
+      // ── Soft delete ──
+      const { error } = await supabase
+        .schema('siembra').from('familias')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', familiaId)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ success: true }, { status: 200 })
+    }
+
+    // ── Hard delete (desde sección Eliminadas) ──
     const { data: familia } = await supabase
       .schema('siembra').from('familias')
       .select('shapefile_finca_url, shapefile_restauracion_url, shapefile_arboles_url, documento_acuerdo_url')
       .eq('id', familiaId).single()
 
-    // Limpiar storage — no bloquear eliminación si falla
     try {
       const shpPaths = [familia?.shapefile_finca_url, familia?.shapefile_restauracion_url, familia?.shapefile_arboles_url]
         .filter(Boolean)
@@ -63,7 +76,6 @@ export async function DELETE(
       console.error('Error limpiando archivos del bucket:', storageErr)
     }
 
-    // Eliminar familia (CASCADE borra monitoreos, camaras_trampa y fotos_camara)
     const { error: deleteError } = await supabase
       .schema('siembra').from('familias').delete().eq('id', familiaId)
 

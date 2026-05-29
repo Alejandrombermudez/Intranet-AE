@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { comprimirPdf } from '@/lib/pdf-compress'
 
 async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
   const { data: profile, error } = await supabase
@@ -70,11 +71,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     for (const campo of pdfFields) {
       const file = formData.get(campo) as File | null
       if (file) {
+        const rawBuf = await file.arrayBuffer()
+        const compressed = await comprimirPdf(rawBuf)
         const path = `${id}/${campo}.pdf`
         await supabase.storage.from('juridica-documentos').remove([path])
         const { error: upErr } = await supabase.storage
           .from('juridica-documentos')
-          .upload(path, file, { contentType: 'application/pdf' })
+          .upload(path, compressed, { contentType: 'application/pdf' })
         if (!upErr) {
           const { data: signed } = await supabase.storage
             .from('juridica-documentos')

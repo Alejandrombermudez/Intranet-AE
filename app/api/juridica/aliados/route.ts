@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { comprimirPdf } from '@/lib/pdf-compress'
 
 async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
   const { data: profile, error } = await supabase
@@ -54,11 +55,14 @@ export async function POST(req: NextRequest) {
     for (const campo of pdfFields) {
       const file = formData.get(campo) as File | null
       if (file) {
+        // Comprimir PDF antes de subir
+        const rawBuf = await file.arrayBuffer()
+        const compressed = await comprimirPdf(rawBuf)
         // Nombre temporal hasta tener el ID; se sobreescribe después si hace falta
         const tmpName = `tmp_${Date.now()}_${campo}.pdf`
         const { error: upErr } = await supabase.storage
           .from('juridica-documentos')
-          .upload(tmpName, file, { contentType: 'application/pdf' })
+          .upload(tmpName, compressed, { contentType: 'application/pdf' })
         if (!upErr) {
           const { data: signed } = await supabase.storage
             .from('juridica-documentos')

@@ -18,6 +18,66 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
+// ─── Conceptos institucionales ─────────────────────────────────────────────────
+
+type ConceptoMode = null | 'sin_respuesta' | 'con_respuesta'
+
+const CONCEPTO_SENTINEL = 'SIN_RESPUESTA'
+
+function parseConcepto(v: string | null): { mode: ConceptoMode; text: string } {
+  if (!v) return { mode: null, text: '' }
+  if (v === CONCEPTO_SENTINEL) return { mode: 'sin_respuesta', text: '' }
+  return { mode: 'con_respuesta', text: v }
+}
+
+function serializeConcepto(mode: ConceptoMode, text: string): string | null {
+  if (!mode) return null
+  if (mode === 'sin_respuesta') return CONCEPTO_SENTINEL
+  return text.trim() || null
+}
+
+function ConceptoField({ label, mode, text, onModeChange, onTextChange }: {
+  label: string; mode: ConceptoMode; text: string
+  onModeChange: (m: ConceptoMode) => void
+  onTextChange: (t: string) => void
+}) {
+  const opts: { v: ConceptoMode; l: string }[] = [
+    { v: null,            l: '— No solicitado' },
+    { v: 'sin_respuesta', l: 'Solicitado sin respuesta' },
+    { v: 'con_respuesta', l: 'Solicitado con respuesta' },
+  ]
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-bold text-stone-500">{label}</p>
+      <div className="flex gap-2 flex-wrap">
+        {opts.map(({ v, l }) => (
+          <button key={String(v)} type="button" onClick={() => onModeChange(v)}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg border-2 transition-colors ${
+              mode === v
+                ? v === 'con_respuesta'
+                  ? 'border-teal-400 bg-teal-50 text-teal-700'
+                  : v === 'sin_respuesta'
+                  ? 'border-amber-300 bg-amber-50 text-amber-700'
+                  : 'border-stone-300 bg-stone-100 text-stone-600'
+                : 'border-stone-200 text-stone-400 hover:border-stone-300'
+            }`}>
+            {l}
+          </button>
+        ))}
+      </div>
+      {mode === 'con_respuesta' && (
+        <textarea value={text} onChange={(e) => onTextChange(e.target.value)}
+          rows={3} className={TEXTAREA} placeholder="Ingrese el concepto recibido…" />
+      )}
+      {mode === 'sin_respuesta' && (
+        <p className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+          Concepto solicitado — a la espera de respuesta institucional
+        </p>
+      )}
+    </div>
+  )
+}
+
 function BoolFlag({ label, value, onChange, children }: {
   label: string; value: boolean | null
   onChange: (v: boolean | null) => void
@@ -83,9 +143,12 @@ export default function AnalisisJuridicoPage() {
   const [sucesiones, setSucesiones]             = useState<boolean | null>(null)
   const [sucesionesDesc, setSucesionesDesc]     = useState('')
 
-  const [conceptoAnt, setConceptoAnt] = useState('')
-  const [conceptoUrt, setConceptoUrt] = useState('')
-  const [conceptoPnn, setConceptoPnn] = useState('')
+  const [conceptoAntMode, setConceptoAntMode] = useState<ConceptoMode>(null)
+  const [conceptoAntText, setConceptoAntText] = useState('')
+  const [conceptoUrtMode, setConceptoUrtMode] = useState<ConceptoMode>(null)
+  const [conceptoUrtText, setConceptoUrtText] = useState('')
+  const [conceptoPnnMode, setConceptoPnnMode] = useState<ConceptoMode>(null)
+  const [conceptoPnnText, setConceptoPnnText] = useState('')
   const [observaciones, setObservaciones] = useState('')
   const [semaforo, setSemaforo]           = useState<Semaforo | null>(null)
 
@@ -134,9 +197,12 @@ export default function AnalisisJuridicoPage() {
           setLiquidacionesDesc(a.liquidaciones_desc ?? '')
           setSucesiones(a.sucesiones)
           setSucesionesDesc(a.sucesiones_desc ?? '')
-          setConceptoAnt(a.concepto_ant ?? '')
-          setConceptoUrt(a.concepto_urt ?? '')
-          setConceptoPnn(a.concepto_pnn ?? '')
+          const ant = parseConcepto(a.concepto_ant)
+          setConceptoAntMode(ant.mode); setConceptoAntText(ant.text)
+          const urt = parseConcepto(a.concepto_urt)
+          setConceptoUrtMode(urt.mode); setConceptoUrtText(urt.text)
+          const pnn = parseConcepto(a.concepto_pnn)
+          setConceptoPnnMode(pnn.mode); setConceptoPnnText(pnn.text)
           setObservaciones(a.observaciones ?? '')
           setSemaforo(a.semaforo)
         }
@@ -171,9 +237,9 @@ export default function AnalisisJuridicoPage() {
           liquidaciones_desc:       liquidacionesDesc || null,
           sucesiones,
           sucesiones_desc:          sucesionesDesc || null,
-          concepto_ant:             conceptoAnt || null,
-          concepto_urt:             conceptoUrt || null,
-          concepto_pnn:             conceptoPnn || null,
+          concepto_ant:             serializeConcepto(conceptoAntMode, conceptoAntText),
+          concepto_urt:             serializeConcepto(conceptoUrtMode, conceptoUrtText),
+          concepto_pnn:             serializeConcepto(conceptoPnnMode, conceptoPnnText),
           observaciones:            observaciones || null,
           semaforo,
         }),
@@ -285,17 +351,23 @@ export default function AnalisisJuridicoPage() {
           </section>
 
           {/* Conceptos institucionales */}
-          <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
+          <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-5">
             <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Conceptos institucionales</h2>
-            <Field label="ANT — Agencia Nacional de Tierras">
-              <textarea value={conceptoAnt} onChange={(e) => setConceptoAnt(e.target.value)} rows={3} className={TEXTAREA} placeholder="Concepto de la ANT…" />
-            </Field>
-            <Field label="URT — Unidad de Restitución de Tierras">
-              <textarea value={conceptoUrt} onChange={(e) => setConceptoUrt(e.target.value)} rows={3} className={TEXTAREA} placeholder="Concepto de la URT…" />
-            </Field>
-            <Field label="PNN — Parques Nacionales Naturales">
-              <textarea value={conceptoPnn} onChange={(e) => setConceptoPnn(e.target.value)} rows={3} className={TEXTAREA} placeholder="Concepto de PNN…" />
-            </Field>
+            <ConceptoField
+              label="ANT — Agencia Nacional de Tierras"
+              mode={conceptoAntMode} text={conceptoAntText}
+              onModeChange={setConceptoAntMode} onTextChange={setConceptoAntText}
+            />
+            <ConceptoField
+              label="URT — Unidad de Restitución de Tierras"
+              mode={conceptoUrtMode} text={conceptoUrtText}
+              onModeChange={setConceptoUrtMode} onTextChange={setConceptoUrtText}
+            />
+            <ConceptoField
+              label="PNN — Parques Nacionales Naturales"
+              mode={conceptoPnnMode} text={conceptoPnnText}
+              onModeChange={setConceptoPnnMode} onTextChange={setConceptoPnnText}
+            />
           </section>
 
           {/* Semáforo y conclusión */}
