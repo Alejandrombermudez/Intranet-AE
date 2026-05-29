@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { aliadoSchema, type AliadoForm } from '@/lib/juridica-schema'
 import { Shield, ArrowLeft, Loader2, Upload, X } from 'lucide-react'
 import Link from 'next/link'
+import { MUNICIPIOS_CAQUETA, VEREDAS_POR_MUNICIPIO, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
 
 const TIPOS_DOC = ['CC', 'NUIP', 'CE', 'TI', 'PP', 'NIT'] as const
 
@@ -62,6 +63,7 @@ export default function NuevoAliadoPage() {
   const [pdfCert, setPdfCert]    = useState<File | null>(null)
   const [pdfRecibo, setPdfRecibo] = useState<File | null>(null)
   const [pdfManif, setPdfManif]  = useState<File | null>(null)
+  const [selectedMunicipio, setSelectedMunicipio] = useState<MunicipioCaqueta | ''>('')
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } =
     useForm<AliadoForm>({ resolver: standardSchemaResolver(aliadoSchema) as any })
@@ -90,7 +92,7 @@ export default function NuevoAliadoPage() {
     setError(null)
     try {
       const fd = new FormData()
-      fd.append('data', JSON.stringify({ ...values, created_by: userEmail }))
+      fd.append('data', JSON.stringify({ ...values, departamento: 'Caquetá', created_by: userEmail }))
       if (pdfCert)   fd.append('certificado_tradicion', pdfCert)
       if (pdfRecibo) fd.append('recibo_predial', pdfRecibo)
       if (pdfManif)  fd.append('manifestacion', pdfManif)
@@ -152,15 +154,38 @@ export default function NuevoAliadoPage() {
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Ubicación del predio</h2>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Departamento">
-              <input {...register('departamento')} className={INPUT} placeholder="Caquetá" />
+              <div className={`${INPUT} bg-stone-50 text-stone-500 cursor-not-allowed`}>Caquetá</div>
             </Field>
             <Field label="Municipio *" error={errors.municipio?.message}>
-              <input {...register('municipio')} className={errors.municipio ? INPUT_ERR : INPUT} placeholder="Florencia" />
+              <select
+                value={selectedMunicipio}
+                onChange={(e) => {
+                  const val = e.target.value as MunicipioCaqueta | ''
+                  setSelectedMunicipio(val)
+                  setValue('municipio', val, { shouldValidate: true })
+                  setValue('vereda', '')
+                }}
+                className={errors.municipio ? INPUT_ERR : INPUT}
+              >
+                <option value="">— Seleccione municipio —</option>
+                {MUNICIPIOS_CAQUETA.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Vereda">
-              <input {...register('vereda')} className={INPUT} placeholder="El Remolino" />
+              <select
+                {...register('vereda')}
+                disabled={!selectedMunicipio}
+                className={`${INPUT} ${!selectedMunicipio ? 'bg-stone-50 text-stone-400 cursor-not-allowed' : ''}`}
+              >
+                <option value="">— Seleccione vereda —</option>
+                {selectedMunicipio && VEREDAS_POR_MUNICIPIO[selectedMunicipio].map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
             </Field>
             <Field label="Zona AE">
               <input {...register('zona_ae')} className={INPUT} placeholder="Ej: Piedemonte" />

@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { aliadoSchema, type AliadoForm, type Aliado } from '@/lib/juridica-schema'
 import { Shield, ArrowLeft, Loader2, Upload, X, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
+import { MUNICIPIOS_CAQUETA, VEREDAS_POR_MUNICIPIO, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
 
 const TIPOS_DOC = ['CC', 'NUIP', 'CE', 'TI', 'PP', 'NIT'] as const
 const INPUT     = 'w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:border-teal-400 transition-colors bg-white'
@@ -66,6 +67,7 @@ export default function EditarAliadoPage() {
   const [pdfCert, setPdfCert]     = useState<File | null>(null)
   const [pdfRecibo, setPdfRecibo] = useState<File | null>(null)
   const [pdfManif, setPdfManif]   = useState<File | null>(null)
+  const [selectedMunicipio, setSelectedMunicipio] = useState<MunicipioCaqueta | ''>('')
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } =
     useForm<AliadoForm>({ resolver: standardSchemaResolver(aliadoSchema) as any })
@@ -92,11 +94,12 @@ export default function EditarAliadoPage() {
       .then((r) => { if (!r.ok) throw new Error(); return r.json() })
       .then((data: Aliado) => {
         setAliado(data)
+        setSelectedMunicipio((data.municipio ?? '') as MunicipioCaqueta | '')
         reset({
           nombre_completo:             data.nombre_completo,
           tipo_documento:              data.tipo_documento as AliadoForm['tipo_documento'],
           numero_documento:            data.numero_documento,
-          departamento:                data.departamento ?? '',
+          departamento:                'Caquetá',
           municipio:                   data.municipio,
           vereda:                      data.vereda ?? '',
           zona_ae:                     data.zona_ae ?? '',
@@ -118,7 +121,7 @@ export default function EditarAliadoPage() {
     setSaving(true); setError(null)
     try {
       const fd = new FormData()
-      fd.append('data', JSON.stringify({ ...values, updated_by: userEmail }))
+      fd.append('data', JSON.stringify({ ...values, departamento: 'Caquetá', updated_by: userEmail }))
       if (pdfCert)   fd.append('certificado_tradicion', pdfCert)
       if (pdfRecibo) fd.append('recibo_predial', pdfRecibo)
       if (pdfManif)  fd.append('manifestacion', pdfManif)
@@ -172,13 +175,40 @@ export default function EditarAliadoPage() {
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Ubicación del predio</h2>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Departamento"><input {...register('departamento')} className={INPUT} /></Field>
+            <Field label="Departamento">
+              <div className={`${INPUT} bg-stone-50 text-stone-500 cursor-not-allowed`}>Caquetá</div>
+            </Field>
             <Field label="Municipio *" error={errors.municipio?.message}>
-              <input {...register('municipio')} className={errors.municipio ? INPUT_ERR : INPUT} />
+              <select
+                value={selectedMunicipio}
+                onChange={(e) => {
+                  const val = e.target.value as MunicipioCaqueta | ''
+                  setSelectedMunicipio(val)
+                  setValue('municipio', val, { shouldValidate: true })
+                  setValue('vereda', '')
+                }}
+                className={errors.municipio ? INPUT_ERR : INPUT}
+              >
+                <option value="">— Seleccione municipio —</option>
+                {MUNICIPIOS_CAQUETA.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Vereda"><input {...register('vereda')} className={INPUT} /></Field>
+            <Field label="Vereda">
+              <select
+                {...register('vereda')}
+                disabled={!selectedMunicipio}
+                className={`${INPUT} ${!selectedMunicipio ? 'bg-stone-50 text-stone-400 cursor-not-allowed' : ''}`}
+              >
+                <option value="">— Seleccione vereda —</option>
+                {selectedMunicipio && VEREDAS_POR_MUNICIPIO[selectedMunicipio].map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            </Field>
             <Field label="Zona AE"><input {...register('zona_ae')} className={INPUT} /></Field>
           </div>
           <Field label="Nombre del predio"><input {...register('nombre_predio')} className={INPUT} /></Field>
