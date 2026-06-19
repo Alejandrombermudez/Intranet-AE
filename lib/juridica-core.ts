@@ -15,36 +15,46 @@ import { comprimirPdf } from '@/lib/pdf-compress'
 type SB = ReturnType<typeof createServerSupabaseClient>
 
 const BUCKET_JURIDICA = 'juridica-documentos'
-// Extensiones que un documento puede tener (para borrar versiones previas al reemplazar)
-const EXTENSIONES_DOC = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'gif'] as const
+// Tipos permitidos (sirve para validar y para borrar versiones previas al reemplazar)
+const EXTENSIONES_DOC = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'gif', 'doc', 'docx'] as const
+const MIME_POR_EXT: Record<string, string> = {
+  pdf:  'application/pdf',
+  jpg:  'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', heic: 'image/heic', gif: 'image/gif',
+  doc:  'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+}
 
 /**
- * Sube un documento (PDF o imagen) al bucket de jurídica y devuelve su URL firmada.
+ * Sube un documento (PDF, imagen o Word) al bucket de jurídica y devuelve su URL firmada.
  *  - PDF   → se comprime con pdf-lib.
- *  - Imagen (jpg/png/webp/heic…) → se sube tal cual, con su content-type real.
+ *  - Imagen (jpg/png/webp/heic…) o Word (doc/docx) → se sube tal cual, con su content-type.
  * `basePath` es la ruta SIN extensión (ej. `${predioId}/cedula`). Antes de subir
  * borra cualquier versión previa (cualquier extensión) para no dejar archivos
- * huérfanos al pasar de PDF a imagen o viceversa.
+ * huérfanos al cambiar de formato.
  * Devuelve null si el tipo de archivo no es soportado o si falla la subida.
  */
 export async function subirDocumento(supabase: SB, basePath: string, file: File): Promise<string | null> {
+  const nombre = (file.name || '').toLowerCase()
   const tipo = (file.type || '').toLowerCase()
-  const esPdf = tipo === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')
-  const esImagen = tipo.startsWith('image/')
-  if (!esPdf && !esImagen) return null
+  // Extensión: preferir la del nombre del archivo; si no, derivarla del MIME
+  const mExt = nombre.match(/\.([a-z0-9]+)$/)
+  const ext = mExt ? mExt[1]
+    : tipo === 'application/pdf'        ? 'pdf'
+    : tipo === 'application/msword'     ? 'doc'
+    : tipo.includes('wordprocessingml') ? 'docx'
+    : tipo.startsWith('image/')         ? (tipo.split('/')[1] || '').replace(/[^a-z0-9]/g, '')
+    : ''
+  if (!(EXTENSIONES_DOC as readonly string[]).includes(ext)) return null
 
   const buf = await file.arrayBuffer()
   let data: Uint8Array
-  let ext: string
   let contentType: string
-  if (esPdf) {
-    data = await comprimirPdf(buf)
-    ext = 'pdf'
+  if (ext === 'pdf') {
+    data = await comprimirPdf(buf)                          // solo los PDF se comprimen
     contentType = 'application/pdf'
   } else {
-    data = new Uint8Array(buf)
-    contentType = tipo
-    ext = (tipo.split('/')[1] || 'img').replace(/[^a-z0-9]/g, '')
+    data = new Uint8Array(buf)                              // imagen o Word: tal cual
+    contentType = tipo || MIME_POR_EXT[ext] || 'application/octet-stream'
   }
 
   // Borrar versiones previas (cualquier extensión conocida) para evitar huérfanos

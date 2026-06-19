@@ -36,8 +36,8 @@ function FileInput({ label, existingUrl, file, onChange, onClear }: {
       ) : (
         <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-stone-200 rounded-xl cursor-pointer hover:border-teal-400 transition-colors text-sm text-stone-400">
           <Upload size={14} />
-          <span>{existingUrl ? 'Reemplazar archivo…' : 'Seleccionar PDF o imagen…'}</span>
-          <input type="file" accept="application/pdf,image/*" className="hidden"
+          <span>{existingUrl ? 'Reemplazar archivo…' : 'Seleccionar archivo…'}</span>
+          <input type="file" accept="image/*,application/pdf,.doc,.docx" className="hidden"
             onChange={(e) => e.target.files?.[0] && onChange(e.target.files[0])} />
         </label>
       )}

@@ -88,7 +88,7 @@ function ListaRow({ label, value, url, onChange, onPdf }: {
         ) : (
           <label className="flex items-center gap-1 cursor-pointer text-[11px] text-stone-400 hover:text-stone-600">
             <Upload size={12} /> Archivo
-            <input type="file" accept="application/pdf,image/*" className="hidden"
+            <input type="file" accept="image/*,application/pdf,.doc,.docx" className="hidden"
               onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
           </label>
         )}
