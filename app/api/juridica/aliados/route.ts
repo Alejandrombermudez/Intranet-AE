@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { comprimirPdf } from '@/lib/pdf-compress'
-import { listCasos, findOrCreateAliado } from '@/lib/juridica-core'
+import { listCasos, findOrCreateAliado, subirDocumento } from '@/lib/juridica-core'
 
 async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
   const { data: profile, error } = await supabase
@@ -108,24 +107,14 @@ export async function POST(req: NextRequest) {
         created_by:                  email,
       })
 
-    // 6) PDFs → bucket bajo {predio_id}/...  y actualizar URLs en la DD
-    const pdfFields = ['cedula', 'certificado_tradicion', 'recibo_predial', 'manifestacion'] as const
+    // 6) Documentos (PDF o imagen) → bucket bajo {predio_id}/...  y URLs en la DD
+    const docFields = ['cedula', 'certificado_tradicion', 'recibo_predial', 'manifestacion'] as const
     const urlUpdates: Record<string, string> = {}
-    for (const campo of pdfFields) {
+    for (const campo of docFields) {
       const file = formData.get(campo) as File | null
       if (file) {
-        const rawBuf = await file.arrayBuffer()
-        const compressed = await comprimirPdf(rawBuf)
-        const path = `${predioId}/${campo}.pdf`
-        const { error: upErr } = await supabase.storage
-          .from('juridica-documentos')
-          .upload(path, compressed, { contentType: 'application/pdf', upsert: true })
-        if (!upErr) {
-          const { data: signed } = await supabase.storage
-            .from('juridica-documentos')
-            .createSignedUrl(path, 60 * 60 * 24 * 365 * 5) // 5 años
-          if (signed?.signedUrl) urlUpdates[`${campo}_url`] = signed.signedUrl
-        }
+        const url = await subirDocumento(supabase, `${predioId}/${campo}`, file)
+        if (url) urlUpdates[`${campo}_url`] = url
       }
     }
     if (Object.keys(urlUpdates).length > 0) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { subirDocumento } from '@/lib/juridica-core'
 
 async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
   const { data: profile, error } = await supabase
@@ -41,22 +42,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (pErr || !predio) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 })
     const aliadoId = predio.aliado_id
 
-    // PDFs de cada consulta → {aliado_id}/antecedentes/{lista}.pdf  (por persona)
+    // Documentos de cada consulta (PDF o imagen) → {aliado_id}/antecedentes/{lista}
     const urlUpdates: Record<string, string | null> = {}
     for (const lista of LISTAS) {
       const file = formData.get(lista) as File | null
       if (file) {
-        const path = `${aliadoId}/antecedentes/${lista}.pdf`
-        await supabase.storage.from('juridica-documentos').remove([path])
-        const { error: upErr } = await supabase.storage
-          .from('juridica-documentos')
-          .upload(path, file, { contentType: 'application/pdf', upsert: true })
-        if (!upErr) {
-          const { data: signed } = await supabase.storage
-            .from('juridica-documentos')
-            .createSignedUrl(path, 60 * 60 * 24 * 365 * 5)
-          urlUpdates[`${lista}_url`] = signed?.signedUrl ?? null
-        }
+        urlUpdates[`${lista}_url`] = await subirDocumento(supabase, `${aliadoId}/antecedentes/${lista}`, file)
       }
     }
 

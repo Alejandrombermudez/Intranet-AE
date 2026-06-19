@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { comprimirPdf } from '@/lib/pdf-compress'
-import { getCaso } from '@/lib/juridica-core'
+import { getCaso, subirDocumento } from '@/lib/juridica-core'
 
 async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
   const { data: profile, error } = await supabase
@@ -95,24 +94,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       manifestacion_observaciones: data.manifestacion_observaciones || null,
     }
 
-    // 4) PDFs → {predio_id}/...
-    const pdfFields = ['cedula', 'certificado_tradicion', 'recibo_predial', 'manifestacion'] as const
-    for (const campo of pdfFields) {
+    // 4) Documentos (PDF o imagen) → {predio_id}/...
+    const docFields = ['cedula', 'certificado_tradicion', 'recibo_predial', 'manifestacion'] as const
+    for (const campo of docFields) {
       const file = formData.get(campo) as File | null
       if (file) {
-        const rawBuf = await file.arrayBuffer()
-        const compressed = await comprimirPdf(rawBuf)
-        const path = `${predioId}/${campo}.pdf`
-        await supabase.storage.from('juridica-documentos').remove([path])
-        const { error: upErr } = await supabase.storage
-          .from('juridica-documentos')
-          .upload(path, compressed, { contentType: 'application/pdf', upsert: true })
-        if (!upErr) {
-          const { data: signed } = await supabase.storage
-            .from('juridica-documentos')
-            .createSignedUrl(path, 60 * 60 * 24 * 365 * 5)
-          if (signed?.signedUrl) ddUpdates[`${campo}_url`] = signed.signedUrl
-        }
+        const url = await subirDocumento(supabase, `${predioId}/${campo}`, file)
+        if (url) ddUpdates[`${campo}_url`] = url
       }
     }
 

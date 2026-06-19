@@ -24,7 +24,7 @@ function FileInput({ label, existingUrl, file, onChange, onClear }: {
         <div className="flex items-center gap-2 mb-1">
           <a href={existingUrl} target="_blank" rel="noreferrer"
             className="text-xs text-teal-600 font-bold flex items-center gap-1 hover:underline">
-            Ver PDF actual <ExternalLink size={10} />
+            Ver documento actual <ExternalLink size={10} />
           </a>
         </div>
       )}
@@ -36,8 +36,8 @@ function FileInput({ label, existingUrl, file, onChange, onClear }: {
       ) : (
         <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-stone-200 rounded-xl cursor-pointer hover:border-teal-400 transition-colors text-sm text-stone-400">
           <Upload size={14} />
-          <span>{existingUrl ? 'Reemplazar PDF…' : 'Seleccionar PDF…'}</span>
-          <input type="file" accept="application/pdf" className="hidden"
+          <span>{existingUrl ? 'Reemplazar archivo…' : 'Seleccionar PDF o imagen…'}</span>
+          <input type="file" accept="application/pdf,image/*" className="hidden"
             onChange={(e) => e.target.files?.[0] && onChange(e.target.files[0])} />
         </label>
       )}

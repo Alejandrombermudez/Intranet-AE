@@ -83,12 +83,12 @@ function ListaRow({ label, value, url, onChange, onPdf }: {
         ) : url ? (
           <a href={url} target="_blank" rel="noreferrer"
             className="flex items-center gap-0.5 text-[11px] text-teal-600 font-bold hover:underline">
-            PDF <ExternalLink size={10} />
+            Ver <ExternalLink size={10} />
           </a>
         ) : (
           <label className="flex items-center gap-1 cursor-pointer text-[11px] text-stone-400 hover:text-stone-600">
-            <Upload size={12} /> PDF
-            <input type="file" accept="application/pdf" className="hidden"
+            <Upload size={12} /> Archivo
+            <input type="file" accept="application/pdf,image/*" className="hidden"
               onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
           </label>
         )}

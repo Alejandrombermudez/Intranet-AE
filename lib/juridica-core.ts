@@ -10,8 +10,55 @@
  * desde el modelo normalizado. El identificador del "caso" en la UI es el PREDIO.
  */
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { comprimirPdf } from '@/lib/pdf-compress'
 
 type SB = ReturnType<typeof createServerSupabaseClient>
+
+const BUCKET_JURIDICA = 'juridica-documentos'
+// Extensiones que un documento puede tener (para borrar versiones previas al reemplazar)
+const EXTENSIONES_DOC = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'gif'] as const
+
+/**
+ * Sube un documento (PDF o imagen) al bucket de jurídica y devuelve su URL firmada.
+ *  - PDF   → se comprime con pdf-lib.
+ *  - Imagen (jpg/png/webp/heic…) → se sube tal cual, con su content-type real.
+ * `basePath` es la ruta SIN extensión (ej. `${predioId}/cedula`). Antes de subir
+ * borra cualquier versión previa (cualquier extensión) para no dejar archivos
+ * huérfanos al pasar de PDF a imagen o viceversa.
+ * Devuelve null si el tipo de archivo no es soportado o si falla la subida.
+ */
+export async function subirDocumento(supabase: SB, basePath: string, file: File): Promise<string | null> {
+  const tipo = (file.type || '').toLowerCase()
+  const esPdf = tipo === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')
+  const esImagen = tipo.startsWith('image/')
+  if (!esPdf && !esImagen) return null
+
+  const buf = await file.arrayBuffer()
+  let data: Uint8Array
+  let ext: string
+  let contentType: string
+  if (esPdf) {
+    data = await comprimirPdf(buf)
+    ext = 'pdf'
+    contentType = 'application/pdf'
+  } else {
+    data = new Uint8Array(buf)
+    contentType = tipo
+    ext = (tipo.split('/')[1] || 'img').replace(/[^a-z0-9]/g, '')
+  }
+
+  // Borrar versiones previas (cualquier extensión conocida) para evitar huérfanos
+  await supabase.storage.from(BUCKET_JURIDICA).remove(EXTENSIONES_DOC.map((e) => `${basePath}.${e}`))
+
+  const path = `${basePath}.${ext}`
+  const { error } = await supabase.storage.from(BUCKET_JURIDICA)
+    .upload(path, data, { contentType, upsert: true })
+  if (error) return null
+
+  const { data: signed } = await supabase.storage.from(BUCKET_JURIDICA)
+    .createSignedUrl(path, 60 * 60 * 24 * 365 * 5) // 5 años
+  return signed?.signedUrl ?? null
+}
 
 // Forma plana que espera la UI (compatible con lib/juridica-schema.ts → Aliado)
 export interface CasoPlano {

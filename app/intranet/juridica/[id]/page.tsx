@@ -274,7 +274,7 @@ export default function AliadoDetailPage() {
               <span className="text-xs text-stone-400 w-44 shrink-0 font-medium">Cédula / documento</span>
               <a href={aliado.cedula_url} target="_blank" rel="noreferrer"
                 className="flex items-center gap-1 text-sm text-teal-600 font-bold hover:underline">
-                Ver PDF <ExternalLink size={12} />
+                Ver documento <ExternalLink size={12} />
               </a>
             </div>
           )}
@@ -283,7 +283,7 @@ export default function AliadoDetailPage() {
               <span className="text-xs text-stone-400 w-44 shrink-0 font-medium">Certificado tradición</span>
               <a href={aliado.certificado_tradicion_url} target="_blank" rel="noreferrer"
                 className="flex items-center gap-1 text-sm text-teal-600 font-bold hover:underline">
-                Ver PDF <ExternalLink size={12} />
+                Ver documento <ExternalLink size={12} />
               </a>
             </div>
           )}
@@ -292,7 +292,7 @@ export default function AliadoDetailPage() {
               <span className="text-xs text-stone-400 w-44 shrink-0 font-medium">Recibo predial</span>
               <a href={aliado.recibo_predial_url} target="_blank" rel="noreferrer"
                 className="flex items-center gap-1 text-sm text-teal-600 font-bold hover:underline">
-                Ver PDF <ExternalLink size={12} />
+                Ver documento <ExternalLink size={12} />
               </a>
             </div>
           )}
@@ -301,7 +301,7 @@ export default function AliadoDetailPage() {
               <span className="text-xs text-stone-400 w-44 shrink-0 font-medium">Manifestación firmada</span>
               <a href={aliado.manifestacion_url} target="_blank" rel="noreferrer"
                 className="flex items-center gap-1 text-sm text-teal-600 font-bold hover:underline">
-                Ver PDF <ExternalLink size={12} />
+                Ver documento <ExternalLink size={12} />
               </a>
             </div>
           )}

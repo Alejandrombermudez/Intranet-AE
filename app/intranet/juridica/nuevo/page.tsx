@@ -28,8 +28,8 @@ function FileInput({ label, name, file, onChange, onClear }: {
       ) : (
         <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-stone-200 rounded-xl cursor-pointer hover:border-teal-400 transition-colors text-sm text-stone-400">
           <Upload size={14} />
-          <span>Seleccionar PDF…</span>
-          <input type="file" accept="application/pdf" className="hidden"
+          <span>Seleccionar PDF o imagen…</span>
+          <input type="file" accept="application/pdf,image/*" className="hidden"
             onChange={(e) => e.target.files?.[0] && onChange(e.target.files[0])} />
         </label>
       )}
