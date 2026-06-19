@@ -58,7 +58,6 @@ export const analisisSchema = z.object({
   fmi_derivados:            z.string().optional(),
   acto_origen:              z.string().optional(),
   descripcion_acto_origen:  z.string().optional(),
-  acto_adquisicion_actual:  z.string().optional(),
   naturaleza_juridica:      z.string().optional(),
   falsa_tradicion:          z.boolean().optional(),
   procesos_judiciales:      z.boolean().optional(),
@@ -150,7 +149,6 @@ export interface AnalisisJuridico {
   fmi_derivados:               string | null
   acto_origen:                 string | null
   descripcion_acto_origen:     string | null
-  acto_adquisicion_actual:     string | null
   naturaleza_juridica:         string | null
   falsa_tradicion:             boolean | null
   procesos_judiciales:         boolean | null

@@ -42,7 +42,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       fmi_derivados:            body.fmi_derivados || null,
       acto_origen:              body.acto_origen || null,
       descripcion_acto_origen:  body.descripcion_acto_origen || null,
-      acto_adquisicion_actual:  body.acto_adquisicion_actual || null,
       naturaleza_juridica:      body.naturaleza_juridica || null,
       falsa_tradicion:          body.falsa_tradicion ?? null,
       procesos_judiciales:      body.procesos_judiciales ?? null,

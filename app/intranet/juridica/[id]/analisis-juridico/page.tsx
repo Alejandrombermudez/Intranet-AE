@@ -130,7 +130,6 @@ export default function AnalisisJuridicoPage() {
   const [fmiDerivados, setFmiDerivados] = useState('')
   const [actoOrigen, setActoOrigen]     = useState('')
   const [descOrigen, setDescOrigen]     = useState('')
-  const [actoActual, setActoActual]     = useState('')
   const [naturaleza, setNaturaleza]     = useState('')
 
   const [falsaTradicion, setFalsaTradicion]     = useState<boolean | null>(null)
@@ -186,7 +185,6 @@ export default function AnalisisJuridicoPage() {
           setFmiDerivados(a.fmi_derivados ?? '')
           setActoOrigen(a.acto_origen ?? '')
           setDescOrigen(a.descripcion_acto_origen ?? '')
-          setActoActual(a.acto_adquisicion_actual ?? '')
           setNaturaleza(a.naturaleza_juridica ?? '')
           setFalsaTradicion(a.falsa_tradicion)
           setProcJudiciales(a.procesos_judiciales)
@@ -226,7 +224,6 @@ export default function AnalisisJuridicoPage() {
           fmi_derivados:            fmiDerivados || null,
           acto_origen:              actoOrigen || null,
           descripcion_acto_origen:  descOrigen || null,
-          acto_adquisicion_actual:  actoActual || null,
           naturaleza_juridica:      naturaleza || null,
           falsa_tradicion:          falsaTradicion,
           procesos_judiciales:      procJudiciales,
@@ -322,9 +319,6 @@ export default function AnalisisJuridicoPage() {
             </Field>
             <Field label="Descripción del acto de origen">
               <textarea value={descOrigen} onChange={(e) => setDescOrigen(e.target.value)} rows={2} className={TEXTAREA} placeholder="Descripción libre…" />
-            </Field>
-            <Field label="Acto de adquisición actual">
-              <input value={actoActual} onChange={(e) => setActoActual(e.target.value)} className={INPUT} placeholder="Cómo adquirió el propietario actual" />
             </Field>
             <Field label="Naturaleza jurídica">
               <input value={naturaleza} onChange={(e) => setNaturaleza(e.target.value)} className={INPUT} placeholder="Privado, baldío, reserva, etc." />
