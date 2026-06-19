@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
-// POST /api/juridica/aliados/[id]/crear-en-siembra
+// POST /api/juridica/aliados/[id]/crear-en-siembra   ([id] = predio_id)
+// Crea la familia en siembra a partir del caso aprobado y avanza el expediente a 'campo'.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const { id: predioId } = await params
     const supabase = createServerSupabaseClient()
     const body = await req.json()
     const email: string | null = body.created_by ?? null
@@ -19,51 +20,66 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
-    const { data: aliado, error: aErr } = await supabase
-      .schema('juridica').from('aliados')
-      .select('*')
-      .eq('id', id)
-      .single()
+    // Predio + persona + DD + expediente
+    const { data: predio, error: prErr } = await supabase
+      .schema('core').from('predios').select('*').eq('id', predioId).single()
+    if (prErr || !predio) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 })
 
-    if (aErr || !aliado) return NextResponse.json({ error: 'Aliado no encontrado' }, { status: 404 })
-    if (aliado.estado !== 'aprobado') {
+    const [{ data: aliado }, { data: dd }, { data: exp }] = await Promise.all([
+      supabase.schema('core').from('aliados').select('*').eq('id', predio.aliado_id).single(),
+      supabase.schema('juridica').from('debida_diligencia').select('estado').eq('predio_id', predioId).maybeSingle(),
+      supabase.schema('core').from('expedientes').select('id').eq('predio_id', predioId).maybeSingle(),
+    ])
+    if (!aliado) return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 })
+
+    if (dd?.estado !== 'aprobado') {
       return NextResponse.json(
-        { error: 'El aliado debe estar en estado "aprobado" para crear la familia en Siembra' },
+        { error: 'La debida diligencia debe estar en estado "aprobado" para crear la familia en Siembra' },
         { status: 422 }
       )
     }
 
-    const { data: existing } = await supabase
-      .schema('siembra').from('familias')
-      .select('id')
-      .eq('aliado_id', id)
-      .maybeSingle()
+    const expedienteId = exp?.id ?? null
 
-    if (existing) {
-      return NextResponse.json(
-        { error: 'Ya existe una familia en Siembra vinculada a este aliado', familia_id: existing.id },
-        { status: 409 }
-      )
+    // ¿Ya existe una familia para este expediente?
+    if (expedienteId) {
+      const { data: existing } = await supabase
+        .schema('siembra').from('familias')
+        .select('id').eq('expediente_id', expedienteId).maybeSingle()
+      if (existing) {
+        return NextResponse.json(
+          { error: 'Ya existe una familia en Siembra para este caso', familia_id: existing.id },
+          { status: 409 }
+        )
+      }
     }
 
     const { data: familia, error: fErr } = await supabase
       .schema('siembra').from('familias')
       .insert({
         aliado_id:          aliado.id,
+        expediente_id:      expedienteId,
         nombre_propietario: aliado.nombre_completo,
         tipo_documento:     aliado.tipo_documento,
         numero_documento:   aliado.numero_documento,
-        departamento:       aliado.departamento,
-        municipio:          aliado.municipio,
-        vereda:             aliado.vereda,
-        nombre_finca:       aliado.nombre_predio,
-        nucleo:             aliado.zona_ae,
+        departamento:       predio.departamento,
+        municipio:          predio.municipio,
+        vereda:             predio.vereda,
+        nombre_finca:       predio.nombre_predio,
+        nucleo:             predio.zona_ae,
         created_by:         email,
       })
       .select('id')
       .single()
 
     if (fErr) return NextResponse.json({ error: fErr.message }, { status: 500 })
+
+    // Avanzar el expediente a la etapa de campo
+    if (expedienteId) {
+      await supabase.schema('core').from('expedientes')
+        .update({ etapa: 'campo' })
+        .eq('id', expedienteId)
+    }
 
     return NextResponse.json({ familia_id: familia?.id }, { status: 201 })
   } catch (err) {

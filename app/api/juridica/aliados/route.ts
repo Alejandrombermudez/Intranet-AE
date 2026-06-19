@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { comprimirPdf } from '@/lib/pdf-compress'
+import { listCasos, findOrCreateAliado } from '@/lib/juridica-core'
 
 async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
   const { data: profile, error } = await supabase
@@ -12,7 +13,7 @@ async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>
   return true
 }
 
-// GET /api/juridica/aliados — lista todos los aliados con join a antecedentes y analisis
+// GET /api/juridica/aliados — lista de casos (persona+predio+DD, plano para la UI)
 export async function GET(req: NextRequest) {
   const supabase = createServerSupabaseClient()
   const email = req.nextUrl.searchParams.get('email')
@@ -21,18 +22,17 @@ export async function GET(req: NextRequest) {
   const ok = await authorize(supabase, email)
   if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-  const { data, error } = await supabase
-    .schema('juridica')
-    .from('aliados')
-    .select('*, antecedentes(*), analisis_juridico(*)')
-    .order('created_at', { ascending: false })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  try {
+    const casos = await listCasos(supabase)
+    return NextResponse.json(casos)
+  } catch (err) {
+    console.error('GET /api/juridica/aliados error:', err)
+    return NextResponse.json({ error: 'Error al listar' }, { status: 500 })
+  }
 }
 
-// POST /api/juridica/aliados — crea un nuevo aliado (HOJA 1)
-// Acepta multipart/form-data con campo 'data' (JSON) y archivos PDF opcionales
+// POST /api/juridica/aliados — crea persona + predio + expediente + DD (HOJA 1)
+// Acepta multipart/form-data con campo 'data' (JSON) y PDFs opcionales.
 export async function POST(req: NextRequest) {
   try {
     const supabase = createServerSupabaseClient()
@@ -48,85 +48,93 @@ export async function POST(req: NextRequest) {
     const ok = await authorize(supabase, email)
     if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-    // Subir PDFs opcionales
-    const pdfFields = ['certificado_tradicion', 'recibo_predial', 'manifestacion'] as const
-    const urls: Record<string, string | null> = {}
-
-    for (const campo of pdfFields) {
-      const file = formData.get(campo) as File | null
-      if (file) {
-        // Comprimir PDF antes de subir
-        const rawBuf = await file.arrayBuffer()
-        const compressed = await comprimirPdf(rawBuf)
-        // Nombre temporal hasta tener el ID; se sobreescribe después si hace falta
-        const tmpName = `tmp_${Date.now()}_${campo}.pdf`
-        const { error: upErr } = await supabase.storage
-          .from('juridica-documentos')
-          .upload(tmpName, compressed, { contentType: 'application/pdf' })
-        if (!upErr) {
-          const { data: signed } = await supabase.storage
-            .from('juridica-documentos')
-            .createSignedUrl(tmpName, 60 * 60 * 24 * 365 * 5) // 5 años
-          urls[`${campo}_url`] = signed?.signedUrl ?? null
-          // Mover al path definitivo tras insertar (ver PATCH)
-          urls[`_tmp_path_${campo}`] = tmpName
-        }
-      }
+    // 1) Persona: reusar si ya existe ese documento, si no crearla.
+    let aliadoId: string
+    try {
+      const r = await findOrCreateAliado(supabase, {
+        numero_documento: data.numero_documento,
+        nombre_completo:  data.nombre_completo,
+        tipo_documento:   data.tipo_documento ?? 'CC',
+        created_by:       email,
+      })
+      aliadoId = r.id
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      return NextResponse.json({ error: 'Error al registrar la persona: ' + msg }, { status: 500 })
     }
 
-    const { data: aliado, error } = await supabase
-      .schema('juridica')
-      .from('aliados')
+    // 2) Predio (dueño principal = la persona)
+    const { data: predio, error: pErr } = await supabase
+      .schema('core').from('predios')
       .insert({
-        nombre_completo:             data.nombre_completo,
-        tipo_documento:              data.tipo_documento ?? 'CC',
-        numero_documento:            data.numero_documento,
-        departamento:                data.departamento || null,
-        municipio:                   data.municipio,
-        vereda:                      data.vereda || null,
-        zona_ae:                     data.zona_ae || null,
-        nombre_predio:               data.nombre_predio || null,
-        matricula_inmobiliaria:      data.matricula_inmobiliaria || null,
-        area_registral:              data.area_registral || null,
-        codigo_catastral:            data.codigo_catastral || null,
-        anio_ultimo_pago_predial:    data.anio_ultimo_pago_predial || null,
-        manifestacion_interes:       data.manifestacion_interes ?? null,
-        manifestacion_observaciones: data.manifestacion_observaciones || null,
-        certificado_tradicion_url:   urls['certificado_tradicion_url'] ?? null,
-        recibo_predial_url:          urls['recibo_predial_url'] ?? null,
-        manifestacion_url:           urls['manifestacion_url'] ?? null,
-        estado:                      'borrador',
-        created_by:                  email,
+        aliado_id:              aliadoId,
+        nombre_predio:          data.nombre_predio || null,
+        departamento:           data.departamento || null,
+        municipio:              data.municipio,
+        vereda:                 data.vereda || null,
+        zona_ae:                data.zona_ae || null,
+        matricula_inmobiliaria: data.matricula_inmobiliaria || null,
+        codigo_catastral:       data.codigo_catastral || null,
+        area_registral:         data.area_registral || null,
+        created_by:             email,
       })
       .select('id')
       .single()
 
-    if (error) {
-      if (error.code === '23505') {
-        return NextResponse.json({ error: 'Ya existe un aliado con ese número de documento' }, { status: 409 })
+    if (pErr) {
+      if (pErr.code === '23505') {
+        return NextResponse.json({ error: 'Ya existe un predio con esa matrícula inmobiliaria' }, { status: 409 })
       }
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: pErr.message }, { status: 500 })
     }
+    const predioId = predio!.id
 
-    // Mover archivos temporales al path definitivo {aliado_id}/...
+    // 3) Copropiedad: registrar al dueño principal
+    await supabase.schema('core').from('predio_propietarios')
+      .insert({ predio_id: predioId, aliado_id: aliadoId, rol: 'principal' })
+
+    // 4) Expediente del predio (arranca en etapa jurídica)
+    await supabase.schema('core').from('expedientes')
+      .insert({ predio_id: predioId, etapa: 'juridica', estado: 'activo', created_by: email })
+
+    // 5) Debida diligencia (workflow + manifestación + predial)
+    await supabase.schema('juridica').from('debida_diligencia')
+      .insert({
+        predio_id:                   predioId,
+        estado:                      'borrador',
+        anio_ultimo_pago_predial:    data.anio_ultimo_pago_predial || null,
+        manifestacion_interes:       data.manifestacion_interes ?? null,
+        manifestacion_observaciones: data.manifestacion_observaciones || null,
+        created_by:                  email,
+      })
+
+    // 6) PDFs → bucket bajo {predio_id}/...  y actualizar URLs en la DD
+    const pdfFields = ['cedula', 'certificado_tradicion', 'recibo_predial', 'manifestacion'] as const
+    const urlUpdates: Record<string, string> = {}
     for (const campo of pdfFields) {
-      const tmpPath = urls[`_tmp_path_${campo}`]
-      if (tmpPath && aliado?.id) {
-        const finalPath = `${aliado.id}/${campo}.pdf`
-        await supabase.storage.from('juridica-documentos').move(tmpPath, finalPath)
-        // Actualizar URL en la fila
-        const { data: newSigned } = await supabase.storage
+      const file = formData.get(campo) as File | null
+      if (file) {
+        const rawBuf = await file.arrayBuffer()
+        const compressed = await comprimirPdf(rawBuf)
+        const path = `${predioId}/${campo}.pdf`
+        const { error: upErr } = await supabase.storage
           .from('juridica-documentos')
-          .createSignedUrl(finalPath, 60 * 60 * 24 * 365 * 5)
-        if (newSigned?.signedUrl) {
-          await supabase.schema('juridica').from('aliados')
-            .update({ [`${campo}_url`]: newSigned.signedUrl })
-            .eq('id', aliado.id)
+          .upload(path, compressed, { contentType: 'application/pdf', upsert: true })
+        if (!upErr) {
+          const { data: signed } = await supabase.storage
+            .from('juridica-documentos')
+            .createSignedUrl(path, 60 * 60 * 24 * 365 * 5) // 5 años
+          if (signed?.signedUrl) urlUpdates[`${campo}_url`] = signed.signedUrl
         }
       }
     }
+    if (Object.keys(urlUpdates).length > 0) {
+      await supabase.schema('juridica').from('debida_diligencia')
+        .update(urlUpdates)
+        .eq('predio_id', predioId)
+    }
 
-    return NextResponse.json({ id: aliado?.id }, { status: 201 })
+    return NextResponse.json({ id: predioId }, { status: 201 })
   } catch (err) {
     console.error('POST /api/juridica/aliados error:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

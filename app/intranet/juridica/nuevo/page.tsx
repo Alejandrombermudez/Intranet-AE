@@ -60,6 +60,7 @@ export default function NuevoAliadoPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [pdfCedula, setPdfCedula] = useState<File | null>(null)
   const [pdfCert, setPdfCert]    = useState<File | null>(null)
   const [pdfRecibo, setPdfRecibo] = useState<File | null>(null)
   const [pdfManif, setPdfManif]  = useState<File | null>(null)
@@ -93,6 +94,7 @@ export default function NuevoAliadoPage() {
     try {
       const fd = new FormData()
       fd.append('data', JSON.stringify({ ...values, departamento: 'Caquetá', created_by: userEmail }))
+      if (pdfCedula) fd.append('cedula', pdfCedula)
       if (pdfCert)   fd.append('certificado_tradicion', pdfCert)
       if (pdfRecibo) fd.append('recibo_predial', pdfRecibo)
       if (pdfManif)  fd.append('manifestacion', pdfManif)
@@ -147,6 +149,13 @@ export default function NuevoAliadoPage() {
               <input {...register('numero_documento')} className={errors.numero_documento ? INPUT_ERR : INPUT} placeholder="1234567890" />
             </Field>
           </div>
+          <FileInput
+            label="Documento de identidad / cédula (PDF)"
+            name="cedula"
+            file={pdfCedula}
+            onChange={setPdfCedula}
+            onClear={() => setPdfCedula(null)}
+          />
         </section>
 
         {/* Sección 2: Ubicación */}

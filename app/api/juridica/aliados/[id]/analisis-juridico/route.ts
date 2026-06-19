@@ -11,10 +11,11 @@ async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>
   return true
 }
 
-// POST /api/juridica/aliados/[id]/analisis-juridico — upsert HOJA 3
+// POST /api/juridica/aliados/[id]/analisis-juridico — upsert HOJA 3  ([id] = predio_id)
+// El análisis del folio pertenece al PREDIO. El semáforo fija el estado de la DD.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params
+    const { id: predioId } = await params
     const supabase = createServerSupabaseClient()
     const body = await req.json()
     const email: string | null = body.created_by ?? null
@@ -23,22 +24,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const ok = await authorize(supabase, email)
     if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-    const { data: aliado, error: aErr } = await supabase
-      .schema('juridica').from('aliados')
-      .select('id, estado')
-      .eq('id', id)
-      .single()
-
-    if (aErr || !aliado) return NextResponse.json({ error: 'Aliado no encontrado' }, { status: 404 })
-    if (aliado.estado !== 'antecedentes_ok' && aliado.estado !== 'juridico_ok' && aliado.estado !== 'aprobado') {
-      return NextResponse.json(
-        { error: 'Debe completar la revisión de antecedentes primero' },
-        { status: 422 }
-      )
+    // Verificar que existe el predio y que la DD pasó antecedentes
+    const { data: dd, error: ddSelErr } = await supabase
+      .schema('juridica').from('debida_diligencia')
+      .select('predio_id, estado').eq('predio_id', predioId).single()
+    if (ddSelErr || !dd) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 })
+    if (!['antecedentes_ok', 'juridico_ok', 'aprobado'].includes(dd.estado)) {
+      return NextResponse.json({ error: 'Debe completar la revisión de antecedentes primero' }, { status: 422 })
     }
 
     const payload = {
-      aliado_id:                id,
+      predio_id:                predioId,
       created_by:               email,
       estado_folio:             body.estado_folio || null,
       vereda_registral:         body.vereda_registral || null,
@@ -65,12 +61,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const { error: upsertErr } = await supabase
-      .schema('juridica')
-      .from('analisis_juridico')
-      .upsert(payload, { onConflict: 'aliado_id' })
-
+      .schema('juridica').from('analisis_juridico')
+      .upsert(payload, { onConflict: 'predio_id' })
     if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 })
 
+    // Semáforo → estado de la DD
     const semaforo: string | null = body.semaforo ?? null
     let nuevoEstado: string | null = null
     if (semaforo === 'verde' || semaforo === 'amarillo') nuevoEstado = 'aprobado'
@@ -78,12 +73,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     else if (semaforo === 'rojo')                        nuevoEstado = 'rechazado'
 
     if (nuevoEstado) {
-      await supabase.schema('juridica').from('aliados')
+      await supabase.schema('juridica').from('debida_diligencia')
         .update({ estado: nuevoEstado })
-        .eq('id', id)
+        .eq('predio_id', predioId)
+      if (nuevoEstado === 'rechazado') {
+        await supabase.schema('core').from('expedientes')
+          .update({ estado: 'rechazado' })
+          .eq('predio_id', predioId)
+      }
     }
 
-    return NextResponse.json({ ok: true, estado: nuevoEstado ?? aliado.estado })
+    return NextResponse.json({ ok: true, estado: nuevoEstado ?? dd.estado })
   } catch (err) {
     console.error('POST /api/juridica/aliados/[id]/analisis-juridico error:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

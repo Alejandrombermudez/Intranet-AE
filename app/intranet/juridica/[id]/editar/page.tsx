@@ -64,6 +64,7 @@ export default function EditarAliadoPage() {
   const [loading, setLoading]     = useState(true)
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState<string | null>(null)
+  const [pdfCedula, setPdfCedula] = useState<File | null>(null)
   const [pdfCert, setPdfCert]     = useState<File | null>(null)
   const [pdfRecibo, setPdfRecibo] = useState<File | null>(null)
   const [pdfManif, setPdfManif]   = useState<File | null>(null)
@@ -122,6 +123,7 @@ export default function EditarAliadoPage() {
     try {
       const fd = new FormData()
       fd.append('data', JSON.stringify({ ...values, departamento: 'Caquetá', updated_by: userEmail }))
+      if (pdfCedula) fd.append('cedula', pdfCedula)
       if (pdfCert)   fd.append('certificado_tradicion', pdfCert)
       if (pdfRecibo) fd.append('recibo_predial', pdfRecibo)
       if (pdfManif)  fd.append('manifestacion', pdfManif)
@@ -170,6 +172,8 @@ export default function EditarAliadoPage() {
               <input {...register('numero_documento')} className={errors.numero_documento ? INPUT_ERR : INPUT} />
             </Field>
           </div>
+          <FileInput label="Documento de identidad / cédula (PDF)" existingUrl={aliado?.cedula_url}
+            file={pdfCedula} onChange={setPdfCedula} onClear={() => setPdfCedula(null)} />
         </section>
 
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">

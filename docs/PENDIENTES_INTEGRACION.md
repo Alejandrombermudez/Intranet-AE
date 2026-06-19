@@ -1,0 +1,56 @@
+# Pendientes de integración — Amazonía Emprende
+
+> **Backlog vivo.** Aquí se van anotando las cosas que faltan por módulo a medida que las detectamos, para no perderlas. Cuando algo se implemente, se marca ✅ (o se mueve al historial).
+>
+> **Fecha:** 2026-06-13 · **Relacionado:** [`ARQUITECTURA_ECOSISTEMA.md`](ARQUITECTURA_ECOSISTEMA.md) (decisiones D1–D5)
+
+**Cómo leer el estado:** 🆕 detectado · 🔧 en diseño · ⏳ esperando decisión · ✅ hecho
+
+---
+
+## Jurídica
+
+| Pendiente | Por qué | Dónde impacta | Estado |
+|-----------|---------|---------------|--------|
+| **Subir la cédula en PDF** | Soporte escaneado del documento de identidad | `cedula_url` en `juridica.debida_diligencia` + campo en los formularios crear/editar | ✅ (2026-06-18) |
+| Confirmar si la migración SQL ya corrió | — | Confirmado: schema `juridica` vivo en BD; los datos eran de prueba | ✅ |
+| Crear usuario con `department = 'Juridica'` | El control de acceso lo exige | Existe `legal@amazoniaemprende.com` | ✅ |
+| **Cutover a `core`** | Jurídica es la puerta de entrada; separa persona/predio/expediente | `migration_core.sql` + app reescrita; falta correr el SQL y exponer `core` | 🔧 (2026-06-18) |
+
+## Vivero
+
+| Pendiente | Por qué | Dónde impacta | Estado |
+|-----------|---------|---------------|--------|
+| **Construir el módulo (app aparte)** | Diseñado y decisiones cerradas; falta implementar | schema `vivero` + `catalogo` + app que sincroniza | 🔧 |
+| Añadir `dias_crecimiento_vivero` al catálogo | Necesario para la alerta de siembra (planeación hacia atrás) | `catalogo.especies` | 🆕 |
+| Decisiones V1–V6 | ✅ Cerradas: solo normales · sembradas/normales · mensual · manual · COP sin IVA · **app aparte** | `CONTEXTO_MODULO_VIVERO.md` §8 | ✅ |
+
+## Plan de siembra
+
+| Pendiente | Por qué | Dónde impacta | Estado |
+|-----------|---------|---------------|--------|
+| Cálculo de demanda (modelo florístico) | **Diseñado:** área(SIG) × densidad × %especie × (1+reposición) → solicitud. Ver `Plan.svg`, hoja «Plan» | `siembra.planes / modelos_floristicos / modelo_especies / plan_zonas` | 🔧 |
+| Definir la app de verificación / corrección de zonas | Ahora la app de campo hace SIG II | PWA campo + `geo.zonas` | 🆕 |
+
+## Geo / SIG
+
+| Pendiente | Por qué | Dónde impacta | Estado |
+|-----------|---------|---------------|--------|
+| **Crear módulo SIG en la Intranet** | Cargar/ingerir la geometría, gestionar las zonas y disparar la publicación a PMTiles | nuevo módulo `/intranet/sig` | 🆕 |
+| **Habilitar PostGIS** | Medir hectáreas reales y versionar zonas (hoy son .zip en Storage) | `geo.zonas` | ⏳ (D4) |
+| Pipeline de publicación a PMTiles | Geoportal serverless con MapLibre | GeoAE | 🆕 |
+| App de campo debe **devolver las zonas corregidas (SIG II)** | El flujo lo exige antes del plan; diseño en `arquitectura-visual/Campo_SIG.svg` + tabla `geo.zona_revision`. Decidir: método (vértices/GPS/ambos), mapa base offline, versionado | PWA campo ↔ `geo.zonas` | 🔧 |
+
+## Núcleo / modelo de datos
+
+| Pendiente | Por qué | Dónde impacta | Estado |
+|-----------|---------|---------------|--------|
+| Crear el schema `core` (aliados / predios / expedientes) | Deduplicar persona y predio | `migration_core.sql` + `CORE_MIGRACION.md`; jurídica ya escribe a `core` | 🔧 en cutover (2026-06-18) |
+| Fusionar `siembra` + `ras` en `intervenciones` | Hoy son schemas gemelos | refactor | ⏳ (D3) |
+| Crear el `catalogo.especies` | Dato maestro que usan vivero, plan y Ley del árbol | nuevo schema | 🔧 |
+
+---
+
+## Historial (hecho)
+
+_(vacío por ahora — aquí se moverá lo que se complete)_

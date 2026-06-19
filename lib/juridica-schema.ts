@@ -86,7 +86,12 @@ export type EstadoAliado = 'borrador' | 'antecedentes_ok' | 'juridico_ok' | 'apr
 export type Semaforo     = 'verde' | 'amarillo' | 'naranja' | 'rojo'
 
 export interface Aliado {
-  id:                          string
+  id:                          string   // = predio_id (identificador del caso en la UI)
+  predio_id?:                  string
+  aliado_id?:                  string   // id de la persona en core.aliados
+  expediente_id?:              string | null
+  tipo_persona?:               string   // 'natural' | 'juridica'
+  cedula_url?:                 string | null
   nombre_completo:             string
   tipo_documento:              string
   numero_documento:            string

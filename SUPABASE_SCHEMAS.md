@@ -3,9 +3,9 @@
 > **Última actualización:** Mayo 2026 | Proyecto Supabase: `lbxysovesmbgesxooghw`
 > Para seguimiento de migraciones SQL ver `docs/sql/`
 >
-> **Última migración ejecutada:** `migration_ejecutivo_v2.sql` + creación de `fleet.vehicle_documents` (Mayo 2026)
+> **Última migración ejecutada:** `migration_modulo_juridico.sql` — schema `juridica` vivo (confirmado en BD: 3 tablas + bucket `juridica-documentos` + usuario `legal@`). Los datos que tenía eran de prueba.
 >
-> **Pendiente:** `docs/sql/migration_modulo_juridico.sql` — schema `juridica` (3 tablas) + columna `siembra.familias.aliado_id`. Contexto funcional en `juridica/CONTEXTO_MODULO_JURIDICO.md`.
+> **Pendiente (cutover en curso, 2026-06-18):** `docs/sql/migration_core.sql` — núcleo canónico `core` (aliados/predios/expedientes) + descomposición de jurídica. Mapeo y runbook en `docs/CORE_MIGRACION.md`. El código de la app ya está reescrito para este modelo.
 
 ---
 
@@ -20,7 +20,8 @@
 | `ejecutivo` | Módulo ejecutivo | ✅ En producción — columna `nota` y estado `rechazado` activos |
 | `siembra` | Módulo Restauración / Siembra | ✅ Ejecutado en producción |
 | `ras` | Módulo Conservación | ✅ Ejecutado en producción |
-| `juridica` | Módulo Jurídico (Fase 1) | ⏳ Pendiente — ver `juridica/CONTEXTO_MODULO_JURIDICO.md` |
+| `juridica` | Módulo Jurídico (Fase 1) | ✅ En producción — schema vivo; tras el cutover guarda solo `debida_diligencia` + `antecedentes` + `analisis_juridico` (persona/predio pasan a `core`) |
+| `core` | Núcleo canónico (aliados/predios/expedientes) | ⏳ Cutover en curso — `docs/sql/migration_core.sql` + `docs/CORE_MIGRACION.md` |
 | `storage` | Buckets *(Supabase managed)* | ✅ Buckets creados |
 
 ```js
