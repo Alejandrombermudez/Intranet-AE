@@ -15,7 +15,9 @@
 | **Subir la cédula en PDF** | Soporte escaneado del documento de identidad | `cedula_url` en `juridica.debida_diligencia` + campo en los formularios crear/editar | ✅ (2026-06-18) |
 | Confirmar si la migración SQL ya corrió | — | Confirmado: schema `juridica` vivo en BD; los datos eran de prueba | ✅ |
 | Crear usuario con `department = 'Juridica'` | El control de acceso lo exige | Existe `legal@amazoniaemprende.com` | ✅ |
-| **Cutover a `core`** | Jurídica es la puerta de entrada; separa persona/predio/expediente | `migration_core.sql` + app reescrita; falta correr el SQL y exponer `core` | 🔧 (2026-06-18) |
+| **Cutover a `core`** | Jurídica es la puerta de entrada; separa persona/predio/expediente | Hecho y verificado con caso real; `core` expuesto; `juridica.aliados_legacy` borrada | ✅ (2026-06-19) |
+| Subir documentos como imagen o Word | La abogada no siempre tiene el soporte en PDF | `subirDocumento` acepta PDF (se comprime), imagen y Word; inputs con `accept` ampliado | ✅ (2026-06-18) |
+| Quitar campo "acto de adquisición actual" | Innecesario en HOJA 3 | Removido de UI/API/tipo; `DROP COLUMN` corrido en BD | ✅ (2026-06-19) |
 
 ## Vivero
 
@@ -45,7 +47,8 @@
 
 | Pendiente | Por qué | Dónde impacta | Estado |
 |-----------|---------|---------------|--------|
-| Crear el schema `core` (aliados / predios / expedientes) | Deduplicar persona y predio | `migration_core.sql` + `CORE_MIGRACION.md`; jurídica ya escribe a `core` | 🔧 en cutover (2026-06-18) |
+| Crear el schema `core` (aliados / predios / expedientes) | Deduplicar persona y predio | Hecho; jurídica escribe sobre `core`; ver `CORE_MIGRACION.md` | ✅ (2026-06-19) |
+| **Conectar campo/siembra y conservación al `core`** | Que el proceso siga desde jurídica sobre el mismo backbone (expediente) | `siembra.familias.expediente_id` ya existe y `crear-en-siembra` lo llena; falta que el flujo/UI de campo lo use y que conservación referencie `core.predios` | 🆕 **siguiente paso** |
 | Fusionar `siembra` + `ras` en `intervenciones` | Hoy son schemas gemelos | refactor | ⏳ (D3) |
 | Crear el `catalogo.especies` | Dato maestro que usan vivero, plan y Ley del árbol | nuevo schema | 🔧 |
 

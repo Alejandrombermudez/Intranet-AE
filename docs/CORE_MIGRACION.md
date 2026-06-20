@@ -91,9 +91,14 @@ Datos de prueba — no se reestructuran ahora. Solo se dejan los enganches listo
 2. **Supabase Dashboard → Settings → API → Exposed schemas**: agregar `core` (después de correr el SQL; dispara la recarga de PostgREST). Sin esto la app da "schema must be one of…".
 3. **App (ya reescrita en este cutover):** las rutas de `/api/juridica/*` escriben a `core.*` + `juridica.debida_diligencia`. Las 6 páginas no cambiaron (consumen el caso plano). Probar el flujo: crear aliado+predio → antecedentes → análisis → aprobar.
 4. **Verificar** que `crear-en-siembra` enlaza al expediente y avanza la etapa a `campo`.
-5. Eliminar el archivo viejo: correr [`sql/cleanup_legacy.sql`](sql/cleanup_legacy.sql) (`DROP TABLE juridica.aliados_legacy`).
+5. Eliminar el archivo viejo: correr [`sql/cleanup_legacy.sql`](sql/cleanup_legacy.sql) (`DROP TABLE juridica.aliados_legacy`). ✅ hecho.
 
-**Estado (2026-06-18):** SQL corrido, `core` expuesto, cutover **verificado por REST** (core escribe/lee, jurídica descompuesta, reglas de unicidad y enlace a siembra OK). Falta solo el paso 5 (limpieza de `aliados_legacy`).
+**Estado (2026-06-19): COMPLETO.** SQL corrido, `core` expuesto, `juridica.aliados_legacy` borrada, y la columna `analisis_juridico.acto_adquisicion_actual` eliminada. **Verificado con un caso real** (persona Arnulfo Silva → predio Los Andes → expediente → DD aprobada con 4 documentos → antecedentes → análisis verde). Reglas de negocio probadas: documento único (1 persona por documento), matrícula única (no duplica predios), `crear-en-siembra` enlaza al expediente. Extras añadidos después del cutover: subida de **imagen/Word** además de PDF, y eliminación del campo "acto de adquisición actual".
+
+**Cómo está hecho (código):**
+- `lib/juridica-core.ts` — `getCaso` / `listCasos` (reensamblan el "caso plano" desde `core`), `findOrCreateAliado` (reusa persona por documento → modelo 1—N), `subirDocumento` (PDF/imagen/Word).
+- Rutas `/api/juridica/aliados/*` — reparten la escritura a `core.aliados` + `core.predios` + `core.predio_propietarios` + `core.expedientes` + `juridica.debida_diligencia`; antecedentes por persona, análisis por predio. **El `[id]` de la UI = `predio_id`.**
+- Las 6 páginas de `/intranet/juridica` **no cambiaron de contrato** (siguen consumiendo el caso plano).
 
 **Cambio de comportamiento a tener en cuenta:** si la abogada captura un documento que ya existe, el sistema **reutiliza la persona** y crea otro predio (modelo 1—N), en vez de rechazar por "documento duplicado". Lo que evita predios duplicados es la matrícula (única).
 

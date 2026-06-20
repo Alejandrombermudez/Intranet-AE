@@ -3,9 +3,9 @@
 > **Última actualización:** Mayo 2026 | Proyecto Supabase: `lbxysovesmbgesxooghw`
 > Para seguimiento de migraciones SQL ver `docs/sql/`
 >
-> **Última migración ejecutada:** `migration_modulo_juridico.sql` — schema `juridica` vivo (confirmado en BD: 3 tablas + bucket `juridica-documentos` + usuario `legal@`). Los datos que tenía eran de prueba.
+> **Última migración ejecutada:** `migration_core.sql` (2026-06-19) — núcleo canónico `core` (aliados/predios/expedientes) + descomposición de jurídica. **Cutover completo y verificado con un caso real**; `juridica.aliados_legacy` borrada. Mapeo y detalle de cómo está hecho: `docs/CORE_MIGRACION.md`.
 >
-> **Pendiente (cutover en curso, 2026-06-18):** `docs/sql/migration_core.sql` — núcleo canónico `core` (aliados/predios/expedientes) + descomposición de jurídica. Mapeo y runbook en `docs/CORE_MIGRACION.md`. El código de la app ya está reescrito para este modelo.
+> **Modelo actual:** Jurídica es la puerta de entrada y escribe sobre `core` (persona/predio/expediente). Ver secciones **`core`** y **`juridica`** abajo.
 
 ---
 
@@ -20,8 +20,8 @@
 | `ejecutivo` | Módulo ejecutivo | ✅ En producción — columna `nota` y estado `rechazado` activos |
 | `siembra` | Módulo Restauración / Siembra | ✅ Ejecutado en producción |
 | `ras` | Módulo Conservación | ✅ Ejecutado en producción |
-| `juridica` | Módulo Jurídico (Fase 1) | ✅ En producción — schema vivo; tras el cutover guarda solo `debida_diligencia` + `antecedentes` + `analisis_juridico` (persona/predio pasan a `core`) |
-| `core` | Núcleo canónico (aliados/predios/expedientes) | ⏳ Cutover en curso — `docs/sql/migration_core.sql` + `docs/CORE_MIGRACION.md` |
+| `core` | Núcleo canónico (aliados/predios/expedientes) | ✅ En producción — jurídica escribe aquí |
+| `juridica` | Módulo Jurídico (Fase 1) | ✅ En producción — sobre `core`; guarda solo `debida_diligencia` + `antecedentes` + `analisis_juridico` |
 | `storage` | Buckets *(Supabase managed)* | ✅ Buckets creados |
 
 ```js
@@ -596,6 +596,87 @@ familias (17 filas)
 
 ---
 
+## Schema `core` — Núcleo canónico (2026-06-19)
+
+Separa **persona**, **predio** y **proceso**. Jurídica es la puerta de entrada: crea las tres. Los demás módulos referencian en vez de recopiar. Mapeo y runbook: `docs/CORE_MIGRACION.md`.
+
+```
+aliados (persona)
+  └── predios (FK aliado_id = dueño principal)
+        ├── predio_propietarios (N—N: copropiedad)
+        ├── expedientes (1:1: máquina de estados del proceso)
+        ├── juridica.debida_diligencia (1:1)
+        └── juridica.analisis_juridico (1:1)
+aliados ── juridica.antecedentes (1:1, por persona)
+```
+
+### `core.aliados` — Persona (natural o jurídica)
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `tipo_persona` | text | `natural` \| `juridica` |
+| `tipo_documento` | text | CC/NUIP/CE/TI/PP/NIT |
+| `numero_documento` | text | **UNIQUE** |
+| `nombre_completo` | text | razón social si jurídica |
+| `telefono` / `email` | text | |
+| `created_by` / `created_at` / `updated_at` | — | auditoría |
+
+### `core.predios` — Predio
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `aliado_id` | uuid FK → core.aliados | dueño principal (ON DELETE RESTRICT) |
+| `nombre_predio` / `departamento` / `municipio` / `vereda` / `zona_ae` | text | |
+| `matricula_inmobiliaria` | text | índice único parcial (cuando no es null) |
+| `codigo_catastral` | text | |
+| `area_registral` | numeric(12,4) | hectáreas del folio |
+
+### `core.predio_propietarios` — Copropiedad (N—N)
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `predio_id` | uuid FK → core.predios | ON DELETE CASCADE |
+| `aliado_id` | uuid FK → core.aliados | |
+| `rol` | text | `principal` \| `copropietario` |
+| `cuota_pct` | numeric(5,2) | opcional |
+
+### `core.expedientes` — Proceso del predio (máquina de estados)
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `predio_id` | uuid FK → core.predios | **UNIQUE** (1 expediente por predio) |
+| `etapa` | text | `juridica`→`sig_i`→`campo`→`sig_ii`→`plan`→`juridica_ii`→`ejecucion`→`archivado` |
+| `estado` | text | `activo` \| `rechazado` \| `archivado` \| `completado` |
+| `linea` | text | `restauracion` \| `conservacion` \| `ambas` |
+| `proyecto_fase` / `responsable` | text | |
+| `fecha_inicio` | timestamptz | |
+
+---
+
+## Schema `juridica` — Debida diligencia (sobre `core`)
+
+Tras el cutover guarda **solo lo jurídico**; persona/predio viven en `core`. **El `[id]` de la UI de jurídica = `predio_id`.** Código: rutas `/api/juridica/*` reparten/reensamblan vía `lib/juridica-core.ts`.
+
+### `juridica.debida_diligencia` — Workflow + soportes (1:1 con el predio)
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `predio_id` | uuid FK → core.predios | **UNIQUE** |
+| `estado` | text | `borrador`→`antecedentes_ok`→`juridico_ok`→`aprobado`\|`rechazado` |
+| `cedula_url` / `certificado_tradicion_url` / `recibo_predial_url` / `manifestacion_url` | text | PDF/imagen/Word en bucket `juridica-documentos` |
+| `anio_ultimo_pago_predial` | integer | |
+| `manifestacion_interes` / `manifestacion_observaciones` | bool / text | |
+
+### `juridica.antecedentes` — 14 listas restrictivas + PEP/prensa (1:1 por persona)
+FK `aliado_id` → **core.aliados** (la persona se veta una vez, sirve para todos sus predios). Columnas: igual que antes (rama_judicial, procuraduria, ofac, interpol… con `_url`; `pep`, `prensa_negativa`, `aprobado`).
+
+### `juridica.analisis_juridico` — Folio de matrícula + semáforo (1:1 con el predio)
+FK `predio_id` → **core.predios**. Banderas (falsa_tradicion, procesos_judiciales, medidas_cautelares…), conceptos ANT/URT/PNN, `semaforo` (verde/amarillo/naranja/rojo). *(Se quitó `acto_adquisicion_actual`.)*
+
+> **Documentos:** bucket privado `juridica-documentos`. Soportes del predio en `{predio_id}/…`; consultas de antecedentes en `{aliado_id}/antecedentes/…`. Acepta PDF (se comprime), imagen y Word (se suben tal cual). Helper `subirDocumento` en `lib/juridica-core.ts`.
+
+---
+
 ## Rutas de la app ↔ tablas
 
 | Ruta | Tabla(s) |
@@ -610,6 +691,8 @@ familias (17 filas)
 | `/intranet/ras/conservacion/nueva` | `ras.familias` |
 | `/intranet/ejecutivo` | `ejecutivo.sesiones`, `ejecutivo.indicaciones`, `people.user_profiles` |
 | `/intranet/admin` | `people.user_profiles`, `fleet.vehicle_documents`, `public.consentimientos` |
+| `/intranet/juridica` (+ `[id]`, `nuevo`, `editar`, `antecedentes`, `analisis-juridico`) | `core.aliados/predios/predio_propietarios/expedientes` + `juridica.debida_diligencia/antecedentes/analisis_juridico` |
+| `/api/juridica/aliados/[id]/crear-en-siembra` | crea `siembra.familias` enlazada a `core.expedientes` (avanza etapa a `campo`) |
 
 ---
 
