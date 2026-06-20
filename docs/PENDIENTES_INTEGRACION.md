@@ -48,7 +48,8 @@
 | Pendiente | Por qué | Dónde impacta | Estado |
 |-----------|---------|---------------|--------|
 | Crear el schema `core` (aliados / predios / expedientes) | Deduplicar persona y predio | Hecho; jurídica escribe sobre `core`; ver `CORE_MIGRACION.md` | ✅ (2026-06-19) |
-| **Conectar campo/siembra y conservación al `core`** | Que el proceso siga desde jurídica sobre el mismo backbone (expediente) | `siembra.familias.expediente_id` ya existe y `crear-en-siembra` lo llena; falta que el flujo/UI de campo lo use y que conservación referencie `core.predios` | 🆕 **siguiente paso** |
+| **Tablero de predios/expedientes** | Ver "¿en qué etapa va cada predio?" (payoff de D1) | `/intranet/expedientes` + `lib/expedientes.ts` + `/api/expedientes`; resumen por etapa, búsqueda, filtros (etapa/estado jurídico/semáforo/municipio/línea) y agrupación | ✅ (2026-06-19) |
+| **Conectar campo/siembra y conservación al `core`** | Que el proceso siga desde jurídica sobre el mismo backbone (expediente) | `siembra.familias.expediente_id` ya existe y `crear-en-siembra` lo llena; falta que el flujo/UI de campo lo use y que conservación referencie `core.predios` | 🆕 siguiente |
 | Fusionar `siembra` + `ras` en `intervenciones` | Hoy son schemas gemelos | refactor | ⏳ (D3) |
 | Crear el `catalogo.especies` | Dato maestro que usan vivero, plan y Ley del árbol | nuevo schema | 🔧 |
 

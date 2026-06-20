@@ -9,7 +9,7 @@ import {
 } from '@/lib/juridica-schema'
 import {
   Plus, Search, Filter, ChevronRight, Loader2,
-  FileText, Shield, BarChart3, CheckCircle2, Circle,
+  FileText, Shield, BarChart3, CheckCircle2, Circle, LayoutGrid,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -269,12 +269,20 @@ export default function JuridicaPage() {
             </div>
             <p className="text-sm text-stone-400">Debida diligencia jurídica de aliados</p>
           </div>
-          <Link
-            href="/intranet/juridica/nuevo"
-            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-xl font-bold text-sm hover:bg-teal-700 transition-colors"
-          >
-            <Plus size={16} /> Nuevo aliado
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/intranet/expedientes"
+              className="flex items-center gap-2 px-4 py-2 border border-stone-200 text-stone-600 rounded-xl font-bold text-sm hover:border-teal-400 hover:text-teal-700 transition-colors"
+            >
+              <LayoutGrid size={16} /> Tablero
+            </Link>
+            <Link
+              href="/intranet/juridica/nuevo"
+              className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-xl font-bold text-sm hover:bg-teal-700 transition-colors"
+            >
+              <Plus size={16} /> Nuevo aliado
+            </Link>
+          </div>
         </div>
       </div>
 
