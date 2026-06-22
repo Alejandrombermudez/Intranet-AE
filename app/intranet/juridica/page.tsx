@@ -114,7 +114,7 @@ function AliadoCard({ aliado, onCrearSiembra }: {
       <div className="flex items-center justify-between">
         <MiniStepper estado={aliado.estado} />
         <div className="flex items-center gap-1.5">
-          {aliado.estado === 'aprobado' && (
+          {aliado.estado === 'aprobado' && (!aliado.etapa || aliado.etapa === 'juridica') && (
             <button
               onClick={() => onCrearSiembra(aliado.id)}
               className="text-[11px] font-bold px-2.5 py-1 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
@@ -232,17 +232,14 @@ export default function JuridicaPage() {
         body: JSON.stringify({ created_by: userEmail }),
       })
       const body = await res.json()
-      if (!res.ok) {
-        if (res.status === 409) {
-          showToast('ok', 'El predio ya está en SIG — redirigiendo...')
-          setTimeout(() => router.push('/intranet/sig'), 1000)
-        } else {
-          showToast('error', body.error ?? 'Error al enviar a SIG')
-        }
-      } else {
-        showToast('ok', 'Predio enviado a SIG')
-        setTimeout(() => router.push('/intranet/sig'), 1000)
+      if (!res.ok && res.status !== 409) {
+        showToast('error', body.error ?? 'Error al enviar a SIG')
+        return
       }
+      showToast('ok', res.status === 409 ? 'El predio ya estaba en SIG' : 'Predio enviado a SIG')
+      // Jurídica envía y listo: recargamos la lista (no entramos al módulo SIG)
+      const r2 = await fetch(`/api/juridica/aliados?email=${encodeURIComponent(userEmail)}`)
+      if (r2.ok) { const d = await r2.json(); setAliados(Array.isArray(d) ? d : []) }
     } finally {
       setCreando(false)
       setModal(null)

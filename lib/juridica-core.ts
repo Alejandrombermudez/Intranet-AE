@@ -76,6 +76,7 @@ export interface CasoPlano {
   predio_id: string
   aliado_id: string
   expediente_id: string | null
+  etapa: string | null
   // Persona
   tipo_persona: string
   nombre_completo: string
@@ -118,7 +119,7 @@ function ensamblar(
   predio: Row,
   aliado: Row,
   dd: Row | null,
-  expedienteId: string | null,
+  exp: Row | null,
   antecedentes: Row | null,
   analisis: Row | null,
 ): CasoPlano {
@@ -126,7 +127,8 @@ function ensamblar(
     id: predio.id,
     predio_id: predio.id,
     aliado_id: aliado.id,
-    expediente_id: expedienteId,
+    expediente_id: exp?.id ?? null,
+    etapa: exp?.etapa ?? null,
     // Persona
     tipo_persona: aliado.tipo_persona,
     nombre_completo: aliado.nombre_completo,
@@ -170,7 +172,7 @@ export async function getCaso(supabase: SB, predioId: string): Promise<CasoPlano
   const [{ data: aliado }, { data: dd }, { data: exp }] = await Promise.all([
     supabase.schema('core').from('aliados').select('*').eq('id', predio.aliado_id).single(),
     supabase.schema('juridica').from('debida_diligencia').select('*').eq('predio_id', predioId).maybeSingle(),
-    supabase.schema('core').from('expedientes').select('id').eq('predio_id', predioId).maybeSingle(),
+    supabase.schema('core').from('expedientes').select('id, etapa').eq('predio_id', predioId).maybeSingle(),
   ])
   if (!aliado) return null
 
@@ -179,7 +181,7 @@ export async function getCaso(supabase: SB, predioId: string): Promise<CasoPlano
     supabase.schema('juridica').from('analisis_juridico').select('*').eq('predio_id', predioId).maybeSingle(),
   ])
 
-  return ensamblar(predio, aliado, dd, exp?.id ?? null, ant, ana)
+  return ensamblar(predio, aliado, dd, exp ?? null, ant, ana)
 }
 
 /** Lista de casos (un predio = un caso), con join en memoria para evitar N+1. */
@@ -193,7 +195,7 @@ export async function listCasos(supabase: SB): Promise<CasoPlano[]> {
   const [{ data: aliados }, { data: dds }, { data: exps }, { data: ants }, { data: anas }] = await Promise.all([
     supabase.schema('core').from('aliados').select('*').in('id', aliadoIds),
     supabase.schema('juridica').from('debida_diligencia').select('*').in('predio_id', predioIds),
-    supabase.schema('core').from('expedientes').select('id, predio_id').in('predio_id', predioIds),
+    supabase.schema('core').from('expedientes').select('id, predio_id, etapa').in('predio_id', predioIds),
     supabase.schema('juridica').from('antecedentes').select('*').in('aliado_id', aliadoIds),
     supabase.schema('juridica').from('analisis_juridico').select('*').in('predio_id', predioIds),
   ])
@@ -211,7 +213,7 @@ export async function listCasos(supabase: SB): Promise<CasoPlano[]> {
       return ensamblar(
         p, aliado,
         ddByPredio.get(p.id) ?? null,
-        expByPredio.get(p.id)?.id ?? null,
+        expByPredio.get(p.id) ?? null,
         antByAliado.get(p.aliado_id) ?? null,
         anaByPredio.get(p.id) ?? null,
       )

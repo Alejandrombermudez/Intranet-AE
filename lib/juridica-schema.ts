@@ -89,6 +89,7 @@ export interface Aliado {
   predio_id?:                  string
   aliado_id?:                  string   // id de la persona en core.aliados
   expediente_id?:              string | null
+  etapa?:                      string | null   // etapa del expediente (juridica, sig_i, …)
   tipo_persona?:               string   // 'natural' | 'juridica'
   cedula_url?:                 string | null
   nombre_completo:             string

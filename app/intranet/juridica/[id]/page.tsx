@@ -156,17 +156,15 @@ export default function AliadoDetailPage() {
         body: JSON.stringify({ created_by: userEmail }),
       })
       const body = await res.json()
-      if (!res.ok) {
-        if (res.status === 409) {
-          showToast('ok', 'El predio ya está en SIG — redirigiendo…')
-          setTimeout(() => router.push('/intranet/sig'), 1000)
-        } else {
-          showToast('error', body.error ?? 'Error')
-        }
-      } else {
-        showToast('ok', 'Predio enviado a SIG')
-        setTimeout(() => router.push('/intranet/sig'), 1000)
+      if (!res.ok && res.status !== 409) {
+        showToast('error', body.error ?? 'Error')
+        return
       }
+      showToast('ok', res.status === 409 ? 'El predio ya estaba en SIG' : 'Predio enviado a SIG')
+      // Jurídica envía y listo: no entra al módulo SIG. Recargamos el caso para
+      // reflejar la nueva etapa (oculta el botón "Enviar a SIG").
+      const r2 = await fetch(`/api/juridica/aliados/${aliado.id}?email=${encodeURIComponent(userEmail)}`)
+      if (r2.ok) setAliado(await r2.json())
     } finally {
       setCreando(false)
       setConfirmar(false)
@@ -186,6 +184,7 @@ export default function AliadoDetailPage() {
   const estadoCfg = ESTADO_CONFIG[aliado.estado as EstadoAliado]
   const semaforo  = aliado.analisis_juridico?.semaforo as Semaforo | null
   const semCfg    = semaforo ? SEMAFORO_CONFIG[semaforo] : null
+  const enviadoASig = !!aliado.etapa && aliado.etapa !== 'juridica'
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -228,7 +227,7 @@ export default function AliadoDetailPage() {
             <p className="text-sm text-amber-700 font-medium">Semáforo naranja — requiere revisión del comité antes de ser aprobado.</p>
           </div>
         )}
-        {aliado.estado === 'aprobado' && (
+        {aliado.estado === 'aprobado' && !enviadoASig && (
           <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <CheckCircle2 size={20} className="text-teal-600 shrink-0" />
@@ -243,6 +242,15 @@ export default function AliadoDetailPage() {
             >
               Enviar a SIG →
             </button>
+          </div>
+        )}
+        {aliado.estado === 'aprobado' && enviadoASig && (
+          <div className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 flex items-center gap-3">
+            <CheckCircle2 size={20} className="text-sky-600 shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-sky-800">Enviado a SIG</p>
+              <p className="text-xs text-sky-600">El predio ya está en el proceso de zonificación. Jurídica no requiere más acciones.</p>
+            </div>
           </div>
         )}
 
