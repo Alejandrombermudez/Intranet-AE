@@ -1369,6 +1369,9 @@ export default function IntranetPage() {
                   if (tab.key === 'modulo' && myProfile?.department === 'Juridica') {
                     router.push('/intranet/juridica'); return
                   }
+                  if (tab.key === 'modulo' && myProfile?.department === 'SIG') {
+                    router.push('/intranet/sig'); return
+                  }
                   setActiveTab(tab.key)
                 }}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
