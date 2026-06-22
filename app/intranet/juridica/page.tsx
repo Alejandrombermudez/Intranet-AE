@@ -119,7 +119,7 @@ function AliadoCard({ aliado, onCrearSiembra }: {
               onClick={() => onCrearSiembra(aliado.id)}
               className="text-[11px] font-bold px-2.5 py-1 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
             >
-              + Siembra
+              → SIG
             </button>
           )}
           <Link
@@ -226,22 +226,22 @@ export default function JuridicaPage() {
     if (!modal || !userEmail) return
     setCreando(true)
     try {
-      const res = await fetch(`/api/juridica/aliados/${modal.id}/crear-en-siembra`, {
+      const res = await fetch(`/api/juridica/aliados/${modal.id}/enviar-sig`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ created_by: userEmail }),
       })
       const body = await res.json()
       if (!res.ok) {
-        if (res.status === 409 && body.familia_id) {
-          showToast('ok', 'Ya existe una familia vinculada — redirigiendo...')
-          setTimeout(() => router.push(`/intranet/ras/siembra/${body.familia_id}`), 1200)
+        if (res.status === 409) {
+          showToast('ok', 'El predio ya está en SIG — redirigiendo...')
+          setTimeout(() => router.push('/intranet/sig'), 1000)
         } else {
-          showToast('error', body.error ?? 'Error al crear en Siembra')
+          showToast('error', body.error ?? 'Error al enviar a SIG')
         }
       } else {
-        showToast('ok', 'Familia creada en Siembra correctamente')
-        setTimeout(() => router.push(`/intranet/ras/siembra/${body.familia_id}`), 1200)
+        showToast('ok', 'Predio enviado a SIG')
+        setTimeout(() => router.push('/intranet/sig'), 1000)
       }
     } finally {
       setCreando(false)
@@ -368,11 +368,10 @@ export default function JuridicaPage() {
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
-            <h3 className="font-black text-stone-900 text-lg mb-2">Crear en Siembra</h3>
+            <h3 className="font-black text-stone-900 text-lg mb-2">Enviar a SIG</h3>
             <p className="text-sm text-stone-600 mb-5">
-              Se creará un registro en <strong>Siembra</strong> para{' '}
-              <strong>{modal.nombre}</strong> con los datos básicos prellenados.
-              El equipo RAS completará la encuesta predial desde allí.
+              El predio de <strong>{modal.nombre}</strong> pasará a <strong>SIG I</strong> para
+              generar las zonas potenciales. El equipo SIG lo verá en su lista de trabajo.
             </p>
             <div className="flex gap-3">
               <button

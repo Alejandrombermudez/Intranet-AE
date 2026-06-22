@@ -146,26 +146,26 @@ export default function AliadoDetailPage() {
     setTimeout(() => setToast(null), 3500)
   }
 
-  async function crearEnSiembra() {
+  async function enviarSig() {
     if (!userEmail || !aliado) return
     setCreando(true)
     try {
-      const res = await fetch(`/api/juridica/aliados/${aliado.id}/crear-en-siembra`, {
+      const res = await fetch(`/api/juridica/aliados/${aliado.id}/enviar-sig`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ created_by: userEmail }),
       })
       const body = await res.json()
       if (!res.ok) {
-        if (res.status === 409 && body.familia_id) {
-          showToast('ok', 'Ya existe — redirigiendo…')
-          setTimeout(() => router.push(`/intranet/ras/siembra/${body.familia_id}`), 1200)
+        if (res.status === 409) {
+          showToast('ok', 'El predio ya está en SIG — redirigiendo…')
+          setTimeout(() => router.push('/intranet/sig'), 1000)
         } else {
           showToast('error', body.error ?? 'Error')
         }
       } else {
-        showToast('ok', 'Familia creada en Siembra')
-        setTimeout(() => router.push(`/intranet/ras/siembra/${body.familia_id}`), 1200)
+        showToast('ok', 'Predio enviado a SIG')
+        setTimeout(() => router.push('/intranet/sig'), 1000)
       }
     } finally {
       setCreando(false)
@@ -234,14 +234,14 @@ export default function AliadoDetailPage() {
               <CheckCircle2 size={20} className="text-teal-600 shrink-0" />
               <div>
                 <p className="text-sm font-bold text-teal-800">Aliado aprobado</p>
-                <p className="text-xs text-teal-600">Listo para crear la familia en Siembra y avanzar a la encuesta de campo.</p>
+                <p className="text-xs text-teal-600">Listo para enviar a SIG y generar las zonas potenciales.</p>
               </div>
             </div>
             <button
               onClick={() => setConfirmar(true)}
               className="shrink-0 px-4 py-2 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors"
             >
-              Crear en Siembra →
+              Enviar a SIG →
             </button>
           </div>
         )}
@@ -366,17 +366,17 @@ export default function AliadoDetailPage() {
       {confirmar && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
-            <h3 className="font-black text-stone-900 text-lg mb-2">Crear en Siembra</h3>
+            <h3 className="font-black text-stone-900 text-lg mb-2">Enviar a SIG</h3>
             <p className="text-sm text-stone-600 mb-5">
-              Se creará un registro para <strong>{aliado.nombre_completo}</strong> en el módulo Siembra
-              con los datos básicos prellenados. El equipo RAS completará la encuesta predial desde allí.
+              El predio de <strong>{aliado.nombre_completo}</strong> pasará a <strong>SIG I</strong> para
+              generar las zonas potenciales. El equipo SIG lo verá en su lista de trabajo.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmar(false)} disabled={creando}
                 className="flex-1 py-2.5 border border-stone-200 rounded-xl text-sm font-bold text-stone-600 hover:bg-stone-50 transition-colors">
                 Cancelar
               </button>
-              <button onClick={crearEnSiembra} disabled={creando}
+              <button onClick={enviarSig} disabled={creando}
                 className="flex-1 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
                 {creando ? <Loader2 size={14} className="animate-spin" /> : null}
                 Confirmar

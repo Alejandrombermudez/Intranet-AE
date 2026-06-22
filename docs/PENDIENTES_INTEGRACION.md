@@ -38,8 +38,10 @@
 
 | Pendiente | Por qué | Dónde impacta | Estado |
 |-----------|---------|---------------|--------|
-| **Crear módulo SIG en la Intranet** | Cargar/ingerir la geometría, gestionar las zonas y disparar la publicación a PMTiles | nuevo módulo `/intranet/sig` | 🆕 |
-| **Habilitar PostGIS** | Medir hectáreas reales y versionar zonas (hoy son .zip en Storage) | `geo.zonas` | ⏳ (D4) |
+| **Módulo SIG en la Intranet** | Gestionar las zonas potenciales (SIG I) | `/intranet/sig`: worklist de predios enviados por jurídica (etapa `sig_i`), enlazado desde el tablero | ✅ worklist (2026-06-19); ingesta pendiente |
+| **Flujo Jurídica → SIG** | Jurídica ya NO entrega a Siembra; entrega a **SIG** | "Enviar a SIG" avanza `core.expedientes.etapa` a `sig_i` (ruta `enviar-sig`) | ✅ (2026-06-19) |
+| **Habilitar PostGIS + `geo.zonas`** | Medir hectáreas reales y versionar zonas (hoy son .zip en Storage) | `migration_geo.sql` escrito (PostGIS + `geo.zonas` + RPC `geo.crear_zona`); falta correrlo y exponer `geo` | 🔧 (2026-06-19) |
+| **Ingesta de shapefile (SIG I)** | El SIG sube su `.zip` → parsear, reproyectar a 4326 (leyendo el .prj), guardar geometría en `geo.zonas` | upload en `/intranet/sig` + API de ingesta; necesita PostGIS activo y un shapefile de muestra para probar | 🆕 **siguiente** |
 | Pipeline de publicación a PMTiles | Geoportal serverless con MapLibre | GeoAE | 🆕 |
 | App de campo debe **devolver las zonas corregidas (SIG II)** | El flujo lo exige antes del plan; diseño en `arquitectura-visual/Campo_SIG.svg` + tabla `geo.zona_revision`. Decidir: método (vértices/GPS/ambos), mapa base offline, versionado | PWA campo ↔ `geo.zonas` | 🔧 |
 
@@ -49,7 +51,7 @@
 |-----------|---------|---------------|--------|
 | Crear el schema `core` (aliados / predios / expedientes) | Deduplicar persona y predio | Hecho; jurídica escribe sobre `core`; ver `CORE_MIGRACION.md` | ✅ (2026-06-19) |
 | **Tablero de predios/expedientes** | Ver "¿en qué etapa va cada predio?" (payoff de D1) | `/intranet/expedientes` + `lib/expedientes.ts` + `/api/expedientes`; resumen por etapa, búsqueda, filtros (etapa/estado jurídico/semáforo/municipio/línea) y agrupación | ✅ (2026-06-19) |
-| **Conectar campo/siembra y conservación al `core`** | Que el proceso siga desde jurídica sobre el mismo backbone (expediente) | `siembra.familias.expediente_id` ya existe y `crear-en-siembra` lo llena; falta que el flujo/UI de campo lo use y que conservación referencie `core.predios` | 🆕 siguiente |
+| Conectar campo al `core` (DESPUÉS de SIG) | El flujo cambió: Jurídica → **SIG** → Campo. Campo ya no es el paso inmediato | `siembra.familias.expediente_id` y la ruta `crear-en-siembra` quedan listos; se conectan cuando el proceso llegue a la etapa `campo` | ⏳ (tras SIG) |
 | Fusionar `siembra` + `ras` en `intervenciones` | Hoy son schemas gemelos | refactor | ⏳ (D3) |
 | Crear el `catalogo.especies` | Dato maestro que usan vivero, plan y Ley del árbol | nuevo schema | 🔧 |
 

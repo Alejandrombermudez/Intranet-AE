@@ -33,7 +33,7 @@ Diseño conceptual **completo**. **Semana 1 IMPLEMENTADA y en producción (2026-
 
 ## Siguiente paso
 
-**Semana 1 (core + jurídica) — HECHA y en producción.** Lo que sigue en Fase 1 del cronograma: **conectar el campo/siembra y la conservación al `core`** — que la evaluación de campo cuelgue de `core.expedientes` (la pelota llega desde jurídica vía `crear-en-siembra`, que ya crea la familia enlazada al expediente) y que conservación referencie `core.predios` en lugar de recopiar. Estado vivo: [`PENDIENTES_INTEGRACION.md`](PENDIENTES_INTEGRACION.md).
+**Semana 1 (core + jurídica) — HECHA.** El flujo se ajustó: Jurídica → **SIG** (ya no a Siembra). Hecho (2026-06-19): el módulo **SIG** (`/intranet/sig`, worklist de SIG I), el cambio de flujo ("Enviar a SIG" avanza el expediente a `sig_i`), el **tablero de predios** (`/intranet/expedientes`), y el modelo `geo.zonas` + PostGIS (`docs/sql/migration_geo.sql`, falta correrlo). **Siguiente:** la **ingesta del shapefile** en SIG I (subir `.zip` → reproyectar a 4326 → `geo.zonas`); necesita PostGIS activo + un shapefile de muestra. Estado vivo: [`PENDIENTES_INTEGRACION.md`](PENDIENTES_INTEGRACION.md).
 
 ## Prompt para el chat nuevo
 

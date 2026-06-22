@@ -8,7 +8,7 @@ import {
   ESTADO_CONFIG, SEMAFORO_CONFIG, type EstadoAliado, type Semaforo,
 } from '@/lib/juridica-schema'
 import {
-  LayoutGrid, ArrowLeft, Search, Loader2, ChevronRight, X, MapPin, FileText,
+  LayoutGrid, ArrowLeft, Search, Loader2, ChevronRight, X, MapPin, FileText, Map as MapIcon,
 } from 'lucide-react'
 
 // ─── Configuración de etapas del proceso ──────────────────────────────────────
@@ -153,7 +153,12 @@ export default function ExpedientesPage() {
               <p className="text-sm text-stone-400">¿En qué etapa va cada predio?</p>
             </div>
           </div>
-          <span className="text-sm font-bold text-stone-500">{rows.length} predios</span>
+          <div className="flex items-center gap-3">
+            <Link href="/intranet/sig" className="flex items-center gap-2 px-4 py-2 border border-stone-200 text-stone-600 rounded-xl font-bold text-sm hover:border-teal-400 hover:text-teal-700 transition-colors">
+              <MapIcon size={16} /> Módulo SIG
+            </Link>
+            <span className="text-sm font-bold text-stone-500">{rows.length} predios</span>
+          </div>
         </div>
       </div>
 

@@ -12,6 +12,12 @@ Hoy toda la geometría se guarda como un `.zip` (shapefile) en Storage y el geov
 
 ---
 
+## Estado de implementación (2026-06-19)
+
+Arrancó **SIG I**. **Hecho:** el flujo **Jurídica → SIG** (la abogada aprueba y "Envía a SIG"; el expediente avanza a `sig_i`); el módulo **`/intranet/sig`** (worklist de predios por zonificar, enlazado desde el tablero `/intranet/expedientes`); y el modelo de datos **`geo.zonas` + PostGIS** escrito en [`sql/migration_geo.sql`](sql/migration_geo.sql) (PostGIS + tabla + RPC `geo.crear_zona`, que recibe GeoJSON, repara la geometría con `ST_MakeValid`/`ST_Multi` y calcula el área). **Decisiones tomadas (defaults de este doc):** G1 = sí PostGIS; G3 = incremental (GeoJSON ya, PMTiles después); G4 = `geo.zonas` central; carga = el SIG **sube `.zip`** (no edita en el navegador — eso es "futuro" D10). **Falta correr `migration_geo.sql` + exponer `geo` en la API.** **Siguiente:** la **ingesta del shapefile** (subir `.zip` → parsear + reproyectar a 4326 leyendo el `.prj` → `geo.crear_zona`). Para probarla se necesita PostGIS activo y un **shapefile de muestra del SIG** (de paso resuelve la pregunta A1 del SRID: se lee del `.prj`).
+
+---
+
 ## 2. El problema con el esquema actual
 
 Hoy el `.zip` hace tres trabajos y no hace bien ninguno:

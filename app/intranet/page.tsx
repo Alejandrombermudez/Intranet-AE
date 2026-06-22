@@ -108,7 +108,7 @@ function hasIssues(insp: InspectionStat): boolean {
   )
 }
 
-const DEPARTMENTS = ['Financiero', 'Ejecutivo', 'RAS', 'Siembra', 'Tecnología', 'Juridica']
+const DEPARTMENTS = ['Financiero', 'Ejecutivo', 'RAS', 'Siembra', 'Tecnología', 'Juridica', 'SIG']
 
 // ─── EditRow (tabla usuarios) ─────────────────────────────────────────────────
 
@@ -1236,6 +1236,7 @@ export default function IntranetPage() {
         if (profile.department === 'RAS') { router.push('/intranet/ras'); return }
         if (profile.department === 'Ejecutivo') { router.push('/intranet/ejecutivo'); return }
         if (profile.department === 'Juridica') { router.push('/intranet/juridica'); return }
+        if (profile.department === 'SIG') { router.push('/intranet/sig'); return }
         setActiveTab('modulo')
       }
 
