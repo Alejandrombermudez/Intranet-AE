@@ -41,7 +41,9 @@
 | **Módulo SIG en la Intranet** | Gestionar las zonas potenciales (SIG I) | `/intranet/sig`: worklist de predios enviados por jurídica (etapa `sig_i`), enlazado desde el tablero | ✅ worklist (2026-06-19); ingesta pendiente |
 | **Flujo Jurídica → SIG** | Jurídica ya NO entrega a Siembra; entrega a **SIG** | "Enviar a SIG" avanza `core.expedientes.etapa` a `sig_i` (ruta `enviar-sig`) | ✅ (2026-06-19) |
 | **Habilitar PostGIS + `geo.zonas`** | Medir hectáreas reales y versionar zonas (hoy son .zip en Storage) | `migration_geo.sql` escrito (PostGIS + `geo.zonas` + RPC `geo.crear_zona`); falta correrlo y exponer `geo` | 🔧 (2026-06-19) |
-| **Ingesta de shapefile (SIG I)** | El SIG sube su `.zip` → parsear, reproyectar a 4326 (leyendo el .prj), guardar geometría en `geo.zonas` | upload en `/intranet/sig` + API de ingesta; necesita PostGIS activo y un shapefile de muestra para probar | 🆕 **siguiente** |
+| **Ingesta de shapefile (SIG I)** | El SIG sube su `.zip` → parsear, reproyectar a 4326, guardar en `geo.zonas` | HECHO en `/intranet/sig/[predioId]`: parsea (shpjs), reproyecta (proj4 + `.prj`), **previsualiza en mapa Leaflet/OSM + tabla de atributos + métricas** (área ha/km², perímetro, nº zonas) y guarda vía `geo.crear_zona`. **Falta probar con un shapefile real.** | ✅ (2026-06-19) |
+| Persistir atributos/perímetro + ver zonas guardadas | Guardar `propiedades` (.dbf) y `perimetro_m`, y leer zonas en el mapa al recargar | correr `migration_geo_v2.sql` (ALTER + RPC `geo.zonas_de_predio`) | 🔧 (correr v2) |
+| Respaldo del `.zip` en Storage | Trazabilidad (el geom queda en PostGIS, pero el .zip es respaldo) | bucket `sig-shapefiles` + subir en la ingesta | 🆕 opcional |
 | Pipeline de publicación a PMTiles | Geoportal serverless con MapLibre | GeoAE | 🆕 |
 | App de campo debe **devolver las zonas corregidas (SIG II)** | El flujo lo exige antes del plan; diseño en `arquitectura-visual/Campo_SIG.svg` + tabla `geo.zona_revision`. Decidir: método (vértices/GPS/ambos), mapa base offline, versionado | PWA campo ↔ `geo.zonas` | 🔧 |
 

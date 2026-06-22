@@ -81,9 +81,8 @@ export default function SigPage() {
         <div className="flex items-start gap-3 bg-sky-50 border border-sky-200 rounded-xl px-4 py-3">
           <Info size={18} className="text-sky-500 shrink-0 mt-0.5" />
           <p className="text-sm text-sky-800">
-            Estos predios fueron aprobados en jurídica y enviados a SIG. El siguiente paso es
-            <strong> cargar el shapefile</strong> de cada uno para generar las zonas potenciales
-            (se habilita al activar PostGIS).
+            Estos predios fueron aprobados en jurídica y enviados a SIG. Abre cada uno con
+            <strong> «Zonificar»</strong> para cargar su shapefile y generar las zonas potenciales.
           </p>
         </div>
 
@@ -138,8 +137,8 @@ export default function SigPage() {
                         <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">sin cargar</span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Link href={`/intranet/juridica/${r.predio_id}`} className="inline-flex items-center gap-0.5 text-[11px] font-bold text-stone-400 hover:text-teal-600 transition-colors whitespace-nowrap">
-                          Ver caso <ChevronRight size={12} />
+                        <Link href={`/intranet/sig/${r.predio_id}`} className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 hover:text-teal-700 transition-colors whitespace-nowrap">
+                          Zonificar <ChevronRight size={12} />
                         </Link>
                       </td>
                     </tr>
