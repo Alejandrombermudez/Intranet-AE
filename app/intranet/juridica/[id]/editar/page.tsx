@@ -69,6 +69,7 @@ export default function EditarAliadoPage() {
   const [pdfRecibo, setPdfRecibo] = useState<File | null>(null)
   const [pdfManif, setPdfManif]   = useState<File | null>(null)
   const [selectedMunicipio, setSelectedMunicipio] = useState<MunicipioCaqueta | ''>('')
+  const [matriculas, setMatriculas] = useState<string[]>([''])
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } =
     useForm<AliadoForm>({ resolver: standardSchemaResolver(aliadoSchema) as any })
@@ -112,6 +113,7 @@ export default function EditarAliadoPage() {
           manifestacion_interes:       data.manifestacion_interes ?? undefined,
           manifestacion_observaciones: data.manifestacion_observaciones ?? '',
         })
+        setMatriculas(data.matriculas && data.matriculas.length ? data.matriculas : (data.matricula_inmobiliaria ? [data.matricula_inmobiliaria] : ['']))
         setLoading(false)
       })
       .catch(() => router.push('/intranet/juridica'))
@@ -122,7 +124,11 @@ export default function EditarAliadoPage() {
     setSaving(true); setError(null)
     try {
       const fd = new FormData()
-      fd.append('data', JSON.stringify({ ...values, departamento: 'Caquetá', updated_by: userEmail }))
+      fd.append('data', JSON.stringify({
+        ...values,
+        matriculas: matriculas.map((m) => m.trim()).filter(Boolean),
+        departamento: 'Caquetá', updated_by: userEmail,
+      }))
       if (pdfCedula) fd.append('cedula', pdfCedula)
       if (pdfCert)   fd.append('certificado_tradicion', pdfCert)
       if (pdfRecibo) fd.append('recibo_predial', pdfRecibo)
@@ -220,10 +226,24 @@ export default function EditarAliadoPage() {
 
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Registro y catastro</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Matrícula inmobiliaria"><input {...register('matricula_inmobiliaria')} className={INPUT} /></Field>
-            <Field label="Área registral (ha)"><input {...register('area_registral')} type="number" step="0.0001" min="0" className={INPUT} /></Field>
-          </div>
+          <Field label="Matrículas inmobiliarias (un predio puede tener varias)">
+            <div className="space-y-2">
+              {matriculas.map((m, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input value={m}
+                    onChange={(e) => setMatriculas((arr) => arr.map((x, j) => (j === i ? e.target.value : x)))}
+                    className={INPUT} placeholder="420-3478" />
+                  {matriculas.length > 1 && (
+                    <button type="button" onClick={() => setMatriculas((arr) => arr.filter((_, j) => j !== i))}
+                      className="text-stone-400 hover:text-red-500 shrink-0"><X size={16} /></button>
+                  )}
+                </div>
+              ))}
+              <button type="button" onClick={() => setMatriculas((arr) => [...arr, ''])}
+                className="text-xs font-bold text-teal-600 hover:underline">+ Agregar matrícula</button>
+            </div>
+          </Field>
+          <Field label="Área registral (ha)"><input {...register('area_registral')} type="number" step="0.0001" min="0" className={INPUT} /></Field>
           <Field label="Código catastral"><input {...register('codigo_catastral')} className={INPUT} /></Field>
           <FileInput label="Certificado de tradición (PDF)" existingUrl={aliado?.certificado_tradicion_url}
             file={pdfCert} onChange={setPdfCert} onClear={() => setPdfCert(null)} />

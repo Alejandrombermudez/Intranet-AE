@@ -66,6 +66,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: aErr.message }, { status: 500 })
     }
 
+    // Matrículas: lista; la principal = la primera
+    const matriculas: string[] = Array.isArray(data.matriculas)
+      ? data.matriculas.map((m: string) => String(m).trim()).filter(Boolean)
+      : (data.matricula_inmobiliaria ? [String(data.matricula_inmobiliaria).trim()] : [])
+
     // 2) Predio (core.predios)
     const { error: pErr } = await supabase.schema('core').from('predios')
       .update({
@@ -74,7 +79,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         municipio:              data.municipio,
         vereda:                 data.vereda || null,
         zona_ae:                data.zona_ae || null,
-        matricula_inmobiliaria: data.matricula_inmobiliaria || null,
+        matricula_inmobiliaria: matriculas[0] || null,
+        matriculas:             matriculas.length ? matriculas : null,
         codigo_catastral:       data.codigo_catastral || null,
         area_registral:         data.area_registral || null,
       })

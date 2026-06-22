@@ -90,7 +90,8 @@ export interface CasoPlano {
   vereda: string | null
   zona_ae: string | null
   nombre_predio: string | null
-  matricula_inmobiliaria: string | null
+  matricula_inmobiliaria: string | null   // la principal (= primera de matriculas)
+  matriculas: string[] | null             // todas las matrículas del predio
   codigo_catastral: string | null
   area_registral: number | null
   // Debida diligencia
@@ -143,6 +144,9 @@ function ensamblar(
     zona_ae: predio.zona_ae ?? null,
     nombre_predio: predio.nombre_predio ?? null,
     matricula_inmobiliaria: predio.matricula_inmobiliaria ?? null,
+    matriculas: (Array.isArray(predio.matriculas) && predio.matriculas.length > 0)
+      ? predio.matriculas
+      : (predio.matricula_inmobiliaria ? [predio.matricula_inmobiliaria] : null),
     codigo_catastral: predio.codigo_catastral ?? null,
     area_registral: predio.area_registral ?? null,
     // Debida diligencia

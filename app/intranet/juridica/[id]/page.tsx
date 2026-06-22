@@ -9,7 +9,7 @@ import {
 } from '@/lib/juridica-schema'
 import {
   Shield, ArrowLeft, Pencil, ChevronRight, Loader2,
-  CheckCircle2, Circle, Lock, ExternalLink, AlertCircle,
+  CheckCircle2, Circle, Lock, ExternalLink, AlertCircle, Plus,
 } from 'lucide-react'
 
 function label(v: unknown) {
@@ -258,10 +258,18 @@ export default function AliadoDetailPage() {
         <section className="bg-white rounded-2xl border border-stone-100 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-black text-stone-800">HOJA 1 — Datos básicos</h2>
-            <Link href={`/intranet/juridica/${aliado.id}/editar`}
-              className="flex items-center gap-1 text-xs font-bold text-stone-400 hover:text-stone-700 transition-colors">
-              <Pencil size={12} /> Editar
-            </Link>
+            <div className="flex items-center gap-3">
+              {aliado.aliado_id && (
+                <Link href={`/intranet/juridica/nuevo?aliado=${aliado.aliado_id}`}
+                  className="flex items-center gap-1 text-xs font-bold text-teal-600 hover:text-teal-700 transition-colors">
+                  <Plus size={12} /> Otro predio del propietario
+                </Link>
+              )}
+              <Link href={`/intranet/juridica/${aliado.id}/editar`}
+                className="flex items-center gap-1 text-xs font-bold text-stone-400 hover:text-stone-700 transition-colors">
+                <Pencil size={12} /> Editar
+              </Link>
+            </div>
           </div>
           <DataRow k="Nombre completo"       v={aliado.nombre_completo} />
           <DataRow k="Tipo / Nº documento"   v={`${aliado.tipo_documento} ${aliado.numero_documento}`} />
@@ -270,7 +278,10 @@ export default function AliadoDetailPage() {
           <DataRow k="Vereda"                v={aliado.vereda} />
           <DataRow k="Zona AE"               v={aliado.zona_ae} />
           <DataRow k="Nombre predio"         v={aliado.nombre_predio} />
-          <DataRow k="Matrícula inmobiliaria" v={aliado.matricula_inmobiliaria} />
+          <DataRow
+            k={aliado.matriculas && aliado.matriculas.length > 1 ? 'Matrículas' : 'Matrícula inmobiliaria'}
+            v={aliado.matriculas && aliado.matriculas.length ? aliado.matriculas.join(', ') : aliado.matricula_inmobiliaria}
+          />
           <DataRow k="Área registral (ha)"   v={aliado.area_registral} />
           <DataRow k="Código catastral"      v={aliado.codigo_catastral} />
           <DataRow k="Último pago predial"   v={aliado.anio_ultimo_pago_predial} />

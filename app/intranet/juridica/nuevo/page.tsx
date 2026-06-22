@@ -65,6 +65,9 @@ export default function NuevoAliadoPage() {
   const [pdfRecibo, setPdfRecibo] = useState<File | null>(null)
   const [pdfManif, setPdfManif]  = useState<File | null>(null)
   const [selectedMunicipio, setSelectedMunicipio] = useState<MunicipioCaqueta | ''>('')
+  const [matriculas, setMatriculas] = useState<string[]>([''])
+  const [aliadoLock, setAliadoLock] = useState(false)
+  const [prefillNombre, setPrefillNombre] = useState('')
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } =
     useForm<AliadoForm>({ resolver: standardSchemaResolver(aliadoSchema) as any })
@@ -87,13 +90,34 @@ export default function NuevoAliadoPage() {
     })
   }, [router])
 
+  // Caso "otro predio del propietario": prellenar y bloquear los datos de la persona
+  useEffect(() => {
+    const aliadoId = new URLSearchParams(window.location.search).get('aliado')
+    if (!aliadoId) return
+    supabase.schema('core').from('aliados')
+      .select('nombre_completo, tipo_documento, numero_documento')
+      .eq('id', aliadoId).single()
+      .then(({ data }) => {
+        if (!data) return
+        setValue('nombre_completo', data.nombre_completo)
+        setValue('tipo_documento', data.tipo_documento as AliadoForm['tipo_documento'])
+        setValue('numero_documento', data.numero_documento)
+        setPrefillNombre(data.nombre_completo)
+        setAliadoLock(true)
+      })
+  }, [setValue])
+
   async function onSubmit(values: AliadoForm) {
     if (!userEmail) return
     setSaving(true)
     setError(null)
     try {
       const fd = new FormData()
-      fd.append('data', JSON.stringify({ ...values, departamento: 'Caquetá', created_by: userEmail }))
+      fd.append('data', JSON.stringify({
+        ...values,
+        matriculas: matriculas.map((m) => m.trim()).filter(Boolean),
+        departamento: 'Caquetá', created_by: userEmail,
+      }))
       if (pdfCedula) fd.append('cedula', pdfCedula)
       if (pdfCert)   fd.append('certificado_tradicion', pdfCert)
       if (pdfRecibo) fd.append('recibo_predial', pdfRecibo)
@@ -133,20 +157,26 @@ export default function NuevoAliadoPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl mx-auto px-6 py-8 space-y-8">
 
+        {aliadoLock && (
+          <div className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 text-sm text-sky-800">
+            Agregando <strong>otro predio</strong> del propietario <strong>{prefillNombre}</strong>. Los datos de la persona vienen del aliado existente; completa solo el nuevo predio.
+          </div>
+        )}
+
         {/* Sección 1: Identificación */}
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Identificación</h2>
           <Field label="Nombre completo *" error={errors.nombre_completo?.message}>
-            <input {...register('nombre_completo')} className={errors.nombre_completo ? INPUT_ERR : INPUT} placeholder="Juan Pérez García" />
+            <input {...register('nombre_completo')} readOnly={aliadoLock} className={`${errors.nombre_completo ? INPUT_ERR : INPUT}${aliadoLock ? ' bg-stone-50 text-stone-500' : ''}`} placeholder="Juan Pérez García" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Tipo de documento">
-              <select {...register('tipo_documento')} className={INPUT}>
+              <select {...register('tipo_documento')} disabled={aliadoLock} className={INPUT}>
                 {TIPOS_DOC.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </Field>
             <Field label="Número de documento *" error={errors.numero_documento?.message}>
-              <input {...register('numero_documento')} className={errors.numero_documento ? INPUT_ERR : INPUT} placeholder="1234567890" />
+              <input {...register('numero_documento')} readOnly={aliadoLock} className={`${errors.numero_documento ? INPUT_ERR : INPUT}${aliadoLock ? ' bg-stone-50 text-stone-500' : ''}`} placeholder="1234567890" />
             </Field>
           </div>
           <FileInput
@@ -208,14 +238,26 @@ export default function NuevoAliadoPage() {
         {/* Sección 3: Registro catastral */}
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Registro y catastro</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Matrícula inmobiliaria" hint="Ej: 420-3478">
-              <input {...register('matricula_inmobiliaria')} className={INPUT} placeholder="420-3478" />
-            </Field>
-            <Field label="Área registral (ha)">
-              <input {...register('area_registral')} type="number" step="0.0001" min="0" className={INPUT} placeholder="25.5" />
-            </Field>
-          </div>
+          <Field label="Matrículas inmobiliarias" hint="Un predio puede tener varias (englobe). La primera es la principal.">
+            <div className="space-y-2">
+              {matriculas.map((m, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input value={m}
+                    onChange={(e) => setMatriculas((arr) => arr.map((x, j) => (j === i ? e.target.value : x)))}
+                    className={INPUT} placeholder="420-3478" />
+                  {matriculas.length > 1 && (
+                    <button type="button" onClick={() => setMatriculas((arr) => arr.filter((_, j) => j !== i))}
+                      className="text-stone-400 hover:text-red-500 shrink-0"><X size={16} /></button>
+                  )}
+                </div>
+              ))}
+              <button type="button" onClick={() => setMatriculas((arr) => [...arr, ''])}
+                className="text-xs font-bold text-teal-600 hover:underline">+ Agregar matrícula</button>
+            </div>
+          </Field>
+          <Field label="Área registral (ha)">
+            <input {...register('area_registral')} type="number" step="0.0001" min="0" className={INPUT} placeholder="25.5" />
+          </Field>
           <Field label="Código catastral" hint="Se preservan ceros a la izquierda">
             <input {...register('codigo_catastral')} className={INPUT} placeholder="18001000400..." />
           </Field>

@@ -62,6 +62,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Error al registrar la persona: ' + msg }, { status: 500 })
     }
 
+    // Matrículas: lista (un predio puede tener varias); la principal = la primera
+    const matriculas: string[] = Array.isArray(data.matriculas)
+      ? data.matriculas.map((m: string) => String(m).trim()).filter(Boolean)
+      : (data.matricula_inmobiliaria ? [String(data.matricula_inmobiliaria).trim()] : [])
+
     // 2) Predio (dueño principal = la persona)
     const { data: predio, error: pErr } = await supabase
       .schema('core').from('predios')
@@ -72,7 +77,8 @@ export async function POST(req: NextRequest) {
         municipio:              data.municipio,
         vereda:                 data.vereda || null,
         zona_ae:                data.zona_ae || null,
-        matricula_inmobiliaria: data.matricula_inmobiliaria || null,
+        matricula_inmobiliaria: matriculas[0] || null,
+        matriculas:             matriculas.length ? matriculas : null,
         codigo_catastral:       data.codigo_catastral || null,
         area_registral:         data.area_registral || null,
         created_by:             email,

@@ -18,6 +18,7 @@
 | **Cutover a `core`** | Jurídica es la puerta de entrada; separa persona/predio/expediente | Hecho y verificado con caso real; `core` expuesto; `juridica.aliados_legacy` borrada | ✅ (2026-06-19) |
 | Subir documentos como imagen o Word | La abogada no siempre tiene el soporte en PDF | `subirDocumento` acepta PDF (se comprime), imagen y Word; inputs con `accept` ampliado | ✅ (2026-06-18) |
 | Quitar campo "acto de adquisición actual" | Innecesario en HOJA 3 | Removido de UI/API/tipo; `DROP COLUMN` corrido en BD | ✅ (2026-06-19) |
+| **Varias matrículas por predio + varios predios por propietario** | Un polígono puede estar bajo varias matrículas (englobe); y el dueño puede tener predios en otros lados | `core.predios.matriculas text[]` (`migration_core_matriculas.sql`); formularios con lista de matrículas; botón "Otro predio del propietario" (reutiliza la persona vía `?aliado=`) | ✅ (2026-06-20) · falta correr el SQL |
 
 ## Vivero
 

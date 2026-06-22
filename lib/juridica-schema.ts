@@ -101,6 +101,7 @@ export interface Aliado {
   zona_ae:                     string | null
   nombre_predio:               string | null
   matricula_inmobiliaria:      string | null
+  matriculas?:                 string[] | null
   certificado_tradicion_url:   string | null
   area_registral:              number | null
   codigo_catastral:            string | null
