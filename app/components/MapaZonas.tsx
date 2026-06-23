@@ -7,13 +7,13 @@ import type { Feature, FeatureCollection } from 'geojson'
 interface Props {
   features: Feature[]
   baseFeatures?: Feature[]              // capa de fondo (p. ej. el polígono ya guardado), en gris
-  selectedIndex?: number | null        // resalta una feature de `features`
-  onSelect?: (index: number) => void   // clic en una feature → la selecciona
+  selectedIndices?: number[]           // resalta varias features de `features`
+  onSelect?: (index: number) => void   // clic en una feature → alterna su selección
   className?: string
 }
 
 /** Mapa con basemap OpenStreetMap que pinta zonas (polígonos) en 4326. */
-export default function MapaZonas({ features, baseFeatures, selectedIndex, onSelect, className }: Props) {
+export default function MapaZonas({ features, baseFeatures, selectedIndices, onSelect, className }: Props) {
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const baseRef = useRef<L.GeoJSON | null>(null)
@@ -50,8 +50,8 @@ export default function MapaZonas({ features, baseFeatures, selectedIndex, onSel
     const layer = L.geoJSON({ type: 'FeatureCollection', features } as FeatureCollection, {
       style: (feat) => {
         const idx = feat ? features.indexOf(feat as Feature) : -1
-        const sel = selectedIndex != null && idx === selectedIndex
-        return { color: sel ? '#0d9488' : '#14b8a6', weight: sel ? 3 : 2, fillColor: '#14b8a6', fillOpacity: sel ? 0.35 : 0.18 }
+        const sel = idx >= 0 && (selectedIndices?.includes(idx) ?? false)
+        return { color: sel ? '#0d9488' : '#94a3b8', weight: sel ? 3 : 1.5, fillColor: sel ? '#14b8a6' : '#cbd5e1', fillOpacity: sel ? 0.4 : 0.12 }
       },
       onEachFeature: onSelect
         ? (feat, lyr) => { const idx = features.indexOf(feat as Feature); lyr.on('click', () => onSelect(idx)) }
@@ -65,7 +65,7 @@ export default function MapaZonas({ features, baseFeatures, selectedIndex, onSel
       const b = todo.getBounds()
       if (b.isValid()) map.fitBounds(b, { padding: [20, 20], maxZoom: 16 })
     } catch { /* sin bounds */ }
-  }, [features, baseFeatures, selectedIndex, onSelect])
+  }, [features, baseFeatures, selectedIndices, onSelect])
 
   return <div ref={elRef} className={className ?? 'w-full h-80 rounded-xl overflow-hidden border border-stone-200 z-0'} />
 }

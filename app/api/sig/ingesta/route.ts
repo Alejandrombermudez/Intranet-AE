@@ -14,6 +14,18 @@ function deriveNombre(props: Record<string, unknown> | null | undefined): string
   return null
 }
 
+// Combina varios polígonos (Polygon/MultiPolygon) en un solo MultiPolygon GeoJSON
+function combinarMultiPolygon(features: { geometry?: { type?: string; coordinates?: unknown } }[]) {
+  const coords: unknown[] = []
+  for (const f of features) {
+    const g = f?.geometry
+    if (!g) continue
+    if (g.type === 'Polygon') coords.push(g.coordinates)
+    else if (g.type === 'MultiPolygon') for (const poly of (g.coordinates as unknown[])) coords.push(poly)
+  }
+  return { type: 'MultiPolygon', coordinates: coords }
+}
+
 // Guarda atributos + perímetro (requiere migration_geo_v2; si no existe se ignora)
 async function persistirProps(supabase: SB, zonaId: string, f: { properties?: unknown; perimetro_m?: number }) {
   const { error } = await supabase.schema('geo').from('zonas')
@@ -44,18 +56,23 @@ export async function POST(req: NextRequest) {
 
     const t: string = tipo || 'restauracion'
 
-    // UNIR: una sola geometría fusionada (ST_Union) con las zonas indicadas
+    // UNIR: combinar los seleccionados en un MultiPolygon y fusionarlo (ST_Union)
+    // con las zonas indicadas. El RPC calcula área y perímetro de la unión.
     if (modo === 'unir') {
-      const f = features[0]
+      const geom = combinarMultiPolygon(features)
       const { data: zonaId, error } = await supabase.schema('geo').rpc('crear_zona_union', {
         p_predio_id: predio_id,
-        p_geojson: JSON.stringify(f.geometry),
+        p_geojson: JSON.stringify(geom),
         p_ids: Array.isArray(unir_ids) ? unir_ids : [],
-        p_tipo: t, p_origen: 'sig', p_nombre: deriveNombre(f.properties),
+        p_tipo: t, p_origen: 'sig', p_nombre: deriveNombre(features[0]?.properties),
         p_expediente_id: expediente_id || null, p_created_by: email,
       })
       if (error) return NextResponse.json({ error: 'Error al unir: ' + error.message }, { status: 500 })
-      if (zonaId) await persistirProps(supabase, zonaId as string, f)
+      if (zonaId) {
+        await supabase.schema('geo').from('zonas')
+          .update({ propiedades: features[0]?.properties ?? null })
+          .eq('id', zonaId as string)
+      }
       return NextResponse.json({ ok: true, creadas: 1 })
     }
 
