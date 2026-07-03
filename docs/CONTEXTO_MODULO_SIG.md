@@ -2,7 +2,7 @@
 
 > **Propósito doble:** (1) definir la arquitectura de datos geoespaciales del ecosistema y (2) **preparar la reunión con el equipo SIG** para decidir el futuro de esta capa.
 > **Fecha:** 2026-06-14 · **Versión:** 0.1 (borrador para discutir)
-> **Diagrama:** [`../../arquitectura-visual/geo.svg`](../../arquitectura-visual/geo.svg) · **Relacionado:** [`ARQUITECTURA_ECOSISTEMA.md`](ARQUITECTURA_ECOSISTEMA.md) (D4) · [`geovisor/CONTEXTO_GEOVISOR.md`](geovisor/CONTEXTO_GEOVISOR.md) · [`PENDIENTES_INTEGRACION.md`](PENDIENTES_INTEGRACION.md)
+> **Relacionado:** [`ARQUITECTURA_ECOSISTEMA.md`](ARQUITECTURA_ECOSISTEMA.md) (D4) · [`geovisor/CONTEXTO_GEOVISOR.md`](geovisor/CONTEXTO_GEOVISOR.md) · [`PENDIENTES_INTEGRACION.md`](PENDIENTES_INTEGRACION.md)
 
 ---
 
@@ -125,7 +125,7 @@ Como en Fase I son ~6 predios, no hace falta construirlo todo de golpe:
 
 ## 9. Agenda sugerida para la reunión (30–45 min)
 
-1. Mostrar el diagrama [`geo.svg`](../../arquitectura-visual/geo.svg) — la idea de separar guardar / mostrar / insumo. *(5 min)*
+1. Explicar la idea de separar guardar / mostrar / insumo (PostGIS = verdad, PMTiles = entrega, `.zip` = insumo). *(5 min)*
 2. Resolver el bloque **A (datos y proyección)** — es lo más urgente para arrancar. *(10 min)*
 3. Bloque **D (futuro)** — editar en la Intranet vs. QGIS, y versionado. *(15 min)*
 4. Cerrar G1–G3 y definir quién hace el primer cargue de prueba. *(10 min)*
@@ -134,7 +134,6 @@ Como en Fase I son ~6 predios, no hace falta construirlo todo de golpe:
 
 ## 10. Referencias
 
-- Diagrama de flujo: `arquitectura-visual/geo.svg` (+ `.html` para proyectar)
 - Geovisor actual: `Intranet-AE/docs/geovisor/CONTEXTO_GEOVISOR.md`
 - Buckets actuales: `siembra-shapefiles`, `ras-shapefiles` (ver `SUPABASE_SCHEMAS.md`)
 - Decisión marco D4: `ARQUITECTURA_ECOSISTEMA.md` §5

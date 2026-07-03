@@ -81,7 +81,7 @@ Los datos en `juridica`, `siembra` y `ras` son de **prueba** (ejercicio para el 
 Datos de prueba — no se reestructuran ahora. Solo se dejan los enganches listos:
 - `siembra.familias.aliado_id` repuntado a `core.aliados`; nuevo `siembra.familias.expediente_id` → `core.expedientes`.
 - `ras.familias` recibe `aliado_id` y `expediente_id` (→ core) opcionales.
-- La fusión `siembra`+`ras` en `intervenciones` (D3) sigue diferida, como dice el cronograma.
+- La fusión `siembra`+`ras` en `intervenciones` (D3) quedó **DESCARTADA (2026-06-27)**: son dominios separados (Siembra = restauración; RAS = conservación).
 
 ---
 

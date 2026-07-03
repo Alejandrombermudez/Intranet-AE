@@ -6,6 +6,22 @@
 
 ---
 
+## 0. Alcance: dos dominios separados
+
+Este documento describe el dominio de **Siembra (Restauración)**. Hay un segundo dominio que **no se mezcla** con éste:
+
+| | **Siembra (Restauración)** | **Conservación (RAS = Red de Árboles Semilleros)** |
+|---|---|---|
+| Qué es | El **proceso completo** de extremo a extremo | Familias en conservación que **alojan** la red de árboles semilleros |
+| Flujo | Jurídica → SIG I → Campo → SIG II → Vivero → Ejecución | Registro del predio + su red de árboles (uno por árbol) |
+| Objeto central | El **predio** avanzando por el expediente | El **árbol semillero** (uno por fila, colgado del predio) |
+| Schemas | `core`, `geo`, `siembra.*`, `catalogo`, `vivero` | `ras.*` |
+| Estado | `siembra.*` y la PWA de campo (`familias-res/`) son **pruebas exitosas, NO productivas**. Producción real arranca con Jurídica sobre `core`. | En **rediseño**: parámetros del formulario + carga de árboles + conexión al geovisor |
+
+> "Siembra" **no** es un módulo de familias: es la cadena de valor de la restauración completa. Lo que sigue (§1–§6) es ese proceso.
+
+---
+
 ## 1. La articulación — el hilo de datos del predio
 
 Un predio recorre el sistema de extremo a extremo. Cada componente **produce** algo que es la **entrada** del siguiente. Esa es la articulación.
@@ -59,17 +75,16 @@ geo.zonas.area_ha    densidad/ha × composición %       editable por plan      
 - **La reposición** (`siembra.planes.factor_reposicion_pct`): margen por mortalidad, **editable**. Es lo que vuelve "aproximada" la cifra y conecta con la merma del vivero.
 - **La salida**: el sistema arma el **borrador** de `vivero.solicitudes` + `solicitud_items`; la persona ajusta y al aprobar el plan, la solicitud queda en firme (**modelo pull**: cada plántula con dueño).
 
-Diagrama: [`arquitectura-visual/Plan.svg`](../../arquitectura-visual/Plan.svg).
-
 ---
 
 ## 3. Qué queremos desarrollar
 
 | Componente | Estado | Qué falta | Depende de |
 |-----------|--------|-----------|-----------|
-| Intranet (flota, RAS, ejecutivo) | 🟢 producción | — | — |
+| Intranet (flota, ejecutivo) | 🟢 producción | — | — |
 | Jurídica | 🟢 producción | Sobre `core`; subida de PDF/imagen/Word ✅ | `core` |
-| App de campo (encuesta/evaluación) | 🟢 producción | **Conectar al `core.expedientes`** | `core` |
+| App de campo (encuesta/evaluación) | 🧪 prueba exitosa, **no productiva** | Se rehará conectada al `core.expedientes` cuando arranque la etapa Campo | `core` |
+| Conservación / RAS (familias + Red de Árboles Semilleros) | 🔧 en rediseño | Árbol como entidad propia; carga + geovisor | `ras` (dominio aparte) |
 | **`catalogo.especies`** | 🔴 por construir | Crear schema maestro | — |
 | **`core` (aliados/predios/expedientes)** | 🟢 implementado | Conectar campo/siembra y conservación | — |
 | **PostGIS + `geo.zonas`** | 🔴 por construir | `CREATE EXTENSION` + modelo | — |
@@ -124,10 +139,9 @@ flowchart TD
 
 ## 6. Mapa de artefactos (dónde está cada cosa)
 
-**Diagramas** (`arquitectura-visual/`, abrir `.html` para proyectar):
-- `proceso` — la cadena de 7 etapas · `geo` — SIG→PostGIS→PMTiles · `Campo` — app completa · `Campo_SIG` — corrección de zonas · `Plan` — cálculo de demanda · `juridica` — debida diligencia · `ecosistema-datos` / `ecosistema-conexiones` — el ER.
+**Diagramas:** los `.svg`/`.html` de exposición se eliminaron (2026-06-27, eran material de presentación inicial). Los diagramas vivos son los **Mermaid embebidos** en estos `.md`.
 
-**Parámetros y llaves:** `arquitectura-visual/parametros_ER.xlsx` (una hoja por módulo).
+**Parámetros y llaves (ER completo):** [`ARQUITECTURA_DATOS.md`](ARQUITECTURA_DATOS.md) — documento maestro de entidad-relación y parámetros de todo el ecosistema.
 
 **Specs (`Intranet-AE/docs/` y carpetas de módulo):**
 - `ARQUITECTURA_ECOSISTEMA.md` (maestro, 4 vistas + decisiones D1–D5)

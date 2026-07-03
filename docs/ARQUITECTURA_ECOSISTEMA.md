@@ -12,6 +12,11 @@
 
 El sistema se construyó **módulo por módulo** (flota, jurídica, RAS, ejecutivo…). El proceso real del negocio, en cambio, es **de extremo a extremo**: un predio avanza por una cadena de etapas con responsables y compuertas. Este documento alinea ambas cosas.
 
+> **Dos dominios — no mezclar.**
+> **(1) Siembra (Restauración)** = el proceso completo de extremo a extremo (Jurídica → SIG I → Campo → SIG II → Vivero → Ejecución), descrito en las §1–§7. No es un módulo de "familias". Hoy `siembra.*` y la PWA de campo son **pruebas exitosas, no datos productivos**.
+> **(2) Conservación (RAS = Red de Árboles Semilleros)** = dominio aparte (`ras.*`): familias en conservación que alojan la red de árboles semilleros, donde el **árbol es la entidad principal** (uno por fila). Está en rediseño y **no comparte tablas ni flujo** con Siembra.
+> Ojo con "RAS": en los diagramas del proceso es el **equipo** de algunas etapas; como schema/dominio significa **Conservación**.
+
 **Regla de oro:** no existe *un solo diagrama* que explique todo. Usamos **cuatro vistas**, cada una responde una pregunta distinta. Juntas, son la arquitectura.
 
 | # | Vista | Pregunta que responde |
@@ -143,7 +148,7 @@ flowchart TB
 |-----|---------|----------------------|--------|
 | Intranet AE | `Intranet-AE/` | Vinculación, Finanzas, Personas, (futuro: Plan, Vivero) | Producción |
 | Geoportal | `GeoAE/` | Geoespacial (entrega) | Producción (visor) → evolucionar a PMTiles |
-| PWA Campo | `familias-res/` | Vinculación (etapa campo) | Producción |
+| PWA Campo | `familias-res/` | Siembra (etapa campo) | **Prueba exitosa — no productiva** (se rehará al llegar la etapa Campo) |
 | App Vivero | `app_vivero/` | Producción de vivero | **Solo Excel — por construir** |
 | Modelo IA | `modelo-web/` | Geoespacial (insumo SIG I) | Prototipo desconectado |
 | Escuela Bosque | `amazonia-escuela-bosque/` | Educación | En desarrollo |
@@ -179,13 +184,13 @@ erDiagram
 |-----|--------------------|-----------|
 | Persona+predio mezclados en `juridica.aliados` | `core.aliados` (persona) **1—N** `core.predios` | Un propietario con varios predios; copropiedad posible |
 | Datos copiados en 4 tablas | Las demás tablas guardan `predio_id` y **referencian** | Sin divergencia de datos |
-| `siembra.*` y `ras.*` schemas gemelos | `intervenciones.tipo ∈ {restauración, conservación}` | Elimina duplicación; un predio puede tener ambas |
+| `siembra.*` y `ras.*` **se mantienen separados** (dominios distintos, decisión del usuario 2026-06-27) | NO se fusionan en `intervenciones`; cada dominio evoluciona aparte | Claridad de dominios; Siembra = proceso de restauración, RAS = conservación |
 | Estado del proceso disperso | `core.expedientes` + `core.transiciones` (máquina de estados) | "¿En qué etapa está el predio X y quién tiene la pelota?" |
 | "Especie" como número suelto | `catalogo.especies` referenciado por todos | Vivero, plan, campo y Ley del árbol hablan el mismo idioma |
 
 > **Hecho (2026-06-19):** el modelo `core` está creado y **jurídica ya escribe sobre él** (cutover completo, verificado con un caso real). `core.aliados` (persona, natural/jurídica) **1—N** `core.predios` + `core.predio_propietarios` (copropiedad N—N) + `core.expedientes` (máquina de estados: juridica→sig→campo→…). Jurídica se descompuso en `juridica.debida_diligencia` (1:1 predio), `antecedentes` (por persona) y `analisis_juridico` (por predio). La tabla vieja se archivó y luego se borró. Cómo está hecho: [`CORE_MIGRACION.md`](CORE_MIGRACION.md).
 >
-> **Falta del modelo:** conectar campo/siembra y conservación al `core`; (diferido) fusionar `siembra`+`ras` y construir `catalogo.especies`/vivero. No hay que migrarlo todo de golpe; el destino ya está decidido (ver §7).
+> **Falta del modelo:** conectar conservación (`ras`) al `core` y construir `catalogo.especies`/vivero. `siembra` y `ras` **se mantienen como dominios separados** (D3 descartada, ver §7). No hay que migrarlo todo de golpe; el destino ya está decidido (ver §7).
 
 ---
 
@@ -235,14 +240,14 @@ A alto nivel (no exhaustivo — el detalle de cada campo va en la spec de cada m
 
 ## 7. Decisiones (estado)
 
-**Cerradas (2026-06-19):** **D1 → (a)** expediente adoptado (`core.expedientes`, máquina de estados por predio). **D2 → modelo canónico `core`** construido directamente (los datos de jurídica/siembra/ras eran de prueba, así que no hubo migración gradual: se levantó `core` limpio y jurídica escribe ahí). **D5 → (b)** vivero como app aparte. **Siguen:** **D3** (fusionar `siembra`+`ras`) diferida; **D4** (PostGIS+PMTiles) confirmada pero pendiente de implementar (Fase 2).
+**Cerradas (2026-06-19):** **D1 → (a)** expediente adoptado (`core.expedientes`, máquina de estados por predio). **D2 → modelo canónico `core`** construido directamente (los datos de jurídica/siembra/ras eran de prueba, así que no hubo migración gradual: se levantó `core` limpio y jurídica escribe ahí). **D5 → (b)** vivero como app aparte. **D3 → DESCARTADA (2026-06-27): NO se fusionan `siembra`+`ras`.** Son dominios separados (Siembra = proceso de restauración; RAS = conservación / Red de Árboles Semilleros). **Sigue:** **D4** (PostGIS+PMTiles) confirmada pero pendiente de implementar (Fase 2).
 
 
 | # | Decisión | Opciones | Impacto |
 |---|----------|----------|---------|
 | D1 | Alcance del **expediente** | (a) columna solo del dominio de vinculación *(recomendado)* · (b) no usarlo, conectar módulos con FKs sueltas | Define si hay tablero de "¿en qué etapa va cada predio?" |
 | D2 | **Unificar aliado/predio** | (a) refactor del modelo actual · (b) capa canónica nueva que convive y migra gradual *(recomendado para no romper producción)* | Elimina duplicación; afecta jurídica, siembra, ras, PWA |
-| D3 | **Fusionar `siembra`+`ras`** en `intervenciones` | (a) ahora · (b) cuando se toque el modelo de datos · (c) dejar gemelos | Mantenibilidad a largo plazo |
+| D3 | **Fusionar `siembra`+`ras`** en `intervenciones` | ❌ **DESCARTADA (2026-06-27): se mantienen separados** (dominios distintos) | Claridad de dominios sobre dedup |
 | D4 | **PostGIS + PMTiles** | confirmado: PostGIS como fuente, PMTiles como entrega | Habilita cálculo de área real y geoportal serverless |
 | D5 | **App Vivero** | (a) módulo dentro de Intranet · (b) app aparte que sincroniza | Velocidad vs. separación de responsabilidades |
 

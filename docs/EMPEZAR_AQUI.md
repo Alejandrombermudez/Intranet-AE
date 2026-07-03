@@ -4,7 +4,19 @@
 
 ## Qué es
 
-Ecosistema tecnológico de Amazonía Emprende: intranet, geoportal, vivero, app de campo. Un predio recorre un proceso de extremo a extremo (jurídica → SIG → campo → plan de siembra → vivero → ejecución). Supabase compartido: `lbxysovesmbgesxooghw`.
+Ecosistema tecnológico de Amazonía Emprende: intranet, geoportal, vivero, app de campo. Supabase compartido: `lbxysovesmbgesxooghw`.
+
+## Dos dominios — no mezclar
+
+El sistema tiene **dos dominios distintos** que no comparten tablas ni flujo:
+
+1. **Siembra (Restauración) = un proceso completo de extremo a extremo**, no un módulo de "familias". Es la cadena de valor de la restauración:
+   **Jurídica → SIG I → Campo → SIG II → Vivero → Ejecución.**
+   > **Estado real:** lo que hoy existe en `siembra.*` y en la PWA de campo (`familias-res/`) son **pruebas exitosas (prueba de concepto), NO datos productivos**. La producción arranca con Jurídica sobre `core`.
+
+2. **Conservación (RAS = Red de Árboles Semilleros) = dominio aparte.** Familias en conservación que **alojan** la red de árboles semilleros. El **árbol semillero es el objeto principal** (uno por fila, colgado del predio), no un conteo. Vive en `ras.*` y está **en rediseño** (parámetros del formulario + carga de árboles + conexión al geovisor).
+
+> Cuidado con la palabra "RAS": en los diagramas del proceso de restauración aparece como el **equipo** responsable de algunas etapas; como **schema/dominio** (`ras.*`) significa **Conservación / Red de Árboles Semilleros**. Son cosas distintas.
 
 ## Estado
 
@@ -13,13 +25,14 @@ Diseño conceptual **completo**. **Semana 1 IMPLEMENTADA y en producción (2026-
 ## Orden de lectura
 
 1. **`ARTICULACION_Y_PROYECCION.md`** — leer primero. Flujo end-to-end, las "costuras" (claves foráneas), qué falta desarrollar, el roadmap por dependencias, todas las decisiones, y el mapa de dónde está cada artefacto.
-2. **`CRONOGRAMA.md`** — plan de 20 semanas, en el orden del proceso. Versión para presentar: `../../arquitectura-visual/cronograma_actividades.xlsx`.
-3. **`../../arquitectura-visual/parametros_ER.xlsx`** — tablas, parámetros y llaves (PK/FK), una hoja por módulo: Jurídica, SIG, Campo, Campo_SIG, Plan, Vivero, Relaciones, Leyenda.
+2. **`CRONOGRAMA.md`** — plan de 20 semanas, en el orden del proceso.
+3. **`ARQUITECTURA_DATOS.md`** — documento maestro de **entidad-relación y parámetros** de todo el ecosistema (todas las tablas, llaves PK/FK, estado y orden para desarrollar). **Base para desarrollar masivamente.**
 4. **Specs de módulo:** `../../app_vivero/CONTEXTO_MODULO_VIVERO.md`, `CONTEXTO_MODULO_SIG.md`, `../../juridica/CONTEXTO_MODULO_JURIDICO.md`.
-5. **Diagramas:** `../../arquitectura-visual/*.html` (abrir en el navegador): proceso, geo, Campo, Campo_SIG, Plan, Vivero, juridica, ecosistema-datos, ecosistema-conexiones, cronograma.
-6. **`PENDIENTES_INTEGRACION.md`** — backlog vivo (incluye la cédula en PDF de jurídica, etc.).
-7. **`ARQUITECTURA_ECOSISTEMA.md`** — el documento maestro (4 vistas + decisiones D1–D5).
-8. **`CORE_MIGRACION.md`** — qué se implementó en la Semana 1 (modelo `core` + cutover de jurídica) y cómo está hecho. **Leer para entender el estado actual del código.**
+5. **`PENDIENTES_INTEGRACION.md`** — backlog vivo (incluye la cédula en PDF de jurídica, etc.).
+6. **`ARQUITECTURA_ECOSISTEMA.md`** — el documento maestro (4 vistas + decisiones D1–D5).
+7. **`CORE_MIGRACION.md`** — qué se implementó en la Semana 1 (modelo `core` + cutover de jurídica) y cómo está hecho. **Leer para entender el estado actual del código.**
+
+> La carpeta `arquitectura-visual/` (diagramas `.svg/.html` + Excel `parametros_ER.xlsx`/`cronograma_actividades.xlsx`) se eliminó (2026-06-27). Todo su contenido se consolidó en [`ARQUITECTURA_DATOS.md`](ARQUITECTURA_DATOS.md); los diagramas vivos son los **Mermaid embebidos** en los `.md`.
 
 ## Decisiones tomadas (resumen)
 

@@ -32,7 +32,7 @@
 
 | Pendiente | Por qué | Dónde impacta | Estado |
 |-----------|---------|---------------|--------|
-| Cálculo de demanda (modelo florístico) | **Diseñado:** área(SIG) × densidad × %especie × (1+reposición) → solicitud. Ver `Plan.svg`, hoja «Plan» | `siembra.planes / modelos_floristicos / modelo_especies / plan_zonas` | 🔧 |
+| Cálculo de demanda (modelo florístico) | **Diseñado:** área(SIG) × densidad × %especie × (1+reposición) → solicitud. Ver §3.4 de `ARQUITECTURA_DATOS.md` | `siembra.planes / modelos_floristicos / modelo_especies / plan_zonas` | 🔧 |
 | Definir la app de verificación / corrección de zonas | Ahora la app de campo hace SIG II | PWA campo + `geo.zonas` | 🆕 |
 
 ## Geo / SIG
@@ -47,7 +47,7 @@
 | **SIG I en dos pasos: polígono del predio + sitios de siembra** | El SIG sube un `.zip` con varios polígonos → elige UNO (el predio, `tipo=finca`); y aparte los sitios de siembra (`tipo=restauracion`) dentro del polígono | `/intranet/sig/[predioId]` con 2 pestañas. Polígono: selección en mapa/lista + aviso de **sobreposición** → **sobreescribir** (borra y reemplaza) o **unir** (`ST_Union` vía `geo.crear_zona_union`). Sitios: previsualización **superpuesta** al polígono guardado. Mapa con capa base + clic para elegir. | ✅ (2026-06-20) · correr `migration_geo_v3.sql` |
 | Respaldo del `.zip` en Storage | Trazabilidad (el geom queda en PostGIS, pero el .zip es respaldo) | bucket `sig-shapefiles` + subir en la ingesta | 🆕 opcional |
 | Pipeline de publicación a PMTiles | Geoportal serverless con MapLibre | GeoAE | 🆕 |
-| App de campo debe **devolver las zonas corregidas (SIG II)** | El flujo lo exige antes del plan; diseño en `arquitectura-visual/Campo_SIG.svg` + tabla `geo.zona_revision`. Decidir: método (vértices/GPS/ambos), mapa base offline, versionado | PWA campo ↔ `geo.zonas` | 🔧 |
+| App de campo debe **devolver las zonas corregidas (SIG II)** | El flujo lo exige antes del plan; tabla `geo.zona_revision`. Decidir: método (vértices/GPS/ambos), mapa base offline, versionado | PWA campo ↔ `geo.zonas` | 🔧 |
 
 ## Núcleo / modelo de datos
 
@@ -56,7 +56,7 @@
 | Crear el schema `core` (aliados / predios / expedientes) | Deduplicar persona y predio | Hecho; jurídica escribe sobre `core`; ver `CORE_MIGRACION.md` | ✅ (2026-06-19) |
 | **Tablero de predios/expedientes** | Ver "¿en qué etapa va cada predio?" (payoff de D1) | `/intranet/expedientes` + `lib/expedientes.ts` + `/api/expedientes`; resumen por etapa, búsqueda, filtros (etapa/estado jurídico/semáforo/municipio/línea) y agrupación | ✅ (2026-06-19) |
 | Conectar campo al `core` (DESPUÉS de SIG) | El flujo cambió: Jurídica → **SIG** → Campo. Campo ya no es el paso inmediato | `siembra.familias.expediente_id` y la ruta `crear-en-siembra` quedan listos; se conectan cuando el proceso llegue a la etapa `campo` | ⏳ (tras SIG) |
-| Fusionar `siembra` + `ras` en `intervenciones` | Hoy son schemas gemelos | refactor | ⏳ (D3) |
+| ~~Fusionar `siembra` + `ras` en `intervenciones`~~ | **Descartada (2026-06-27)**: dominios separados (Siembra=restauración, RAS=conservación) | — | ❌ D3 descartada |
 | Crear el `catalogo.especies` | Dato maestro que usan vivero, plan y Ley del árbol | nuevo schema | 🔧 |
 
 ---

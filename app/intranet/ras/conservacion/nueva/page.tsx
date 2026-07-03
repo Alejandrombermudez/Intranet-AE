@@ -245,7 +245,6 @@ export default function NuevaConservacionPage() {
   // Archivos fuera de RHF
   const [shpFinca, setShpFinca] = useState<File | null>(null)
   const [shpConservacion, setShpConservacion] = useState<File | null>(null)
-  const [shpArboles, setShpArboles] = useState<File | null>(null)
   const [docAcuerdo, setDocAcuerdo] = useState<File | null>(null)
   // Fotos por categoría de predio
   const [fotosPredioCat, setFotosPredioCat] = useState<Record<string, File[]>>({})
@@ -342,7 +341,6 @@ export default function NuevaConservacionPage() {
       formData.append('data', JSON.stringify({ ...data, created_by: userEmail }))
       if (shpFinca) formData.append('shp_finca', shpFinca)
       if (shpConservacion) formData.append('shp_conservacion', shpConservacion)
-      if (shpArboles) formData.append('shp_arboles', shpArboles)
       if (docAcuerdo) formData.append('doc_acuerdo', docAcuerdo)
 
       FOTO_CATS.forEach(({ key }) => {
@@ -609,7 +607,6 @@ export default function NuevaConservacionPage() {
 
               <Dropzone label="Polígono total de la finca" file={shpFinca} onFile={setShpFinca} />
               <Dropzone label="Polígono en conservación" file={shpConservacion} onFile={setShpConservacion} />
-              <Dropzone label="Árboles — Shapefile de puntos (.zip)" file={shpArboles} onFile={setShpArboles} />
               <Dropzone label="Tratamiento de datos y acuerdo de conservación con AE (PDF, opcional)" file={docAcuerdo} onFile={setDocAcuerdo} accept=".pdf" />
 
               <Divider label="Indicadores del plan" />

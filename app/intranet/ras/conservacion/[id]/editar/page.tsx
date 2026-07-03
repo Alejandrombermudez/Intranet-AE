@@ -49,7 +49,6 @@ interface FamiliaConservEdit {
   otros_indices: string
   shapefile_finca_url: string | null
   shapefile_conservacion_url: string | null
-  shapefile_arboles_url: string | null
   documento_acuerdo_url: string | null
   nombre_propietario_display: string
 }
@@ -67,7 +66,7 @@ const EMPTY: FamiliaConservEdit = {
   ha_potreros: '', ha_bosque: '', ha_otras: '',
   arboles_semilleros: '', especies_forestales: '', otros_indices: '',
   shapefile_finca_url: null, shapefile_conservacion_url: null,
-  shapefile_arboles_url: null, documento_acuerdo_url: null,
+  documento_acuerdo_url: null,
   nombre_propietario_display: '',
 }
 
@@ -117,7 +116,6 @@ export default function ConservacionEditPage() {
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [shpFinca, setShpFinca] = useState<File | null>(null)
   const [shpConservacion, setShpConservacion] = useState<File | null>(null)
-  const [shpArboles, setShpArboles] = useState<File | null>(null)
   const [docAcuerdo, setDocAcuerdo] = useState<File | null>(null)
   // Fotos del predio — existentes (cargadas de DB) y nuevas (por subir)
   const [fotosExistentes, setFotosExistentes] = useState<Record<string, { id: string; url: string }[]>>({})
@@ -127,7 +125,6 @@ export default function ConservacionEditPage() {
   const [deletingFotoId, setDeletingFotoId] = useState<string | null>(null)
   const shpFincaRef = useRef<HTMLInputElement>(null)
   const shpConservRef = useRef<HTMLInputElement>(null)
-  const shpArbolesRef = useRef<HTMLInputElement>(null)
   const docAcuerdoRef = useRef<HTMLInputElement>(null)
 
   const set = (key: keyof FamiliaConservEdit, val: string | boolean | null) =>
@@ -204,7 +201,6 @@ export default function ConservacionEditPage() {
         otros_indices: fam.otros_indices ?? '',
         shapefile_finca_url: fam.shapefile_finca_url ?? null,
         shapefile_conservacion_url: fam.shapefile_conservacion_url ?? null,
-        shapefile_arboles_url: fam.shapefile_arboles_url ?? null,
         documento_acuerdo_url: fam.documento_acuerdo_url ?? null,
         nombre_propietario_display: fam.nombre_propietario ?? '',
       })
@@ -266,7 +262,6 @@ export default function ConservacionEditPage() {
       }))
       if (shpFinca) fd.append('shp_finca', shpFinca)
       if (shpConservacion) fd.append('shp_conservacion', shpConservacion)
-      if (shpArboles) fd.append('shp_arboles', shpArboles)
       if (docAcuerdo) fd.append('doc_acuerdo', docAcuerdo)
       // Adjuntar fotos nuevas por categoría
       for (const { key } of FOTO_CATS) {
@@ -558,26 +553,6 @@ export default function ConservacionEditPage() {
                 </button>
                 <input ref={shpConservRef} type="file" accept=".zip" className="hidden"
                   onChange={(e) => setShpConservacion(e.target.files?.[0] ?? null)} />
-              </div>
-
-              {/* Shapefile árboles */}
-              <div>
-                <label className={labelCls}>Árboles — Shapefile de puntos (.zip)</label>
-                {form.shapefile_arboles_url && !shpArboles && (
-                  <a href={form.shapefile_arboles_url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 mb-2 text-sm font-bold text-primary hover:underline">
-                    <FileArchive size={14} /> Archivo actual
-                    <ExternalLink size={11} className="text-stone-400" />
-                  </a>
-                )}
-                <button type="button"
-                  onClick={() => shpArbolesRef.current?.click()}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-stone-300 text-stone-500 text-sm font-semibold hover:border-primary hover:text-primary transition-all w-full justify-center">
-                  <UploadCloud size={16} />
-                  {shpArboles ? shpArboles.name : (form.shapefile_arboles_url ? 'Reemplazar archivo' : 'Subir archivo .zip')}
-                </button>
-                <input ref={shpArbolesRef} type="file" accept=".zip" className="hidden"
-                  onChange={(e) => setShpArboles(e.target.files?.[0] ?? null)} />
               </div>
 
               {/* Documento acuerdo PDF */}

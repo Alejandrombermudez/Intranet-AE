@@ -1,7 +1,7 @@
 # Cronograma — Ecosistema Amazonía Emprende
 
 > Estimación a ritmo sostenible, con el modelo de trabajo **usuario + IA**: el usuario prueba, detecta fallos y define la arquitectura; el asistente genera el desarrollo.
-> **Fecha:** 2026-06-14 · **Gantt:** [`../../arquitectura-visual/cronograma.svg`](../../arquitectura-visual/cronograma.svg) · **Excel para presentar:** `arquitectura-visual/cronograma_actividades.xlsx`
+> **Fecha:** 2026-06-14 · **ER y parámetros:** [`ARQUITECTURA_DATOS.md`](ARQUITECTURA_DATOS.md)
 
 ---
 
@@ -16,7 +16,7 @@
 | **3 · Aplicación de campo** | 10–13 | Ajustes a la app; corrección de zonas en campo (sin señal, con GPS) | Zonas corregidas desde campo (sem 13) |
 | **4 · Plan de siembra y vivero** | 14–20 | Catálogo de especies; modelos florísticos y cálculo de demanda; recepción, lotes y costeo del vivero; conexión plan–vivero | Plan y vivero conectados (sem 20) |
 
-El detalle semana a semana está en `cronograma_actividades.xlsx`.
+El detalle de entidades y parámetros por módulo está en [`ARQUITECTURA_DATOS.md`](ARQUITECTURA_DATOS.md).
 
 **Avance (2026-06-19):** Fase 1 en marcha — el modelo central `core` (aliados/predios/expedientes) está construido y el **módulo Jurídico ya opera sobre él en producción** (cutover completo, verificado con un caso real; subida de PDF/imagen/Word). Falta conectar campo/siembra y conservación al expediente. Detalle de lo hecho: `CORE_MIGRACION.md`.
 

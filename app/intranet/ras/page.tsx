@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  ArrowLeft, Leaf, Trees, ShieldCheck, ChevronRight,
+  ArrowLeft, Leaf, ShieldCheck, ChevronRight,
   Loader2, Pencil, ClipboardCheck, CheckCircle2, CalendarDays,
 } from 'lucide-react'
 import { MisSesiones } from '@/app/components/MisSesiones'
@@ -12,24 +12,6 @@ import { MisSesiones } from '@/app/components/MisSesiones'
 const PRIMARY = '#0d7377'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
-
-type SiembraFamilia = {
-  id: string
-  nombre_propietario: string
-  municipio: string
-  vereda: string | null
-  nombre_finca: string | null
-  ha_potreros: number | null
-  ha_bosque: number | null
-  ha_otras: number | null
-  ha_restauracion: number | null
-  parcelas_monitoreo: number | null
-  plantulas_sembradas: number | null
-  especies_sembradas: number | null
-  plan_restauracion: string | null
-  shapefile_finca_url: string | null
-  shapefile_restauracion_url: string | null
-}
 
 type RasFamilia = {
   id: string
@@ -49,22 +31,6 @@ type RasFamilia = {
 
 // ─── Lógica de campos faltantes ───────────────────────────────────────────────
 
-const SIEMBRA_FIELDS: (keyof SiembraFamilia)[] = [
-  'vereda', 'nombre_finca', 'ha_potreros', 'ha_bosque', 'ha_otras',
-  'ha_restauracion', 'parcelas_monitoreo', 'plantulas_sembradas',
-  'especies_sembradas', 'plan_restauracion',
-  'shapefile_finca_url', 'shapefile_restauracion_url',
-]
-
-const SIEMBRA_LABELS: Record<string, string> = {
-  vereda: 'Vereda', nombre_finca: 'Nombre finca',
-  ha_potreros: 'Ha. potreros', ha_bosque: 'Ha. bosque', ha_otras: 'Ha. otras',
-  ha_restauracion: 'Ha. restauración', parcelas_monitoreo: 'Parcelas',
-  plantulas_sembradas: 'Plántulas', especies_sembradas: 'Especies',
-  plan_restauracion: 'Plan restauración',
-  shapefile_finca_url: 'SHP finca', shapefile_restauracion_url: 'SHP restauración',
-}
-
 const RAS_FIELDS: (keyof RasFamilia)[] = [
   'vereda', 'nombre_finca', 'ha_potreros', 'ha_bosque', 'ha_otras',
   'arboles_semilleros', 'especies_forestales', 'otros_indices',
@@ -77,12 +43,6 @@ const RAS_LABELS: Record<string, string> = {
   arboles_semilleros: 'Árboles semilleros', especies_forestales: 'Especies forestales',
   otros_indices: 'Otros índices',
   shapefile_finca_url: 'SHP finca', shapefile_conservacion_url: 'SHP conservación',
-}
-
-function getSiembraMissing(f: SiembraFamilia): string[] {
-  return SIEMBRA_FIELDS.filter((k) => {
-    const v = f[k]; return v === null || v === undefined || v === ''
-  }).map((k) => SIEMBRA_LABELS[k])
 }
 
 function getRasMissing(f: RasFamilia): string[] {
@@ -161,9 +121,7 @@ export default function RASHubPage() {
   const [activeTab, setActiveTab] = useState<'modulos' | 'completitud' | 'mis-sesiones'>('modulos')
   const [token, setToken] = useState<string | null>(null)
   const [myProfileId, setMyProfileId] = useState<string | null>(null)
-  const [subTab, setSubTab] = useState<'restauracion' | 'conservacion'>('restauracion')
   const [loadingComp, setLoadingComp] = useState(false)
-  const [siembraFamilias, setSiembraFamilias] = useState<SiembraFamilia[]>([])
   const [rasFamilias, setRasFamilias] = useState<RasFamilia[]>([])
   const [compLoaded, setCompLoaded] = useState(false)
 
@@ -193,15 +151,9 @@ export default function RASHubPage() {
     setActiveTab('completitud')
     if (compLoaded) return
     setLoadingComp(true)
-    const [{ data: sData }, { data: rData }] = await Promise.all([
-      supabase.schema('siembra').from('familias').select(
-        'id, nombre_propietario, municipio, vereda, nombre_finca, ha_potreros, ha_bosque, ha_otras, ha_restauracion, parcelas_monitoreo, plantulas_sembradas, especies_sembradas, plan_restauracion, shapefile_finca_url, shapefile_restauracion_url'
-      ),
-      supabase.schema('ras').from('familias').select(
-        'id, nombre_propietario, municipio, vereda, nombre_finca, ha_potreros, ha_bosque, ha_otras, arboles_semilleros, especies_forestales, otros_indices, shapefile_finca_url, shapefile_conservacion_url'
-      ),
-    ])
-    setSiembraFamilias((sData ?? []) as SiembraFamilia[])
+    const { data: rData } = await supabase.schema('ras').from('familias').select(
+      'id, nombre_propietario, municipio, vereda, nombre_finca, ha_potreros, ha_bosque, ha_otras, arboles_semilleros, especies_forestales, otros_indices, shapefile_finca_url, shapefile_conservacion_url'
+    )
     setRasFamilias((rData ?? []) as RasFamilia[])
     setCompLoaded(true)
     setLoadingComp(false)
@@ -279,23 +231,6 @@ export default function RASHubPage() {
         {activeTab === 'modulos' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
-            <Link href="/intranet/ras/siembra"
-              className="group bg-white rounded-2xl border-2 border-stone-200 shadow-md hover:border-primary hover:shadow-xl transition-all p-8 flex flex-col gap-5">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{ backgroundColor: '#0d737715' }}>
-                <Trees size={28} style={{ color: PRIMARY }} />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-black text-stone-900 mb-1">Restauración / Siembra</h2>
-                <p className="text-sm text-stone-500 leading-relaxed">
-                  Familias vinculadas a procesos de restauración activa: siembra de plántulas, monitoreos de supervivencia y cámaras trampa.
-                </p>
-              </div>
-              <div className="flex items-center gap-1 text-sm font-bold transition-colors text-stone-400 group-hover:text-primary">
-                Ver familias <ChevronRight size={15} />
-              </div>
-            </Link>
-
             <Link href="/intranet/ras/conservacion"
               className="group bg-white rounded-2xl border-2 border-stone-200 shadow-md hover:border-primary hover:shadow-xl transition-all p-8 flex flex-col gap-5">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
@@ -313,36 +248,33 @@ export default function RASHubPage() {
               </div>
             </Link>
 
+            <Link href="/intranet/catalogo"
+              className="group bg-white rounded-2xl border-2 border-stone-200 shadow-md hover:border-primary hover:shadow-xl transition-all p-8 flex flex-col gap-5">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: '#0d737715' }}>
+                <Leaf size={28} style={{ color: PRIMARY }} />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-black text-stone-900 mb-1">Catálogo de especies</h2>
+                <p className="text-sm text-stone-500 leading-relaxed">
+                  Maestro de especies (catálogo botánico + RAS + vivero): ficha, familia, usos, fotos. Filtra por origen y familia.
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-sm font-bold transition-colors text-stone-400 group-hover:text-primary">
+                Ver catálogo <ChevronRight size={15} />
+              </div>
+            </Link>
+
           </div>
         )}
 
         {/* ── Panel Completitud ── */}
         {activeTab === 'completitud' && (
           <div>
-            {/* Sub-tabs */}
-            <div className="flex gap-1 bg-stone-100 rounded-xl p-1 w-fit mb-6">
-              {(['restauracion', 'conservacion'] as const).map((tab) => (
-                <button key={tab} onClick={() => setSubTab(tab)}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                    subTab === tab
-                      ? 'bg-white text-stone-900 shadow-sm'
-                      : 'text-stone-500 hover:text-stone-700'
-                  }`}>
-                  {tab === 'restauracion' ? 'Restauración' : 'Conservación'}
-                </button>
-              ))}
-            </div>
-
             {loadingComp ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 size={32} className="animate-spin" style={{ color: PRIMARY }} />
               </div>
-            ) : subTab === 'restauracion' ? (
-              <CompletitudList
-                familias={siembraFamilias}
-                getMissing={getSiembraMissing}
-                editBase="/intranet/ras/siembra"
-              />
             ) : (
               <CompletitudList
                 familias={rasFamilias}

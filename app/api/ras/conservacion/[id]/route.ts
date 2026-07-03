@@ -45,12 +45,12 @@ export async function DELETE(
     // Obtener URLs de archivos antes de eliminar
     const { data: familia } = await supabase
       .schema('ras').from('familias')
-      .select('shapefile_finca_url, shapefile_conservacion_url, shapefile_arboles_url, documento_acuerdo_url')
+      .select('shapefile_finca_url, shapefile_conservacion_url, documento_acuerdo_url')
       .eq('id', familiaId).single()
 
     // Limpiar storage — no bloquear eliminación si falla
     try {
-      const shpPaths = [familia?.shapefile_finca_url, familia?.shapefile_conservacion_url, familia?.shapefile_arboles_url]
+      const shpPaths = [familia?.shapefile_finca_url, familia?.shapefile_conservacion_url]
         .filter(Boolean)
         .map((url) => extractStoragePath(url!, BUCKET))
         .filter(Boolean) as string[]
@@ -139,26 +139,6 @@ export async function PATCH(
       if (!upErr) {
         const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path)
         updateObj.shapefile_conservacion_url = publicUrl
-      }
-    }
-
-    // Shapefile árboles (opcional)
-    const shpArboles = formData.get('shp_arboles') as File | null
-    if (shpArboles && shpArboles.size > 0) {
-      const { data: existing } = await supabase
-        .schema('ras').from('familias')
-        .select('shapefile_arboles_url').eq('id', familiaId).single()
-      if (existing?.shapefile_arboles_url) {
-        const oldPath = extractStoragePath(existing.shapefile_arboles_url, BUCKET)
-        if (oldPath) {
-          try { await supabase.storage.from(BUCKET).remove([oldPath]) } catch { /* continuar */ }
-        }
-      }
-      const path = `${userEmail}/${Date.now()}_arboles_${shpArboles.name}`
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, shpArboles)
-      if (!upErr) {
-        const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path)
-        updateObj.shapefile_arboles_url = publicUrl
       }
     }
 

@@ -65,7 +65,7 @@ export function perimetroGeom(geom: Geometry): number {
   return 0
 }
 
-function ampliarBbox(geom: Geometry, bbox: [number, number, number, number]): void {
+export function ampliarBbox(geom: Geometry, bbox: [number, number, number, number]): void {
   const visit = (c: unknown) => {
     const arr = c as unknown[]
     if (typeof arr[0] === 'number') {
@@ -80,9 +80,8 @@ function ampliarBbox(geom: Geometry, bbox: [number, number, number, number]): vo
 
 // ─── parseo principal ──────────────────────────────────────────────────────────
 
-export async function parsearShapefile(file: File): Promise<ShapefileParseado> {
-  const buf = await file.arrayBuffer()
-
+/** Parsea un shapefile (.zip) ya en memoria — usado por parsearShapefile (File) y parsearShapefileDesdeUrl (URL). */
+async function parsearBuffer(buf: ArrayBuffer): Promise<ShapefileParseado> {
   const parsed = await shp(buf)
   const fcs = Array.isArray(parsed) ? parsed : [parsed]
   let features: Feature[] = []
@@ -139,4 +138,16 @@ export async function parsearShapefile(file: File): Promise<ShapefileParseado> {
       bbox: Number.isFinite(bbox[0]) ? bbox : null,
     },
   }
+}
+
+/** Parsea un shapefile (.zip) desde un archivo elegido por el usuario (input file). */
+export async function parsearShapefile(file: File): Promise<ShapefileParseado> {
+  return parsearBuffer(await file.arrayBuffer())
+}
+
+/** Parsea un shapefile (.zip) descargándolo de una URL pública (ej. Supabase Storage). */
+export async function parsearShapefileDesdeUrl(url: string): Promise<ShapefileParseado> {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`No se pudo descargar el shapefile (HTTP ${res.status}).`)
+  return parsearBuffer(await res.arrayBuffer())
 }

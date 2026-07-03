@@ -4,9 +4,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  ArrowLeft, Plus, Loader2, ShieldCheck, MapPin,
-  CalendarDays, ChevronRight, Trash2, AlertTriangle, Trees, Pencil,
+  ArrowLeft, Plus, Loader2, ShieldCheck, MapPin, Eye,
+  CalendarDays, Trash2, AlertTriangle, Trees, Pencil, ImageOff, TreePine,
 } from 'lucide-react'
+import { fetchEspecies, fotoAleatoriaCatalogo } from '@/lib/catalogo'
+import { fetchIndicadoresDeFamilias, type IndicadoresPredio } from '@/lib/ras-arboles'
 
 const PRIMARY = '#0d7377'
 
@@ -34,6 +36,9 @@ export default function ConservacionListPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
+  const [fotos, setFotos] = useState<Record<string, string>>({})
+  const [fotosReales, setFotosReales] = useState<Record<string, boolean>>({})
+  const [indicadores, setIndicadores] = useState<Record<string, IndicadoresPredio>>({})
 
   const handleDelete = async (id: string) => {
     setDeletingId(id)
@@ -78,8 +83,48 @@ export default function ConservacionListPage() {
         .select('id, nombre_propietario, municipio, vereda, nombre_finca, ha_bosque, acuerdo_conservacion, created_at')
         .order('created_at', { ascending: false })
 
-      setFamilias(data ?? [])
+      const fams = (data ?? []) as FamiliaConservacion[]
+      setFamilias(fams)
       setLoading(false)
+
+      if (fams.length === 0) return
+      const ids = fams.map((f) => f.id)
+
+      // Foto de familia/predio — una consulta batch, prioriza categoría "familia" sobre "predio"
+      const { data: fotosData } = await supabase
+        .schema('ras').from('fotos_predio')
+        .select('familia_id, url, categoria')
+        .in('familia_id', ids)
+        .in('categoria', ['familia', 'predio'])
+      if (fotosData) {
+        const porFamilia: Record<string, { familia?: string; predio?: string }> = {}
+        for (const fp of fotosData) {
+          porFamilia[fp.familia_id] ??= {}
+          if (fp.categoria === 'familia' && !porFamilia[fp.familia_id].familia) porFamilia[fp.familia_id].familia = fp.url
+          if (fp.categoria === 'predio' && !porFamilia[fp.familia_id].predio) porFamilia[fp.familia_id].predio = fp.url
+        }
+        const fotoPorFamilia: Record<string, string> = {}
+        const esReal: Record<string, boolean> = {}
+        for (const [fid, v] of Object.entries(porFamilia)) {
+          const url = v.familia ?? v.predio
+          if (url) { fotoPorFamilia[fid] = url; esReal[fid] = true }
+        }
+        // Relleno: familias sin foto propia todavía muestran una foto del catálogo
+        // (determinística por id) para que la tarjeta no se vea vacía.
+        const especies = await fetchEspecies()
+        for (const f of fams) {
+          if (!fotoPorFamilia[f.id]) {
+            const url = fotoAleatoriaCatalogo(especies, f.id)
+            if (url) { fotoPorFamilia[f.id] = url; esReal[f.id] = false }
+          }
+        }
+        setFotos(fotoPorFamilia)
+        setFotosReales(esReal)
+      }
+
+      // Indicadores por predio (total de árboles + diversidad) — una consulta batch
+      const indicadoresPorFamilia = await fetchIndicadoresDeFamilias(ids)
+      setIndicadores(indicadoresPorFamilia)
     }
     init()
   }, [router])
@@ -160,102 +205,128 @@ export default function ConservacionListPage() {
             </Link>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-lg border border-stone-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-stone-50 border-b border-stone-200">
-                    {['Propietario / Finca', 'Municipio', 'Vereda', 'Ha. Bosque', 'Acuerdo', 'Registrado', 'Acciones'].map((h, i) => (
-                      <th key={i} className="px-4 py-3 text-[11px] font-bold text-stone-400 uppercase tracking-wider whitespace-nowrap">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {familias.map((f) => {
-                    const isConfirming = confirmId === f.id
-                    const isDeleting = deletingId === f.id
-                    return (
-                      <tr key={f.id}
-                        className={`border-b border-stone-100 transition-colors ${isConfirming ? 'bg-red-50' : 'hover:bg-stone-50'}`}>
-                        <td className="px-4 py-3">
-                          <p className="font-bold text-stone-900 text-sm">{f.nombre_propietario}</p>
-                          {f.nombre_finca && (
-                            <p className="text-xs text-stone-400 mt-0.5">{f.nombre_finca}</p>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="inline-flex items-center gap-1 text-sm text-stone-600">
-                            <MapPin size={12} className="text-stone-400 shrink-0" /> {f.municipio}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-stone-500">
-                          {f.vereda ?? <span className="text-stone-300">—</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          {f.ha_bosque != null ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold">
-                              <Trees size={11} /> {f.ha_bosque} ha
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {familias.map((f) => {
+              const isConfirming = confirmId === f.id
+              const isDeleting = deletingId === f.id
+              const ind = indicadores[f.id]
+              return (
+                <div key={f.id}
+                  className={`group bg-white rounded-2xl shadow-sm border overflow-hidden transition-all ${
+                    isConfirming ? 'border-red-300' : 'border-stone-200 hover:shadow-md hover:border-primary'
+                  }`}>
+                  <div className="relative flex aspect-[2/1]">
+                    <div className="w-1/2 bg-stone-100 overflow-hidden relative">
+                      {fotos[f.id] ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={fotos[f.id]} alt={f.nombre_propietario} className="w-full h-full object-cover" />
+                          {!fotosReales[f.id] && (
+                            <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-black/50 text-white">
+                              Muestra
                             </span>
-                          ) : <span className="text-stone-300 text-sm">—</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          {f.acuerdo_conservacion != null ? (
-                            <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold ${
-                              f.acuerdo_conservacion
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-stone-100 text-stone-500'
-                            }`}>
-                              {f.acuerdo_conservacion ? 'Sí' : 'No'}
-                            </span>
-                          ) : <span className="text-stone-300 text-sm">—</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="inline-flex items-center gap-1 text-xs text-stone-400">
-                            <CalendarDays size={11} /> {formatDate(f.created_at)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {isConfirming ? (
-                            <div className="flex items-center gap-2 whitespace-nowrap">
-                              <AlertTriangle size={13} className="text-red-500 shrink-0" />
-                              <span className="text-xs font-bold text-red-600">¿Eliminar?</span>
-                              <button onClick={() => setConfirmId(null)} disabled={isDeleting}
-                                className="px-2 py-1 text-xs font-bold rounded-lg border border-stone-300 text-stone-600 hover:bg-stone-100 transition-colors disabled:opacity-50">
-                                No
-                              </button>
-                              <button onClick={() => handleDelete(f.id)} disabled={isDeleting}
-                                className="flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50">
-                                {isDeleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
-                                Sí
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-3">
-                              <Link href={`/intranet/ras/conservacion/${f.id}`}
-                                className="flex items-center gap-1 text-xs font-bold text-stone-400 hover:text-primary transition-colors">
-                                Ver <ChevronRight size={13} />
-                              </Link>
-                              <Link href={`/intranet/ras/conservacion/${f.id}/editar`}
-                                className="text-stone-300 hover:text-primary transition-colors"
-                                title="Editar registro">
-                                <Pencil size={14} />
-                              </Link>
-                              <button onClick={() => setConfirmId(f.id)}
-                                className="text-stone-300 hover:text-red-500 transition-colors"
-                                title="Eliminar registro">
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
                           )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-stone-300">
+                          <ImageOff size={22} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Índices del predio — total de árboles + diversidad */}
+                    <div className="w-1/2 border-l border-stone-200 bg-stone-50 flex flex-col items-center justify-center text-center px-2">
+                      {ind?.arboles_semilleros ? (
+                        <>
+                          <p className="text-2xl font-black leading-none" style={{ color: PRIMARY }}>
+                            {ind.arboles_semilleros.toLocaleString('es-CO')}
+                          </p>
+                          <p className="text-[9px] font-bold text-stone-400 uppercase tracking-wider mt-0.5">
+                            árboles semilleros
+                          </p>
+                          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 mt-1.5 text-[10px] text-stone-500">
+                            {ind.especies_forestales != null && <span>{ind.especies_forestales} especies</span>}
+                            {ind.shannon_h != null && <span>H&apos; {ind.shannon_h}</span>}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-stone-300">
+                          <TreePine size={20} className="mx-auto mb-1" />
+                          <p className="text-[10px]">Sin árboles aún</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Overlay de acciones — aparece al pasar el mouse sobre la tarjeta */}
+                    <div className={`absolute inset-0 flex flex-col justify-between p-2.5 bg-gradient-to-b from-black/55 via-black/5 to-black/60 transition-opacity ${
+                      isConfirming ? 'opacity-100' : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+                    }`}>
+                      <div className="flex items-center justify-center gap-2">
+                        <Link href={`/intranet/ras/conservacion/${f.id}`}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/95 text-stone-700 text-xs font-bold hover:bg-white shadow-sm transition-colors">
+                          <Eye size={12} /> Ver
+                        </Link>
+                        <Link href={`/intranet/ras/conservacion/${f.id}/editar`}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/95 text-stone-700 text-xs font-bold hover:bg-white shadow-sm transition-colors">
+                          <Pencil size={12} /> Editar
+                        </Link>
+                      </div>
+
+                      {isConfirming ? (
+                        <div className="flex items-center justify-center gap-1.5 bg-white/95 rounded-lg p-1.5 shadow-sm">
+                          <span className="flex items-center gap-1 text-[11px] font-bold text-red-600 pl-1">
+                            <AlertTriangle size={12} /> ¿Eliminar?
+                          </span>
+                          <button onClick={() => setConfirmId(null)} disabled={isDeleting}
+                            className="px-2 py-1 text-[11px] font-bold rounded-md border border-stone-300 text-stone-600 hover:bg-stone-100 transition-colors disabled:opacity-50">
+                            No
+                          </button>
+                          <button onClick={() => handleDelete(f.id)} disabled={isDeleting}
+                            className="flex items-center gap-1 px-2 py-1 text-[11px] font-bold rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50">
+                            {isDeleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                            Sí
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmId(f.id)}
+                          className="flex items-center justify-center gap-1.5 mx-auto px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-bold hover:bg-red-600 shadow-sm transition-colors">
+                          <Trash2 size={13} /> Eliminar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-4">
+                    <p className="font-bold text-stone-900 text-sm truncate">{f.nombre_propietario}</p>
+                    {f.nombre_finca && <p className="text-xs text-stone-400 truncate">{f.nombre_finca}</p>}
+
+                    <div className="flex items-center gap-1 text-xs text-stone-500 mt-2">
+                      <MapPin size={11} className="text-stone-400 shrink-0" />
+                      <span className="truncate">{f.municipio}{f.vereda ? ` · ${f.vereda}` : ''}</span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {f.ha_bosque != null && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold">
+                          <Trees size={11} /> {f.ha_bosque} ha
+                        </span>
+                      )}
+                      {f.acuerdo_conservacion != null && (
+                        <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold ${
+                          f.acuerdo_conservacion ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500'
+                        }`}>
+                          Acuerdo: {f.acuerdo_conservacion ? 'Sí' : 'No'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t border-stone-100 flex items-center gap-1 text-xs text-stone-400">
+                      <CalendarDays size={11} /> {formatDate(f.created_at)}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </main>
