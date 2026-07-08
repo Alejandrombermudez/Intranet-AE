@@ -8,9 +8,10 @@ import { parsearShapefile, perimetroGeom, type ShapefileParseado } from '@/lib/s
 import { area as turfArea } from '@turf/area'
 import { booleanIntersects } from '@turf/boolean-intersects'
 import type { Feature } from 'geojson'
+import { useRouter } from 'next/navigation'
 import {
   Map as MapIcon, ArrowLeft, Loader2, FileUp, Save, AlertCircle, AlertTriangle,
-  CheckCircle2, Ruler, Layers, Hexagon as Sq, ExternalLink, MousePointerClick, Check,
+  CheckCircle2, Ruler, Layers, Hexagon as Sq, ExternalLink, MousePointerClick, Check, Send,
 } from 'lucide-react'
 
 const MapaZonas = dynamic(() => import('@/app/components/MapaZonas'), {
@@ -20,7 +21,7 @@ const MapaZonas = dynamic(() => import('@/app/components/MapaZonas'), {
 
 const fmt = (n: number, d = 2) => n.toLocaleString('es-CO', { maximumFractionDigits: d, minimumFractionDigits: d })
 
-interface CasoInfo { nombre_predio?: string | null; nombre_completo?: string; municipio?: string; vereda?: string | null; expediente_id?: string | null }
+interface CasoInfo { nombre_predio?: string | null; nombre_completo?: string; municipio?: string; vereda?: string | null; expediente_id?: string | null; etapa?: string | null }
 interface ZonaGuardada {
   id: string; nombre: string | null; tipo: string; estado: string
   area_ha: number | null; perimetro_m: number | null
@@ -64,7 +65,9 @@ function ListaSeleccion({ parse, sel, setSel }: { parse: ShapefileParseado; sel:
 
 export default function SigPredioPage() {
   const { predioId } = useParams<{ predioId: string }>()
+  const router = useRouter()
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [enviandoCampo, setEnviandoCampo] = useState(false)
   const [authReady, setAuthReady] = useState(false)
   const [caso, setCaso] = useState<CasoInfo | null>(null)
   const [zonas, setZonas] = useState<ZonaGuardada[]>([])
@@ -147,6 +150,25 @@ export default function SigPredioPage() {
     } finally { setGuardando(false) }
   }
 
+  // ── Enviar a Campo: exige al menos 1 sitio de siembra guardado; el server
+  // vuelve a validar (etapa sig_i + geo.zonas) antes de avanzar el expediente.
+  async function enviarACampo() {
+    if (!userEmail || siembraZonas.length === 0 || enviandoCampo) return
+    setEnviandoCampo(true)
+    try {
+      const res = await fetch(`/api/juridica/aliados/${predioId}/crear-en-siembra`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ created_by: userEmail }),
+      })
+      const body = await res.json()
+      if (!res.ok) { showToast('error', body.error ?? 'No se pudo enviar a Campo'); return }
+      showToast('ok', 'Predio enviado a Campo')
+      router.push('/intranet/sig')
+    } finally {
+      setEnviandoCampo(false)
+    }
+  }
+
   // ── Guardar sitios de siembra seleccionados ──
   async function guardarSitios() {
     if (!parseSites || !userEmail || selSites.size === 0) return
@@ -190,6 +212,30 @@ export default function SigPredioPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
+        {/* Enviar a Campo — obligatorio: exige sitios de siembra guardados */}
+        {caso?.etapa === 'sig_i' && (
+          <section className="bg-white rounded-2xl border border-stone-100 p-5 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Enviar a Campo</h2>
+              <p className="text-xs text-stone-400 mt-0.5">
+                {siembraZonas.length > 0
+                  ? `Habilita este predio en la app de Campo con ${siembraZonas.length} sitio(s) de siembra guardado(s).`
+                  : 'Guarda al menos un sitio de siembra (pestaña "Sitios de siembra") antes de poder enviarlo a Campo.'}
+              </p>
+            </div>
+            <button onClick={enviarACampo} disabled={siembraZonas.length === 0 || enviandoCampo}
+              className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0">
+              {enviandoCampo ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+              Enviar a Campo
+            </button>
+          </section>
+        )}
+        {caso && caso.etapa !== 'sig_i' && caso.etapa && (
+          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-sm text-emerald-700">
+            <CheckCircle2 size={16} /> Este predio ya está en etapa <strong className="lowercase">{caso.etapa}</strong> — fue enviado a Campo.
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="flex gap-1 bg-white rounded-xl p-1 border border-stone-100 w-fit">
           {([['poligono', 'Polígono del predio'], ['siembra', 'Sitios de siembra']] as const).map(([k, label]) => (

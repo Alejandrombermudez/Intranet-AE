@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 // POST /api/juridica/aliados/[id]/crear-en-siembra   ([id] = predio_id)
-// Crea la familia en siembra a partir del caso aprobado y avanza el expediente a 'campo'.
+// "Enviar a Campo": crea la familia en siembra (enlazada a core, sin duplicar
+// identidad) y avanza el expediente de 'sig_i' a 'campo'. Es la acción que
+// habilita el predio en la app de Campo (core.v_predios_campo) — por eso
+// exige que el SIG ya haya subido al menos una zona real (geo.zonas), no
+// solo que Jurídica haya aprobado. Ver ARQUITECTURA_DATOS.md §3.3/§3.1.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: predioId } = await params
@@ -20,54 +24,63 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
-    // Predio + persona + DD + expediente
+    // Predio + persona + DD + expediente + zonas del SIG
     const { data: predio, error: prErr } = await supabase
       .schema('core').from('predios').select('*').eq('id', predioId).single()
     if (prErr || !predio) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 })
 
-    const [{ data: aliado }, { data: dd }, { data: exp }] = await Promise.all([
+    const [{ data: aliado }, { data: dd }, { data: exp }, { count: zonasCount }] = await Promise.all([
       supabase.schema('core').from('aliados').select('*').eq('id', predio.aliado_id).single(),
       supabase.schema('juridica').from('debida_diligencia').select('estado').eq('predio_id', predioId).maybeSingle(),
-      supabase.schema('core').from('expedientes').select('id').eq('predio_id', predioId).maybeSingle(),
+      supabase.schema('core').from('expedientes').select('id, etapa').eq('predio_id', predioId).maybeSingle(),
+      supabase.schema('geo').from('zonas').select('id', { count: 'exact', head: true })
+        .eq('predio_id', predioId).eq('tipo', 'restauracion'),
     ])
     if (!aliado) return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 })
 
     if (dd?.estado !== 'aprobado') {
       return NextResponse.json(
-        { error: 'La debida diligencia debe estar en estado "aprobado" para crear la familia en Siembra' },
+        { error: 'La debida diligencia debe estar en estado "aprobado" para enviar el predio a Campo' },
         { status: 422 }
       )
     }
 
-    const expedienteId = exp?.id ?? null
-
-    // ¿Ya existe una familia para este expediente?
-    if (expedienteId) {
-      const { data: existing } = await supabase
-        .schema('siembra').from('familias')
-        .select('id').eq('expediente_id', expedienteId).maybeSingle()
-      if (existing) {
-        return NextResponse.json(
-          { error: 'Ya existe una familia en Siembra para este caso', familia_id: existing.id },
-          { status: 409 }
-        )
-      }
+    if (exp?.etapa !== 'sig_i') {
+      return NextResponse.json(
+        { error: `El expediente debe estar en etapa "sig_i" para enviarse a Campo (etapa actual: ${exp?.etapa ?? 'sin expediente'})` },
+        { status: 422 }
+      )
     }
 
+    if (!zonasCount || zonasCount === 0) {
+      return NextResponse.json(
+        { error: 'El SIG debe subir al menos un sitio de siembra (geo.zonas, tipo "restauracion") antes de habilitar el predio en Campo' },
+        { status: 422 }
+      )
+    }
+
+    const expedienteId = exp.id
+
+    // ¿Ya existe una familia para este expediente?
+    const { data: existing } = await supabase
+      .schema('siembra').from('familias')
+      .select('id').eq('expediente_id', expedienteId).maybeSingle()
+    if (existing) {
+      return NextResponse.json(
+        { error: 'Ya existe una familia en Siembra para este caso', familia_id: existing.id },
+        { status: 409 }
+      )
+    }
+
+    // Identidad/ubicación NO se duplican: predio_id/aliado_id/expediente_id
+    // son las únicas llaves — se leen por JOIN (core.v_predios_campo).
     const { data: familia, error: fErr } = await supabase
       .schema('siembra').from('familias')
       .insert({
-        aliado_id:          aliado.id,
-        expediente_id:      expedienteId,
-        nombre_propietario: aliado.nombre_completo,
-        tipo_documento:     aliado.tipo_documento,
-        numero_documento:   aliado.numero_documento,
-        departamento:       predio.departamento,
-        municipio:          predio.municipio,
-        vereda:             predio.vereda,
-        nombre_finca:       predio.nombre_predio,
-        nucleo:             predio.zona_ae,
-        created_by:         email,
+        predio_id:     predioId,
+        aliado_id:     aliado.id,
+        expediente_id: expedienteId,
+        created_by:    email,
       })
       .select('id')
       .single()
@@ -75,11 +88,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (fErr) return NextResponse.json({ error: fErr.message }, { status: 500 })
 
     // Avanzar el expediente a la etapa de campo
-    if (expedienteId) {
-      await supabase.schema('core').from('expedientes')
-        .update({ etapa: 'campo' })
-        .eq('id', expedienteId)
-    }
+    await supabase.schema('core').from('expedientes')
+      .update({ etapa: 'campo' })
+      .eq('id', expedienteId)
 
     return NextResponse.json({ familia_id: familia?.id }, { status: 201 })
   } catch (err) {

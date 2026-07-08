@@ -1,6 +1,6 @@
 -- ============================================================
 -- SQL Pendiente — Intranet AE
--- Última revisión: Mayo 2026 (verificado contra BD real)
+-- Última revisión: 2026-07-08 (verificado contra BD real vía REST API)
 --
 -- REGLA: solo están aquí cosas que NO se han podido verificar
 -- vía REST API. Una vez ejecutadas, mover al historial abajo.
@@ -11,21 +11,15 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── migration_core.sql ─────────────────────────────────────────────────────────
--- Estado: LISTO PARA EJECUTAR — código de la app YA reescrito y compilando
--- Script: docs/sql/migration_core.sql
--- Contexto + mapeo: docs/CORE_MIGRACION.md
---
--- PASO MANUAL (Supabase Dashboard), DESPUÉS de correr el SQL:
---   Settings → API → Exposed schemas → agregar: core
---
--- Crea el núcleo canónico y hace el cutover de jurídica:
---   - schema 'core': aliados (persona) · predios · predio_propietarios · expedientes
---   - juridica.debida_diligencia (workflow DD + manifestación + predial + cedula_url)
---   - repunta juridica.antecedentes → core.aliados ; analisis_juridico → core.predios
---   - archiva juridica.aliados como juridica.aliados_legacy (reversible, no borra)
---   - engancha siembra.familias (aliado_id→core, +expediente_id) y ras.familias
--- OJO: los datos de prueba en antecedentes/analisis se TRUNCAN (no eran producción).
+-- ── migration_zona_revision.sql ────────────────────────────────────────────
+-- Estado: LISTO PARA EJECUTAR — la app de campo ya lo consume (módulo SIG)
+-- Script: docs/sql/migration_zona_revision.sql
+-- Crea geo.zona_revision (auditoría SIG II) + RPC geo.revisar_zona (única
+-- puerta de escritura de la PWA) + estado 'descartada' en geo.zonas +
+-- v_predios_campo excluye descartadas.
+-- Sin esto: las correcciones de zonas hechas en campo quedan "pendientes de
+-- sincronizar" en el celular (no se pierden), el resto de la app funciona.
+-- Verificar tras correr: select to_regclass('geo.zona_revision');
 
 
 -- ════════════════════════════════════════════════════════════
@@ -52,4 +46,26 @@
 -- ── 2026-05  migration_modulo_juridico.sql (schema juridica + 3 tablas + bucket)
 --             Confirmado en BD: schema juridica vivo, bucket juridica-documentos (privado),
 --             usuario legal@amazoniaemprende.com (department=Juridica). Los datos eran de prueba.
+-- ── 2026-05  migration_soft_delete_familias.sql (siembra.familias.deleted_at) ─
+-- ── 2026-06-18  cleanup_legacy.sql (juridica.aliados_legacy eliminada tras cutover a core) ─
+-- ── 2026-06-19  migration_core.sql ───────────────────────────────────────────
+--             Schema 'core' (aliados · predios · predio_propietarios · expedientes) +
+--             cutover de jurídica sobre core. Verificado por REST: core.aliados (2 filas),
+--             core.predios, juridica.debida_diligencia (2 filas). Ver docs/CORE_MIGRACION.md.
+-- ── 2026-06-19/20  migration_geo.sql + v2 + v3 ────────────────────────────────
+--             Schema 'geo', tabla geo.zonas + PostGIS. v2 agrega columnas
+--             propiedades (jsonb) / perimetro_m y función geo.zonas_de_predio().
+--             v3 agrega geo.crear_zona_union() (unir zonas superpuestas).
+--             Verificado por REST: geo.zonas (3 filas, con propiedades y perimetro_m
+--             poblados); crear_zona_union responde error de negocio (no "function not
+--             found"), confirmando que existe — usada en app/api/sig/ingesta/route.ts.
+-- ── 2026-06-20  migration_core_matriculas.sql (core.predios.matriculas text[]) ─
+--             Verificado por REST: columna matriculas poblada desde matricula_inmobiliaria.
+-- ── 2026-06-30  migration_catalogo.sql + seed_catalogo_especies.sql ──────────
+--             Schema 'catalogo', tabla catalogo.especies — maestro único de especies
+--             (botánica + RAS + vivero). Verificado por REST: 148 filas.
+-- ── 2026-07-01  migration_ras_arboles.sql + seed_ras_arboles.sql ─────────────
+--             ras.arboles_semilleros (normalizada, FK especie_id → catalogo.especies)
+--             + vistas ras.v_indicadores_predio y ras.v_arboles_con_especie.
+--             Verificado por REST: 523 filas (coincide con "523 árboles listos para subir").
 -- (Ver SQL completo en SUPABASE_SCHEMAS.md)

@@ -1,11 +1,11 @@
 # Base de Datos — Intranet Amazonia Emprende
 
-> **Última actualización:** Mayo 2026 | Proyecto Supabase: `lbxysovesmbgesxooghw`
-> Para seguimiento de migraciones SQL ver `docs/sql/`
+> **Última actualización:** 2026-07-06 | Proyecto Supabase: `lbxysovesmbgesxooghw`
+> Para seguimiento de migraciones SQL ver `docs/sql/` (historial de lo ejecutado en `docs/sql/pending.sql`)
 >
-> **Última migración ejecutada:** `migration_core.sql` (2026-06-19) — núcleo canónico `core` (aliados/predios/expedientes) + descomposición de jurídica. **Cutover completo y verificado con un caso real**; `juridica.aliados_legacy` borrada. Mapeo y detalle de cómo está hecho: `docs/CORE_MIGRACION.md`.
+> **Últimas migraciones ejecutadas:** `migration_ras_arboles.sql` + `seed_ras_arboles.sql` (2026-07-01) — tabla `ras.arboles_semilleros` normalizada (523 árboles, FK a `catalogo.especies`). Antes, `migration_catalogo.sql` + `seed_catalogo_especies.sql` (2026-06-30) — maestro único `catalogo.especies` (148 especies). Ver secciones **`catalogo`** y **`ras`** abajo.
 >
-> **Modelo actual:** Jurídica es la puerta de entrada y escribe sobre `core` (persona/predio/expediente). Ver secciones **`core`** y **`juridica`** abajo.
+> **Modelo actual:** Jurídica es la puerta de entrada y escribe sobre `core` (persona/predio/expediente). `catalogo.especies` es el dato maestro que comparten Conservación (RAS), Vivero y Plan — no se duplica taxonomía en ninguna otra tabla.
 
 ---
 
@@ -19,9 +19,11 @@
 | `fleet` | Flota vehicular | ✅ En producción — `vehicle_documents` creada (4 filas) |
 | `ejecutivo` | Módulo ejecutivo | ✅ En producción — columna `nota` y estado `rechazado` activos |
 | `siembra` | Módulo Restauración / Siembra | ✅ Ejecutado en producción |
-| `ras` | Módulo Conservación | ✅ Ejecutado en producción |
+| `ras` | Módulo Conservación | ✅ En producción — `familias` (17) + `arboles_semilleros` (523, normalizada vía `catalogo.especies`) |
+| `catalogo` | Maestro único de especies | ✅ En producción — `especies` (148 filas), compartida por `ras`, vivero y plan |
 | `core` | Núcleo canónico (aliados/predios/expedientes) | ✅ En producción — jurídica escribe aquí |
 | `juridica` | Módulo Jurídico (Fase 1) | ✅ En producción — sobre `core`; guarda solo `debida_diligencia` + `antecedentes` + `analisis_juridico` |
+| `geo` | Geoportal / SIG (zonas PostGIS) | ✅ En producción — `zonas` (3 filas) + función unir zonas (`v3`) |
 | `storage` | Buckets *(Supabase managed)* | ✅ Buckets creados |
 
 ```js
@@ -525,6 +527,10 @@ familias (17 filas)
   ├── camaras_trampa (0 filas)
   │     └── fotos_camara (0 filas)
   └── fotos_predio (0 filas)
+
+arboles_semilleros (523 filas) — Red de Árboles Semilleros (RAS)
+  ├── familia_id  → ras.familias (nullable — predio/familia anfitrión)
+  └── especie_id  → catalogo.especies (taxonomía NUNCA duplicada aquí)
 ```
 
 ### `ras.familias` — Familias en conservación (17 filas)
@@ -593,6 +599,112 @@ familias (17 filas)
 
 ### `ras.monitoreos`, `ras.camaras_trampa`, `ras.fotos_camara`, `ras.fotos_predio`
 *(misma estructura que sus homólogos en `siembra` — actualmente sin filas)*
+
+### `ras.arboles_semilleros` — Red de Árboles Semilleros, un registro por árbol (523 filas)
+
+> Fuente de datos: `arboles_para_subir.xlsx` (hoja "Se sube"). Normalizada: la taxonomía
+> (nombre científico, género, familia, autor, IUCN…) **no se repite por árbol** — vive una
+> sola vez en `catalogo.especies` y se consulta por `especie_id` (join).
+
+**Identidad**
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `codigo` | text | **UNIQUE** — código de placa global |
+| `nucleo` / `predio` | text | ej. Piedemonte, Solano |
+| `familia_id` | uuid FK → `ras.familias` | predio/familia anfitrión (nullable) |
+| `especie_id` | uuid FK → `catalogo.especies` | null si aún no determinada (ver `especie_pendiente`) |
+| `especie_pendiente` | text | texto crudo de campo cuando aún no hay match con el catálogo |
+| `especie_anterior` | text | determinación previa de campo (histórico) |
+| `colecta` | text | voucher de la colecta de este árbol |
+
+**Dendrometría y sitio**
+| Columna | Tipo |
+|---------|------|
+| `cobertura_vegetal` / `pendiente` / `drenaje` / `tipo_suelo` / `forma_fuste` | text |
+| `cap_cm` / `dap_cm` / `ab_m2` | numeric |
+| `altura_comercial_m` / `altura_total_m` | numeric |
+| `clase_copa` | text | dominante \| codominante \| intermedio |
+| `copa_x_m` / `copa_y_m` | numeric |
+| `especies_asociadas` | text | líquenes / epífitas / lianas (bioindicador) |
+
+**Geo**
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `latitud` / `longitud` | numeric | |
+| `geom` | geometry(Point,4326) | generada automáticamente desde lat/long |
+
+**Monitoreo dron & registro**
+| Columna | Tipo |
+|---------|------|
+| `monitoreo_dron` / `razon_no_dron` / `metodo_colecta` / `metodo_trepa` / `ruta_dron` / `codigo_dron` | — |
+| `fecha_registro` / `foto_url` / `origen` / `nombre_registra` / `estado_verificacion` / `observaciones` | — |
+
+`origen` distingue la procedencia del registro: `kobo` \| `csv` \| `manual` \| `Botánica` \| `RAS-Tablas` \| `Solano`.
+
+### Vistas de `ras`
+
+- **`ras.v_indicadores_predio`** — indicadores por predio: riqueza, Shannon, Simpson, Pielou, Margalef, área basal, DAP, especies amenazadas, distribución por grupo funcional (pionera/intermedia/tardía) y síndrome de dispersión, densidad (árboles/ha). Especie/familia/género vienen de `catalogo.especies` vía join, nunca duplicados en `arboles_semilleros`.
+- **`ras.v_arboles_con_especie`** — lectura "aplanada" (árbol + especie por join) para pantallas ya construidas (ficha de árbol, geovisor) que esperan `nombre_cientifico` / `genero` / `familia_botanica` / `nombre_comun` como columnas planas.
+
+---
+
+## Schema `catalogo` — Maestro único de especies (2026-06-30)
+
+### `catalogo.especies` — Especies botánicas (148 filas)
+
+> Dato maestro compartido por Conservación (`ras.arboles_semilleros.especie_id`), Vivero y Plan.
+> La taxonomía y descripción de una especie viven **una sola vez** aquí; el resto de módulos
+> referencian por `especie_id` en vez de recopiar. Constraint `unique(nombre_cientifico)`.
+
+**Identidad taxonómica**
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `nombre_cientifico` | text | **UNIQUE** |
+| `autor` | text | ej. "L.", "(Bertero & Balb. ex Kunth) Skeels" |
+| `genero` / `epiteto` / `familia` | text | |
+| `nombres_comunes` | text[] | |
+| `especie_anterior` | text | sinónimo / determinación previa de campo |
+
+**Descriptivo / usos**
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `descripcion` | text | |
+| `habito` | text | árbol \| palma \| arbusto \| liana... |
+| `foto_url` | text | bucket `species-photos` |
+| `usos` | text[] | |
+| `aplica_ley_arbol` | boolean | |
+
+**Conservación / ecología**
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `iucn` | text | LC\|NT\|VU\|EN\|CR\|DD\|NE |
+| `amenaza` | text | categoría nacional (Res. 1912/2017) — **pendiente para todas** |
+| `cites` | text | NA \| Apéndice I/II/III |
+| `orden` | text | orden taxonómico (ej. Fabales) |
+| `origen` | text | nativa \| introducida |
+| `dispersion` | text | zoocoria \| anemocoria \| autocoria \| barocoria |
+| `polinizacion` | text | zoófila \| entomófila \| anemófila |
+| `rol_sucesional` | text | pionera \| intermedia \| tardía |
+
+**Propagación (vivero/plan)**
+| Columna | Tipo |
+|---------|------|
+| `tipo_semilla` | text — ortodoxa \| recalcitrante \| intermedia |
+| `tratamiento_pregerminativo` | text |
+| `pct_germinacion` / `dias_germinacion` / `dias_crecimiento_vivero` / `semillas_por_kg` | numeric/integer |
+
+**Origen / trazabilidad**
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `en_catalogo` | boolean | true = tiene ficha de la botánica (descripción/usos/foto) |
+| `en_ras` | boolean | aparece en la Red de Árboles Semilleros |
+| `en_vivero` | boolean | aparece en vivero |
+| `n_arboles_ras` | integer | abundancia en RAS (referencia, no fuente de verdad — ver `ras.v_indicadores_predio`) |
+| `slug` | text | usado para `foto_url` en el bucket |
+
+> Muchas especies solo-vivero (`en_catalogo = false`) tienen apenas `nombre_cientifico` + `genero` + `epiteto` + a veces `tipo_semilla`; su ficha completa (descripción/usos/foto) llega cuando la botánica las levanta.
 
 ---
 
@@ -677,6 +789,31 @@ FK `predio_id` → **core.predios**. Banderas (falsa_tradicion, procesos_judicia
 
 ---
 
+## Schema `geo` — Geoportal / SIG (2026-06-19)
+
+### `geo.zonas` — Polígonos georreferenciados (3 filas, PostGIS)
+
+> Fuente de verdad geoespacial: el `.zip` (shapefile) subido en SIG I se desglosa aquí;
+> el geovisor y el resto de la app leen de esta tabla (no del archivo original).
+
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `predio_id` | uuid FK → `core.predios` | |
+| `tipo` | text | ej. `finca`, según `p_tipo` en `crear_zona_union` |
+| `origen` | text | ej. `sig` |
+| `nombre` | text | |
+| `geom` | geometry | PostGIS |
+| `propiedades` | jsonb | atributos leídos del `.dbf` del shapefile *(v2)* |
+| `perimetro_m` | numeric | *(v2)* |
+| `expediente_id` | uuid FK → `core.expedientes` | |
+
+**Funciones**
+- `geo.zonas_de_predio(p_predio_id uuid)` — zonas de un predio con geometría en GeoJSON, para pintar en el mapa *(migration_geo_v2.sql, ejecutada)*.
+- `geo.crear_zona_union(...)` — une (`ST_Union`) una geometría nueva con zonas existentes que se sobreponen *(migration_geo_v3.sql, ejecutada — usada en `app/api/sig/ingesta/route.ts`)*.
+
+---
+
 ## Rutas de la app ↔ tablas
 
 | Ruta | Tabla(s) |
@@ -687,8 +824,12 @@ FK `predio_id` → **core.predios**. Banderas (falsa_tradicion, procesos_judicia
 | `/intranet` | `people.user_profiles`, stats |
 | `/intranet/ras/siembra` | `siembra.familias`, `siembra.predios` |
 | `/intranet/ras/siembra/nueva` | `siembra.familias`, `siembra.predios` |
-| `/intranet/ras/conservacion` | `ras.familias` |
-| `/intranet/ras/conservacion/nueva` | `ras.familias` |
+| `/intranet/ras/conservacion` (+ `nueva`, `[id]`, `[id]/editar`) | `ras.familias` |
+| `/intranet/ras` | `ras.arboles_semilleros` (vía `lib/ras-arboles.ts`) |
+| `/api/ras/arboles/[id]/foto` | `ras.arboles_semilleros` (bucket `species-photos`) |
+| `/api/catalogo/[id]/foto` | `catalogo.especies` (vía `lib/catalogo.ts`, bucket `species-photos`) |
+| `/api/sig/ingesta` | ingesta de shapefile → `geo.zonas` |
+| `/api/sig/zonas` | `geo.zonas` |
 | `/intranet/ejecutivo` | `ejecutivo.sesiones`, `ejecutivo.indicaciones`, `people.user_profiles` |
 | `/intranet/admin` | `people.user_profiles`, `fleet.vehicle_documents`, `public.consentimientos` |
 | `/intranet/juridica` (+ `[id]`, `nuevo`, `editar`, `antecedentes`, `analisis-juridico`) | `core.aliados/predios/predio_propietarios/expedientes` + `juridica.debida_diligencia/antecedentes/analisis_juridico` |

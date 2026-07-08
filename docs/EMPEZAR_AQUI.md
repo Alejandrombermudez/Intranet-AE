@@ -12,7 +12,7 @@ El sistema tiene **dos dominios distintos** que no comparten tablas ni flujo:
 
 1. **Siembra (Restauración) = un proceso completo de extremo a extremo**, no un módulo de "familias". Es la cadena de valor de la restauración:
    **Jurídica → SIG I → Campo → SIG II → Vivero → Ejecución.**
-   > **Estado real:** lo que hoy existe en `siembra.*` y en la PWA de campo (`familias-res/`) son **pruebas exitosas (prueba de concepto), NO datos productivos**. La producción arranca con Jurídica sobre `core`.
+   > **Estado real (2026-07-08):** la app de campo productiva es **`app_campo/`** (`familias-res/` fue la prueba de concepto). Ya está **conectada al proceso real**: lee `core.v_predios_campo` (solo predios que pasaron Jurídica + SIG I), sus zonas vienen de `geo.zonas`, y tiene **módulo SIG** (mapa satelital + GPS + corrección de zonas = SIG II). Contexto completo: `../../app_campo/CONTEXTO_APP_CAMPO.md`.
 
 2. **Conservación (RAS = Red de Árboles Semilleros) = dominio aparte.** Familias en conservación que **alojan** la red de árboles semilleros. El **árbol semillero es el objeto principal** (uno por fila, colgado del predio), no un conteo. Vive en `ras.*` y está **en rediseño** (parámetros del formulario + carga de árboles + conexión al geovisor).
 
@@ -27,7 +27,7 @@ Diseño conceptual **completo**. **Semana 1 IMPLEMENTADA y en producción (2026-
 1. **`ARTICULACION_Y_PROYECCION.md`** — leer primero. Flujo end-to-end, las "costuras" (claves foráneas), qué falta desarrollar, el roadmap por dependencias, todas las decisiones, y el mapa de dónde está cada artefacto.
 2. **`CRONOGRAMA.md`** — plan de 20 semanas, en el orden del proceso.
 3. **`ARQUITECTURA_DATOS.md`** — documento maestro de **entidad-relación y parámetros** de todo el ecosistema (todas las tablas, llaves PK/FK, estado y orden para desarrollar). **Base para desarrollar masivamente.**
-4. **Specs de módulo:** `../../app_vivero/CONTEXTO_MODULO_VIVERO.md`, `CONTEXTO_MODULO_SIG.md`, `../../juridica/CONTEXTO_MODULO_JURIDICO.md`.
+4. **Specs de módulo:** `../../app_vivero/CONTEXTO_MODULO_VIVERO.md`, `CONTEXTO_MODULO_SIG.md`, `../../juridica/CONTEXTO_MODULO_JURIDICO.md`, **`../../app_campo/CONTEXTO_APP_CAMPO.md` (app de campo: qué se hizo, qué falta, cómo retomar)**.
 5. **`PENDIENTES_INTEGRACION.md`** — backlog vivo (incluye la cédula en PDF de jurídica, etc.).
 6. **`ARQUITECTURA_ECOSISTEMA.md`** — el documento maestro (4 vistas + decisiones D1–D5).
 7. **`CORE_MIGRACION.md`** — qué se implementó en la Semana 1 (modelo `core` + cutover de jurídica) y cómo está hecho. **Leer para entender el estado actual del código.**

@@ -144,18 +144,23 @@ erDiagram
 
 > RPCs: `geo.crear_zona(geojson)`, `geo.crear_zona_union(...)`, `geo.zonas_de_predio(predio_id)`. Migraciones v1/v2/v3 corridas.
 
-**`geo.zona_revision`** — corrección de zonas en campo (SIG II). 🔧 diseñado
+**`geo.zona_revision`** — corrección de zonas en campo (SIG II). 🔧 construido (`migration_zona_revision.sql`, 2026-07-07 — falta correr)
 | Parámetro | Tipo | Llave | Notas |
 |---|---|---|---|
 | id | uuid | PK | |
-| zona_id | uuid | FK→ geo.zonas | zona potencial que se corrige |
-| confirmada | boolean | | ¿apta tras verla en terreno? |
+| local_id | text | UQ | idempotencia del sync offline (la PWA reintenta sin duplicar) |
+| zona_id | uuid | FK→ geo.zonas | null hasta sincronizar si `accion='nueva'` |
+| predio_id | uuid | FK→ core.predios | |
+| accion | text CHECK | | `confirmada` \| `modificada` \| `nueva` \| `descartada` |
 | metodo | text | | `vertices` \| `gps` \| `nueva` |
-| geom_corregida | geometry(MultiPolygon,4326) | | se vuelca a geo.zonas (estado `validada`) |
-| area_ha_campo | numeric | | área real medida |
-| observaciones / foto_url / evaluador | text | | |
+| geom_original | geometry(MultiPolygon,4326) | | cómo estaba ANTES (auditoría — geo.zonas guarda solo lo vigente) |
+| geom_corregida | geometry(MultiPolygon,4326) | | se aplica a geo.zonas (estado `validada`, origen `campo`, version+1) |
+| area_ha_campo | numeric | | área de la geometría corregida |
+| observaciones / evaluador | text | | |
 | fecha | date | | |
-| sync_origin | text | | `pwa` \| `web` (app offline) |
+| sync_origin | text | | `pwa` |
+
+> **Única puerta de escritura para la PWA (anon): RPC `geo.revisar_zona`** (SECURITY DEFINER) — valida, aplica el cambio a `geo.zonas` y deja la auditoría; la app no tiene UPDATE/INSERT directo. `geo.zonas.estado` ganó el valor `descartada`. La app de campo (módulo SIG) muestra finca + zonas sobre satelital, geolocaliza al técnico (dentro de / distancia y rumbo a la zona) y edita por vértices con leaflet-geoman, todo offline-first (Dexie `revisiones`).
 
 ### 2.3 `catalogo` — maestro de especies 🔴 por construir
 
@@ -186,6 +191,7 @@ erDiagram
 |---|---|---|---|
 | Jurídica I | aliado/predio aprobado (semáforo) | SIG I | `core.*` + `juridica.*` |
 | SIG I | zonas potenciales | Campo | `geo.zonas` (estado potencial) |
+| **SIG I → Campo (obligatorio, 2026-07-07)** | botón **"Enviar a Campo"** en `/intranet/sig/[predioId]` → `POST /api/juridica/aliados/[id]/crear-en-siembra` | Campo | exige `expediente.etapa='sig_i'` + ≥1 `geo.zonas` (tipo `restauracion`); si no, 422. Crea `siembra.familias` (solo `predio_id`/`aliado_id`/`expediente_id`, sin duplicar identidad) y avanza `etapa` a `campo`. Cinturón de seguridad adicional: `core.v_predios_campo` (la vista que lee la PWA) exige el mismo `EXISTS` sobre `geo.zonas` — ver `migration_campo_core_v2.sql`. |
 | Campo | evaluación biofísica + encuesta | SIG II / Plan | `siembra.evaluaciones_campo`, `siembra.familias` |
 | SIG II | zonas corregidas + área (ha) | Plan | `geo.zona_revision` → `geo.zonas` |
 | Plan | demanda de plántulas | Vivero | `siembra.planes` + `modelos_floristicos` + `plan_zonas` |
@@ -209,23 +215,23 @@ Banderas booleanas con `_url`: rama_judicial, procuraduria, contraloria, policia
 **`juridica.analisis_juridico`** — folio de matrícula + semáforo (1:1 predio). FK `predio_id`→`core.predios`.
 Folios (fmi_matrices/derivados, acto_origen), banderas (falsa_tradicion, procesos_judiciales+desc, medidas_cautelares+desc, liquidaciones, sucesiones), conceptos ANT/URT/PNN, `semaforo` (verde/amarillo/naranja/rojo).
 
-### 3.3 `siembra` — campo (evaluación + encuesta) 🧪 prueba
+### 3.3 `siembra` — campo (evaluación + encuesta) 🟢 reconectado a core+SIG (2026-07-07)
 
 ```mermaid
 erDiagram
-    predios ||--o{ familias : ""
-    predios ||--o{ evaluaciones_campo : ""
+    predios_core ||--o{ familias : "predio_id → core.predios"
+    predios_core ||--o{ evaluaciones_campo : "predio_id → core.predios"
     familias ||--o{ monitoreos : ""
     familias ||--o{ camaras_trampa : ""
     camaras_trampa ||--o{ fotos_camara : ""
     familias ||--o{ fotos_predio : ""
 ```
 
-**`siembra.predios`** — predio registrado en campo (PWA). PK `id`; `predio_id` lógico; datos: local_id, nombre_predio, propietario, ubicación, fecha, contacto, num_zonas, sync_origin.
+> **Rediseño (`migration_campo_core.sql`, 2026-07-07):** la app de Campo vivía desconectada de Jurídica/SIG — el encuestador retecleaba nombre/propietario/municipio/vereda/departamento/contacto y hasta el número de zonas, en vez de leerlos de `core`/`geo.zonas`. `siembra.predios` (duplicado sin FK de `core.predios`+`core.aliados`) **se eliminó**. `siembra.familias`/`evaluaciones_campo` perdieron sus columnas de identidad duplicadas; ahora `predio_id` apunta directo a `core.predios` (antes a la `siembra.predios` vieja) y esos datos se leen por JOIN — expuestos a la PWA (sin login) vía la vista angosta **`core.v_predios_campo`** (solo predios con `expediente.etapa IN ('campo','sig_ii')`). Las zonas evaluadas en campo (`zonas_data` JSONB) ahora cargan `zona_id` (FK a `geo.zonas.id`): las define el SIG, la app de Campo las confirma/corrige/describe (biofísico), no crea zonas a mano — es el enganche real de SIG II. Quedan en la encuesta solo los campos que genuinamente no existen en ningún otro módulo (vivienda, núcleo familiar, valorización, cultivos, ganadería, tecnología, bosque&clima, relaciones, cobertura/suelo/logística/riesgos por zona). Se eliminó `latitud`/`longitud` a nivel predio (se deriva del polígono de `geo.zonas`); `anio_adquisicion` se mantiene en Campo por decisión del usuario (Jurídica no lo captura estructurado todavía).
 
-**`siembra.familias`** — encuesta socioeconómica completa (≈150 columnas). FK `predio_id`→siembra.predios, `aliado_id`→`core.aliados` (prellenado de jurídica). Secciones: Identificación · Metadatos encuesta · Predio · Hogar&Familia · Vivienda&Servicios · Salud&Educación · Economía · Ganadería (incl. regenerativa) · Tecnología&Manejo · Bosque&Ambiente · Restauración · Asociatividad · Archivos (shapefiles, acuerdo) · Snapshots `sec_*` JSONB. **Columnas completas en SUPABASE_SCHEMAS.md.**
+**`siembra.familias`** — encuesta socioeconómica completa. FK `predio_id`→**core.predios**, `aliado_id`/`expediente_id`→**core**. Secciones: Metadatos encuesta · Hogar&Familia · Vivienda&Servicios · Salud&Educación · Economía · Ganadería (incl. regenerativa) · Tecnología&Manejo · Bosque&Ambiente · Restauración · Asociatividad · Archivos (shapefiles, acuerdo) · Snapshots `sec_*` JSONB. **Columnas completas en SUPABASE_SCHEMAS.md** (desactualizado tras el rediseño — pendiente refrescar).
 
-**`siembra.evaluaciones_campo`** — formato AE-CAMPO-001. FK `predio_id`, `familia_id`. Grupos: Visita · Conectividad · Social · Vegetación · Suelo · Agua · Acceso · Riesgos · Fotos · Firmas · JSON. **Detalle en SUPABASE_SCHEMAS.md.**
+**`siembra.evaluaciones_campo`** — formato AE-CAMPO-001. FK `predio_id`→**core.predios**, `expediente_id`→core.expedientes, `familia_id`. Grupos: Visita · Conectividad · Social · Vegetación · Suelo · Agua · Acceso · Riesgos (por zona real de `geo.zonas`) · Fotos · Firmas · JSON. **Detalle en SUPABASE_SCHEMAS.md** (ídem, pendiente refrescar).
 
 **`siembra.monitoreos`** (id, familia_id FK, fecha, supervivencia_pct) · **`siembra.camaras_trampa`** (id, familia_id FK, nombre, lat, lon) · **`siembra.fotos_camara`** (id, camara_id FK, url) · **`siembra.fotos_predio`** (id, familia_id FK, categoria, url).
 
@@ -381,9 +387,12 @@ erDiagram
 | juridica.debida_diligencia.predio_id | core.predios.id | 1:1 | siembra |
 | juridica.antecedentes.aliado_id | core.aliados.id | 1:1 | siembra |
 | juridica.analisis_juridico.predio_id | core.predios.id | 1:1 | siembra |
-| siembra.familias.predio_id | siembra.predios.id | N:1 | siembra 🧪 |
-| siembra.familias.aliado_id | core.aliados.id | N:1 | siembra 🧪 |
-| siembra.evaluaciones_campo.predio_id | siembra.predios.id | N:1 | siembra 🧪 |
+| siembra.familias.predio_id | core.predios.id | N:1 | siembra 🟢 |
+| siembra.familias.aliado_id | core.aliados.id | N:1 | siembra 🟢 |
+| siembra.familias.expediente_id | core.expedientes.id | N:1 | siembra 🟢 |
+| siembra.evaluaciones_campo.predio_id | core.predios.id | N:1 | siembra 🟢 |
+| siembra.evaluaciones_campo.expediente_id | core.expedientes.id | N:1 | siembra 🟢 |
+| siembra.evaluaciones_campo.zonas_data[].zona_id | geo.zonas.id | N:1 (jsonb) | siembra 🟢 SIG II |
 | siembra.fotos_predio.familia_id | siembra.familias.id | N:1 | siembra 🧪 |
 | siembra.planes.expediente_id | core.expedientes.id | N:1 | siembra 🔧 |
 | siembra.planes.predio_id | core.predios.id | N:1 | siembra 🔧 |
@@ -417,9 +426,10 @@ erDiagram
 | juridica.* (debida_diligencia/antecedentes/analisis_juridico) | 🟢 | — |
 | people / fleet / ejecutivo / public | 🟢 | — |
 | geo.zonas (+ RPCs) | 🟢 vacío | probar con shapefile real |
-| geo.zona_revision | 🔧 | construir (Campo SIG II) |
+| geo.zona_revision + RPC revisar_zona | 🔧 construido | correr `migration_zona_revision.sql` |
 | **catalogo.especies** | 🔴 | **fundación — desbloquea plan, vivero, ras-árboles** |
-| siembra.* (predios/familias/evaluaciones/…) | 🧪 prueba | rehacer al llegar la etapa Campo |
+| siembra.familias / evaluaciones_campo | 🟢 reconectado a core+geo (2026-07-07) | probar con un predio real en etapa `campo` |
+| siembra.predios | ❌ eliminada (2026-07-07) | subsumida por core.predios+aliados+expedientes |
 | siembra.planes / modelos / modelo_especies / plan_zonas | 🔧 | construir tras geo + catálogo |
 | vivero.* (8 tablas) | 🔴 | app aparte; tras catálogo + plan |
 | ras.familias | 🟢/🔧 | rediseñar formulario (aligerar + derivar conteos) |
