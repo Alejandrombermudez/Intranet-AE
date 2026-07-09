@@ -24,9 +24,12 @@ if sys.stdout.encoding != "utf-8":
 
 # ── Credenciales ──────────────────────────────────────────────────────────────
 SUPABASE_URL = "https://lbxysovesmbgesxooghw.supabase.co"
-SERVICE_ROLE_KEY = (
-    "***SERVICE_ROLE_KEY_REDACTED***"
-)
+SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+if not SERVICE_ROLE_KEY:
+    sys.exit(
+        "Falta SUPABASE_SERVICE_ROLE_KEY en el entorno.\n"
+        "Ejemplo (PowerShell): $env:SUPABASE_SERVICE_ROLE_KEY = '...'"
+    )
 
 CSV_PATH = os.path.join(os.path.dirname(__file__), "..", "Aliados RAS(Info_Predios).csv")
 
