@@ -221,36 +221,46 @@ export default function AliadoDetailPage() {
             <p className="text-sm text-red-700 font-medium">Este aliado fue rechazado y no puede proceder al proceso de siembra.</p>
           </div>
         )}
-        {aliado.estado === 'juridico_ok' && (
+        {aliado.estado === 'juridico_ok' && !enviadoASig && (
           <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
             <AlertCircle size={18} className="text-amber-500 shrink-0" />
-            <p className="text-sm text-amber-700 font-medium">Semáforo naranja — requiere revisión del comité antes de ser aprobado.</p>
+            <p className="text-sm text-amber-700 font-medium">Semáforo naranja — conviene revisión del comité, pero no impide enviarlo a SIG.</p>
           </div>
         )}
-        {aliado.estado === 'aprobado' && !enviadoASig && (
-          <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 size={20} className="text-teal-600 shrink-0" />
-              <div>
-                <p className="text-sm font-bold text-teal-800">Aliado aprobado</p>
-                <p className="text-xs text-teal-600">Listo para enviar a SIG y generar las zonas potenciales.</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setConfirmar(true)}
-              className="shrink-0 px-4 py-2 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors"
-            >
-              Enviar a SIG →
-            </button>
-          </div>
-        )}
-        {aliado.estado === 'aprobado' && enviadoASig && (
+        {/* Enviar a SIG: disponible en CUALQUIER estado (salvo rechazado / ya enviado).
+            La debida diligencia se completa en paralelo; el candado "DD aprobada" se aplica
+            más adelante, en SIG → Campo. */}
+        {enviadoASig ? (
           <div className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 flex items-center gap-3">
             <CheckCircle2 size={20} className="text-sky-600 shrink-0" />
             <div>
               <p className="text-sm font-bold text-sky-800">Enviado a SIG</p>
-              <p className="text-xs text-sky-600">El predio ya está en el proceso de zonificación. Jurídica no requiere más acciones.</p>
+              <p className="text-xs text-sky-600">
+                El predio ya está en zonificación. Puedes seguir completando la debida diligencia aquí en paralelo.
+              </p>
             </div>
+          </div>
+        ) : aliado.estado !== 'rechazado' && (
+          <div className={`rounded-xl px-4 py-4 flex items-center justify-between gap-3 border ${aliado.estado === 'aprobado' ? 'bg-teal-50 border-teal-200' : 'bg-stone-50 border-stone-200'}`}>
+            <div className="flex items-center gap-3">
+              <CheckCircle2 size={20} className={`shrink-0 ${aliado.estado === 'aprobado' ? 'text-teal-600' : 'text-stone-400'}`} />
+              <div>
+                <p className={`text-sm font-bold ${aliado.estado === 'aprobado' ? 'text-teal-800' : 'text-stone-700'}`}>
+                  {aliado.estado === 'aprobado' ? 'Aliado aprobado' : 'Listo para enviar a SIG'}
+                </p>
+                <p className={`text-xs ${aliado.estado === 'aprobado' ? 'text-teal-600' : 'text-stone-500'}`}>
+                  {aliado.estado === 'aprobado'
+                    ? 'Listo para generar las zonas potenciales.'
+                    : 'Puedes enviarlo a SIG ahora y completar la debida diligencia (antecedentes, análisis, documentos) en paralelo.'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setConfirmar(true)}
+              className={`shrink-0 px-4 py-2 text-white rounded-xl text-sm font-bold transition-colors ${aliado.estado === 'aprobado' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-stone-700 hover:bg-stone-800'}`}
+            >
+              Enviar a SIG →
+            </button>
           </div>
         )}
 
@@ -387,8 +397,9 @@ export default function AliadoDetailPage() {
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
             <h3 className="font-black text-stone-900 text-lg mb-2">Enviar a SIG</h3>
             <p className="text-sm text-stone-600 mb-5">
-              El predio de <strong>{aliado.nombre_completo}</strong> pasará a <strong>SIG I</strong> para
-              generar las zonas potenciales. El equipo SIG lo verá en su lista de trabajo.
+              El predio <strong>{aliado.nombre_predio || aliado.nombre_completo}</strong> pasará a <strong>SIG I</strong> para
+              generar las zonas potenciales. El equipo SIG lo verá en su lista de trabajo. Puedes seguir
+              completando la debida diligencia después, en paralelo.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmar(false)} disabled={creando}

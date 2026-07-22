@@ -2,21 +2,26 @@ import { z } from 'zod'
 
 // ─── HOJA 1: Aliado ────────────────────────────────────────────────────────────
 
+// Creación masiva: lo único obligatorio para abrir un caso es el NOMBRE DEL PREDIO.
+// El resto (propietario, documento, municipio, archivos…) se completa después, en
+// paralelo, incluso con el predio ya enviado a SIG. Los 3 campos que la BD exige
+// NOT NULL (aliados.nombre_completo, aliados.numero_documento, predios.municipio)
+// se rellenan con marcadores en el API cuando llegan vacíos — ver lib/juridica-core.ts.
 export const aliadoSchema = z.object({
-  nombre_completo:             z.string().min(2, 'Nombre requerido'),
+  nombre_completo:             z.string().optional(),
   tipo_documento:              z.enum(['CC', 'NUIP', 'CE', 'TI', 'PP', 'NIT']).default('CC'),
-  numero_documento:            z.string().min(3, 'Documento requerido'),
+  numero_documento:            z.string().optional(),
   departamento:                z.string().optional(),
-  municipio:                   z.string().min(2, 'Municipio requerido'),
+  municipio:                   z.string().optional(),
   vereda:                      z.string().optional(),
-  zona_ae:                     z.string().optional(),
-  nombre_predio:               z.string().optional(),
+  nombre_predio:               z.string().trim().min(1, 'El nombre del predio es obligatorio'),
   matricula_inmobiliaria:      z.string().optional(),
   area_registral:              z.coerce.number().positive().optional(),
   codigo_catastral:            z.string().optional(),
   anio_ultimo_pago_predial:    z.coerce.number().int().min(1900).max(2100).optional(),
   manifestacion_interes:       z.boolean().optional(),
   manifestacion_observaciones: z.string().optional(),
+  zona_ae:                     z.string().optional(),
 })
 
 // ─── HOJA 2: Antecedentes ─────────────────────────────────────────────────────

@@ -556,7 +556,7 @@ export default function NuevaConservacionPage() {
                     value={field.value ?? false} onChange={field.onChange} />
                 )} />
                 <Controller control={control} name="acuerdo_conservacion" render={({ field }) => (
-                  <RadioSiNo name="acuerdo_conservacion" label="Acuerdo de conservación"
+                  <RadioSiNo name="acuerdo_conservacion" label="Acuerdo"
                     value={field.value ?? false} onChange={field.onChange} />
                 )} />
               </div>

@@ -163,10 +163,15 @@ export default function NuevoAliadoPage() {
           </div>
         )}
 
+        <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 text-sm text-teal-800">
+          Solo el <strong>nombre del predio</strong> es obligatorio. Puedes crear el caso ahora, enviarlo a SIG y
+          completar propietario, documento, municipio y archivos después — todo en paralelo.
+        </div>
+
         {/* Sección 1: Identificación */}
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Identificación</h2>
-          <Field label="Nombre completo *" error={errors.nombre_completo?.message}>
+          <Field label="Nombre completo" error={errors.nombre_completo?.message} hint="Opcional — se puede completar después">
             <input {...register('nombre_completo')} readOnly={aliadoLock} className={`${errors.nombre_completo ? INPUT_ERR : INPUT}${aliadoLock ? ' bg-stone-50 text-stone-500' : ''}`} placeholder="Juan Pérez García" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
@@ -175,7 +180,7 @@ export default function NuevoAliadoPage() {
                 {TIPOS_DOC.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </Field>
-            <Field label="Número de documento *" error={errors.numero_documento?.message}>
+            <Field label="Número de documento" error={errors.numero_documento?.message} hint="Opcional">
               <input {...register('numero_documento')} readOnly={aliadoLock} className={`${errors.numero_documento ? INPUT_ERR : INPUT}${aliadoLock ? ' bg-stone-50 text-stone-500' : ''}`} placeholder="1234567890" />
             </Field>
           </div>
@@ -195,7 +200,7 @@ export default function NuevoAliadoPage() {
             <Field label="Departamento">
               <div className={`${INPUT} bg-stone-50 text-stone-500 cursor-not-allowed`}>Caquetá</div>
             </Field>
-            <Field label="Municipio *" error={errors.municipio?.message}>
+            <Field label="Municipio" error={errors.municipio?.message} hint="Opcional">
               <select
                 value={selectedMunicipio}
                 onChange={(e) => {
@@ -230,8 +235,8 @@ export default function NuevoAliadoPage() {
               <input {...register('zona_ae')} className={INPUT} placeholder="Ej: Piedemonte" />
             </Field>
           </div>
-          <Field label="Nombre del predio">
-            <input {...register('nombre_predio')} className={INPUT} placeholder="Finca La Esperanza" />
+          <Field label="Nombre del predio *" error={errors.nombre_predio?.message} hint="Único campo obligatorio">
+            <input {...register('nombre_predio')} className={errors.nombre_predio ? INPUT_ERR : INPUT} placeholder="Finca La Esperanza" />
           </Field>
         </section>
 

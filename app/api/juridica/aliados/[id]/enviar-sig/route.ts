@@ -20,13 +20,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
-    // La debida diligencia debe estar aprobada
+    // Se puede enviar a SIG en cualquier estado de la debida diligencia (la persona
+    // completa jurídica en paralelo mientras el predio ya está en zonificación). El
+    // único bloqueo es un caso explícitamente RECHAZADO. El candado fuerte "DD aprobada"
+    // se mantiene aguas abajo, en SIG → Campo (crear-en-siembra), antes del trabajo de campo.
     const { data: dd } = await supabase
       .schema('juridica').from('debida_diligencia')
       .select('estado').eq('predio_id', predioId).maybeSingle()
-    if (dd?.estado !== 'aprobado') {
+    if (dd?.estado === 'rechazado') {
       return NextResponse.json(
-        { error: 'La debida diligencia debe estar en estado "aprobado" para enviar a SIG' },
+        { error: 'El caso fue rechazado en la debida diligencia; no puede enviarse a SIG.' },
         { status: 422 }
       )
     }

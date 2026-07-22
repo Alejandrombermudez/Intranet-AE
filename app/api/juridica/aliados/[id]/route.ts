@@ -49,15 +49,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .schema('core').from('predios').select('id, aliado_id').eq('id', predioId).single()
     if (pSelErr || !predio) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 })
 
-    // 1) Persona (core.aliados)
+    // 1) Persona (core.aliados). nombre_completo y numero_documento son NOT NULL:
+    //    si el formulario los deja vacíos NO se sobreescriben (se conserva lo que hubiera,
+    //    incluido el marcador puesto al crear). Así la edición nunca rompe por vacíos.
     const tipo_documento = data.tipo_documento ?? 'CC'
+    const aliadoUpdate: Record<string, unknown> = {
+      tipo_documento,
+      tipo_persona: tipo_documento === 'NIT' ? 'juridica' : 'natural',
+    }
+    const nombreEdit = String(data.nombre_completo ?? '').trim()
+    const docEdit    = String(data.numero_documento ?? '').trim()
+    if (nombreEdit) aliadoUpdate.nombre_completo = nombreEdit
+    if (docEdit)    aliadoUpdate.numero_documento = docEdit
     const { error: aErr } = await supabase.schema('core').from('aliados')
-      .update({
-        nombre_completo:  data.nombre_completo,
-        tipo_documento,
-        tipo_persona:     tipo_documento === 'NIT' ? 'juridica' : 'natural',
-        numero_documento: data.numero_documento,
-      })
+      .update(aliadoUpdate)
       .eq('id', predio.aliado_id)
     if (aErr) {
       if (aErr.code === '23505') {
@@ -71,19 +76,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ? data.matriculas.map((m: string) => String(m).trim()).filter(Boolean)
       : (data.matricula_inmobiliaria ? [String(data.matricula_inmobiliaria).trim()] : [])
 
-    // 2) Predio (core.predios)
+    // 2) Predio (core.predios). municipio es NOT NULL: si viene vacío se conserva el actual.
+    const predioUpdate: Record<string, unknown> = {
+      nombre_predio:          data.nombre_predio || null,
+      departamento:           data.departamento || null,
+      vereda:                 data.vereda || null,
+      zona_ae:                data.zona_ae || null,
+      matricula_inmobiliaria: matriculas[0] || null,
+      matriculas:             matriculas.length ? matriculas : null,
+      codigo_catastral:       data.codigo_catastral || null,
+      area_registral:         data.area_registral || null,
+    }
+    const municipioEdit = String(data.municipio ?? '').trim()
+    if (municipioEdit) predioUpdate.municipio = municipioEdit
     const { error: pErr } = await supabase.schema('core').from('predios')
-      .update({
-        nombre_predio:          data.nombre_predio || null,
-        departamento:           data.departamento || null,
-        municipio:              data.municipio,
-        vereda:                 data.vereda || null,
-        zona_ae:                data.zona_ae || null,
-        matricula_inmobiliaria: matriculas[0] || null,
-        matriculas:             matriculas.length ? matriculas : null,
-        codigo_catastral:       data.codigo_catastral || null,
-        area_registral:         data.area_registral || null,
-      })
+      .update(predioUpdate)
       .eq('id', predioId)
     if (pErr) {
       if (pErr.code === '23505') {

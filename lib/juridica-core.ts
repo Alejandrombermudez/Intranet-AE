@@ -14,6 +14,27 @@ import { comprimirPdf } from '@/lib/pdf-compress'
 
 type SB = ReturnType<typeof createServerSupabaseClient>
 
+// ─── Marcadores para creación con datos mínimos ──────────────────────────────
+// La BD exige NOT NULL en aliados.nombre_completo, aliados.numero_documento y
+// predios.municipio. Para permitir abrir un caso con solo el nombre del predio,
+// esos campos se rellenan con estos marcadores cuando llegan vacíos; el usuario
+// los reemplaza después (editar HOJA 1). Son detectables por la UI para avisar
+// "falta completar".
+export const SIN_PROPIETARIO = 'Por completar'
+export const SIN_MUNICIPIO   = 'Por definir'
+
+/** Documento placeholder único (aliados.numero_documento es NOT NULL + UNIQUE).
+ *  Prefijo S/D = "sin documento"; se reemplaza al completar la persona. */
+export function placeholderDocumento(): string {
+  return `S/D-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
+}
+
+/** true si el valor es uno de los marcadores de "falta completar" (o parece placeholder de documento). */
+export function esMarcador(valor: string | null | undefined): boolean {
+  if (!valor) return false
+  return valor === SIN_PROPIETARIO || valor === SIN_MUNICIPIO || /^S\/D-/.test(valor)
+}
+
 const BUCKET_JURIDICA = 'juridica-documentos'
 // Tipos permitidos (sirve para validar y para borrar versiones previas al reemplazar)
 const EXTENSIONES_DOC = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'gif', 'doc', 'docx'] as const

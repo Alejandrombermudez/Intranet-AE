@@ -39,6 +39,9 @@ export default function ConservacionListPage() {
   const [fotos, setFotos] = useState<Record<string, string>>({})
   const [fotosReales, setFotosReales] = useState<Record<string, boolean>>({})
   const [indicadores, setIndicadores] = useState<Record<string, IndicadoresPredio>>({})
+  // Familias con cesión de derechos de imagen firmada (para el filtro / badge)
+  const [conCesion, setConCesion] = useState<Set<string>>(new Set())
+  const [filtroCesion, setFiltroCesion] = useState<'todas' | 'con' | 'sin'>('todas')
 
   const handleDelete = async (id: string) => {
     setDeletingId(id)
@@ -90,6 +93,14 @@ export default function ConservacionListPage() {
       if (fams.length === 0) return
       const ids = fams.map((f) => f.id)
 
+      // Cesión de derechos de imagen firmada — por familia (para filtro y badge)
+      const { data: cesionRows } = await supabase
+        .schema('ras').from('documentos_familia')
+        .select('familia_id')
+        .eq('tipo', 'cesion_imagen')
+        .in('familia_id', ids)
+      setConCesion(new Set((cesionRows ?? []).map((r) => r.familia_id)))
+
       // Foto de familia/predio — una consulta batch, prioriza categoría "familia" sobre "predio"
       const { data: fotosData } = await supabase
         .schema('ras').from('fotos_predio')
@@ -136,6 +147,13 @@ export default function ConservacionListPage() {
       </div>
     )
   }
+
+  const familiasFiltradas = familias.filter((f) => {
+    if (filtroCesion === 'con') return conCesion.has(f.id)
+    if (filtroCesion === 'sin') return !conCesion.has(f.id)
+    return true
+  })
+  const nConCesion = familias.filter((f) => conCesion.has(f.id)).length
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-50 via-primary-50 to-stone-100">
@@ -187,6 +205,27 @@ export default function ConservacionListPage() {
           </div>
         </div>
 
+        {/* Filtro por cesión de derechos de imagen */}
+        {familias.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-5">
+            <span className="text-xs font-bold text-stone-500 uppercase tracking-wider mr-1">Tratamiento de imagen:</span>
+            {([
+              { k: 'todas', label: `Todas (${familias.length})` },
+              { k: 'con',   label: `Con cesión firmada (${nConCesion})` },
+              { k: 'sin',   label: `Sin cesión (${familias.length - nConCesion})` },
+            ] as const).map(({ k, label }) => (
+              <button key={k} onClick={() => setFiltroCesion(k)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all ${
+                  filtroCesion === k
+                    ? 'border-primary text-primary bg-primary/5'
+                    : 'border-stone-200 text-stone-500 hover:border-stone-300'
+                }`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Lista / Estado vacío */}
         {familias.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-stone-400 gap-4">
@@ -206,7 +245,12 @@ export default function ConservacionListPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {familias.map((f) => {
+            {familiasFiltradas.length === 0 && (
+              <p className="col-span-full text-center text-sm text-stone-400 py-12">
+                Ninguna familia coincide con este filtro.
+              </p>
+            )}
+            {familiasFiltradas.map((f) => {
               const isConfirming = confirmId === f.id
               const isDeleting = deletingId === f.id
               const ind = indicadores[f.id]
@@ -318,6 +362,11 @@ export default function ConservacionListPage() {
                           Acuerdo: {f.acuerdo_conservacion ? 'Sí' : 'No'}
                         </span>
                       )}
+                      <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold ${
+                        conCesion.has(f.id) ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                      }`}>
+                        Imagen: {conCesion.has(f.id) ? 'Sí' : 'No'}
+                      </span>
                     </div>
 
                     <div className="mt-3 pt-3 border-t border-stone-100 flex items-center gap-1 text-xs text-stone-400">

@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Datos sensibles/pesados de carga (cédulas, cesiones, fotos, zips) — NO versionar
+docs/temporales/

@@ -39,6 +39,7 @@
 
 | Pendiente | Por qué | Dónde impacta | Estado |
 |-----------|---------|---------------|--------|
+| ~~GeoAE lee columnas de `siembra.familias` eliminadas por `migration_campo_core.sql`~~ | `fetchSiembraFamilias`/`fetchSiembraCamaras` no se habían actualizado tras el rediseño a `core` (2026-07-07); confirmado el fallo en runtime contra la BD real (`42703`) | `GeoAE/lib/queries.ts` — ahora resuelve identidad con JOIN a `core.predios`/`core.aliados` | ✅ (2026-07-16) |
 | **Módulo SIG en la Intranet** | Gestionar las zonas potenciales (SIG I) | `/intranet/sig`: worklist de predios enviados por jurídica (etapa `sig_i`), enlazado desde el tablero | ✅ worklist (2026-06-19); ingesta pendiente |
 | **Flujo Jurídica → SIG** | Jurídica ya NO entrega a Siembra; entrega a **SIG** | "Enviar a SIG" avanza `core.expedientes.etapa` a `sig_i` (ruta `enviar-sig`) | ✅ (2026-06-19) |
 | **Habilitar PostGIS + `geo.zonas`** | Medir hectáreas reales y versionar zonas (hoy son .zip en Storage) | `migration_geo.sql` escrito (PostGIS + `geo.zonas` + RPC `geo.crear_zona`); falta correrlo y exponer `geo` | 🔧 (2026-06-19) |

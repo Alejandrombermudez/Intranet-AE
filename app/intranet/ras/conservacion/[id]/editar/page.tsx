@@ -453,7 +453,7 @@ export default function ConservacionEditPage() {
               <BoolToggle label="Bajo figura de conservación"
                 value={form.bajo_conservacion}
                 onChange={(v) => set('bajo_conservacion', v)} />
-              <BoolToggle label="Acuerdo de conservación"
+              <BoolToggle label="Acuerdo"
                 value={form.acuerdo_conservacion}
                 onChange={(v) => set('acuerdo_conservacion', v)} />
             </div>

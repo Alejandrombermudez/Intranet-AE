@@ -165,8 +165,8 @@ export default function EditarAliadoPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl mx-auto px-6 py-8 space-y-8">
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Identificación</h2>
-          <Field label="Nombre completo *" error={errors.nombre_completo?.message}>
-            <input {...register('nombre_completo')} className={errors.nombre_completo ? INPUT_ERR : INPUT} />
+          <Field label="Nombre completo" error={errors.nombre_completo?.message}>
+            <input {...register('nombre_completo')} className={errors.nombre_completo ? INPUT_ERR : INPUT} placeholder="Por completar" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Tipo de documento">
@@ -174,7 +174,7 @@ export default function EditarAliadoPage() {
                 {TIPOS_DOC.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </Field>
-            <Field label="Número de documento *" error={errors.numero_documento?.message}>
+            <Field label="Número de documento" error={errors.numero_documento?.message}>
               <input {...register('numero_documento')} className={errors.numero_documento ? INPUT_ERR : INPUT} />
             </Field>
           </div>
@@ -188,7 +188,7 @@ export default function EditarAliadoPage() {
             <Field label="Departamento">
               <div className={`${INPUT} bg-stone-50 text-stone-500 cursor-not-allowed`}>Caquetá</div>
             </Field>
-            <Field label="Municipio *" error={errors.municipio?.message}>
+            <Field label="Municipio" error={errors.municipio?.message}>
               <select
                 value={selectedMunicipio}
                 onChange={(e) => {
@@ -221,7 +221,9 @@ export default function EditarAliadoPage() {
             </Field>
             <Field label="Zona AE"><input {...register('zona_ae')} className={INPUT} /></Field>
           </div>
-          <Field label="Nombre del predio"><input {...register('nombre_predio')} className={INPUT} /></Field>
+          <Field label="Nombre del predio *" error={errors.nombre_predio?.message}>
+            <input {...register('nombre_predio')} className={errors.nombre_predio ? INPUT_ERR : INPUT} />
+          </Field>
         </section>
 
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">

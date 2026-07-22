@@ -9,11 +9,16 @@ import {
   Camera, FileArchive, Leaf, ExternalLink,
   CheckCircle2, XCircle, ChevronDown, Pencil, FileText, Image as ImageIcon,
   TreePine, BarChart3, MapPinned, AlertTriangle,
+  ScrollText, Trash2, Upload, Download,
 } from 'lucide-react'
 import {
   fetchArbolesPorFamilia, fetchIndicadoresPorFamilia, cambiarFotoArbol,
   type ArbolSemillero, type IndicadoresPredio,
 } from '@/lib/ras-arboles'
+import {
+  fetchDocumentosFamilia, subirDocumentoFamilia, eliminarDocumentoFamilia,
+  TIPO_DOC_LABEL, type DocumentoFamilia, type TipoDocumentoFamilia,
+} from '@/lib/ras-documentos'
 import { fetchEspecies, fotoAleatoriaCatalogo, type Especie } from '@/lib/catalogo'
 import { parsearShapefileDesdeUrl } from '@/lib/shapefile-client'
 import { EspecieInfoBlock } from '@/app/components/EspecieInfo'
@@ -169,6 +174,17 @@ export default function ConservacionDetailPage() {
   const [uploadingArbol, setUploadingArbol] = useState(false)
   const fotoArbolFileRef = useRef<HTMLInputElement>(null)
 
+  // ── Documentos legales (cesión de derechos de imagen, etc.) ──
+  const [documentos, setDocumentos] = useState<DocumentoFamilia[]>([])
+  const [docTipo, setDocTipo] = useState<TipoDocumentoFamilia>('cesion_imagen')
+  const [docTitular, setDocTitular] = useState('')
+  const [docTitularDoc, setDocTitularDoc] = useState('')
+  const [docFecha, setDocFecha] = useState('')
+  const [docFile, setDocFile] = useState<File | null>(null)
+  const [docSaving, setDocSaving] = useState(false)
+  const [docError, setDocError] = useState<string | null>(null)
+  const docFileRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     const init = async () => {
       // Auth
@@ -231,10 +247,48 @@ export default function ConservacionDetailPage() {
       setIndic(ind)
       setEspeciesMap(new Map(especies.map((e) => [e.id, e])))
 
+      // Documentos legales (cesión, etc.) — no bloquea la ficha si la tabla aún no existe
+      fetchDocumentosFamilia(id)
+        .then(setDocumentos)
+        .catch((e) => console.warn('[conservacion] documentos:', e))
+
       setLoading(false)
     }
     init()
   }, [id, router])
+
+  async function onSubirDocumento(e: React.FormEvent) {
+    e.preventDefault()
+    if (!docFile) { setDocError('Selecciona un archivo (PDF o imagen).'); return }
+    setDocSaving(true); setDocError(null)
+    try {
+      await subirDocumentoFamilia(id, docFile, {
+        tipo: docTipo,
+        titular_nombre: docTitular,
+        titular_documento: docTitularDoc,
+        fecha: docFecha,
+      })
+      const refreshed = await fetchDocumentosFamilia(id)
+      setDocumentos(refreshed)
+      // Limpiar el formulario
+      setDocFile(null); setDocTitular(''); setDocTitularDoc(''); setDocFecha('')
+      if (docFileRef.current) docFileRef.current.value = ''
+    } catch (err) {
+      setDocError(err instanceof Error ? err.message : 'Error al subir el documento')
+    } finally {
+      setDocSaving(false)
+    }
+  }
+
+  async function onEliminarDocumento(docId: string) {
+    if (!confirm('¿Eliminar este documento? Se borra el archivo del almacenamiento.')) return
+    try {
+      await eliminarDocumentoFamilia(id, docId)
+      setDocumentos((prev) => prev.filter((d) => d.id !== docId))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al eliminar')
+    }
+  }
 
   if (loading) {
     return (
@@ -246,6 +300,9 @@ export default function ConservacionDetailPage() {
 
   if (!familia) return null
 
+  // "Tratamiento de imagen" = la familia tiene una cesión de derechos de imagen firmada.
+  // Derivado de los documentos cargados, no un booleano manual.
+  const tieneCesion = documentos.some((d) => d.tipo === 'cesion_imagen')
   const nArboles = indic?.arboles_semilleros ?? arboles.length
   const nEspecies = indic?.especies_forestales ?? new Set(arboles.map((a) => a.nombre_cientifico).filter(Boolean)).size
   const conCoord = indic?.con_coordenada ?? arboles.filter((a) => a.latitud != null && a.longitud != null).length
@@ -361,7 +418,7 @@ export default function ConservacionDetailPage() {
                           }`}>
                           <span className="min-w-0 truncate">
                             <span className="font-bold text-stone-700">#{a.codigo}</span>{' '}
-                            <span className="text-stone-500 italic">{a.nombre_comun || a.nombre_cientifico || 'Sin determinar'}</span>
+                            <span className="text-stone-500 italic">{a.nombre_comun || a.nombre_cientifico || a.especie_pendiente || 'Sin determinar'}</span>
                           </span>
                           {sinCoord && <span className="text-[9px] font-bold text-stone-400 shrink-0">sin GPS</span>}
                         </button>
@@ -477,8 +534,8 @@ export default function ConservacionDetailPage() {
             <Stat label="Potreros" value={familia.ha_potreros != null ? `${familia.ha_potreros} ha` : null} />
             <Stat label="Bosque" value={familia.ha_bosque != null ? `${familia.ha_bosque} ha` : null} />
             <Stat label="Otras" value={familia.ha_otras != null ? `${familia.ha_otras} ha` : null} />
-            <BoolStat label="Bajo figura de conservación" value={familia.bajo_conservacion} />
-            <BoolStat label="Acuerdo de conservación" value={familia.acuerdo_conservacion} />
+            <BoolStat label="Acuerdo" value={familia.acuerdo_conservacion} />
+            <BoolStat label="Tratamiento de imagen" value={tieneCesion} />
             {familia.num_individuos != null && <Stat label="Individuos (inventario)" value={familia.num_individuos.toLocaleString('es-CO')} />}
             {familia.num_especies_inventario != null && <Stat label="Especies identificadas" value={familia.num_especies_inventario} />}
             {familia.area_bosque_recorrida != null && <Stat label="Área bosque recorrida" value={`${familia.area_bosque_recorrida} ha`} />}
@@ -613,6 +670,107 @@ export default function ConservacionDetailPage() {
             </div>
           </section>
         )}
+
+        {/* ── Cesión de derechos de imagen y documentos legales ── */}
+        <section className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
+          <SectionTitle icon={<ScrollText size={16} />} title="Cesión de derechos de imagen y documentos legales" />
+          <p className="text-xs text-stone-400 mb-4 -mt-2">
+            Documentos con datos personales (cédulas, firmas). Se guardan en almacenamiento privado; el enlace de
+            descarga es temporal. Un predio puede tener varios titulares.
+          </p>
+
+          {/* Lista de documentos */}
+          {documentos.length > 0 ? (
+            <div className="space-y-2 mb-6">
+              {documentos.map((d) => (
+                <div key={d.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-stone-200 bg-stone-50">
+                  <FileText size={18} className="shrink-0" style={{ color: PRIMARY }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-stone-800 truncate">
+                      {TIPO_DOC_LABEL[d.tipo]}
+                      {d.titular_nombre && <span className="font-normal text-stone-500"> · {d.titular_nombre}</span>}
+                    </p>
+                    <p className="text-[11px] text-stone-400 truncate">
+                      {d.titular_documento && `Doc. ${d.titular_documento} · `}
+                      {d.fecha && `${formatDate(d.fecha)} · `}
+                      {d.nombre_archivo}
+                    </p>
+                  </div>
+                  {d.url && (
+                    <a href={d.url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-xs font-bold hover:border-primary hover:text-primary transition-all shrink-0">
+                      <Download size={13} /> <span className="hidden sm:block">Ver</span>
+                    </a>
+                  )}
+                  <button type="button" onClick={() => onEliminarDocumento(d.id)}
+                    className="p-2 rounded-lg text-stone-400 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"
+                    title="Eliminar documento">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-stone-400 mb-6">Aún no hay documentos cargados para esta familia.</p>
+          )}
+
+          {/* Formulario de carga */}
+          <form onSubmit={onSubirDocumento} className="border-t border-stone-100 pt-5">
+            <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-3">Agregar documento</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-xs font-bold text-stone-500 mb-1">Tipo de documento</label>
+                <select value={docTipo} onChange={(e) => setDocTipo(e.target.value as TipoDocumentoFamilia)}
+                  className="w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl bg-white focus:outline-none focus:border-primary">
+                  <option value="cesion_imagen">{TIPO_DOC_LABEL.cesion_imagen}</option>
+                  <option value="acuerdo_conservacion">{TIPO_DOC_LABEL.acuerdo_conservacion}</option>
+                  <option value="otro">{TIPO_DOC_LABEL.otro}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 mb-1">Fecha del documento</label>
+                <input type="date" value={docFecha} onChange={(e) => setDocFecha(e.target.value)}
+                  className="w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl bg-white focus:outline-none focus:border-primary" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 mb-1">Titular (nombre)</label>
+                <input value={docTitular} onChange={(e) => setDocTitular(e.target.value)} placeholder="Ej: María Alejandra Cadena"
+                  className="w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl bg-white focus:outline-none focus:border-primary" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-500 mb-1">Documento del titular</label>
+                <input value={docTitularDoc} onChange={(e) => setDocTitularDoc(e.target.value)} placeholder="CC 1117532045"
+                  className="w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl bg-white focus:outline-none focus:border-primary" />
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-bold text-stone-500 mb-1">Archivo (PDF o imagen)</label>
+                {docFile ? (
+                  <div className="flex items-center gap-2 px-3 py-2.5 bg-primary/5 border border-primary/20 rounded-xl text-sm">
+                    <span className="truncate flex-1 text-stone-700 font-medium">{docFile.name}</span>
+                    <button type="button" onClick={() => { setDocFile(null); if (docFileRef.current) docFileRef.current.value = '' }}
+                      className="text-stone-400 hover:text-red-500"><XCircle size={15} /></button>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2 px-3 py-2.5 border-2 border-dashed border-stone-200 rounded-xl cursor-pointer hover:border-primary transition-colors text-sm text-stone-400">
+                    <Upload size={15} /> <span>Seleccionar archivo…</span>
+                    <input ref={docFileRef} type="file" accept="application/pdf,image/*" className="hidden"
+                      onChange={(e) => e.target.files?.[0] && setDocFile(e.target.files[0])} />
+                  </label>
+                )}
+              </div>
+              <button type="submit" disabled={docSaving || !docFile}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white shrink-0 disabled:opacity-50 transition-all"
+                style={{ backgroundColor: PRIMARY }}>
+                {docSaving ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                Subir documento
+              </button>
+            </div>
+            {docError && <p className="text-[11px] text-red-500 mt-2">{docError}</p>}
+          </form>
+        </section>
 
         {/* ── Fotos del Predio ── */}
         {Object.keys(fotosPredioCat).length > 0 && (

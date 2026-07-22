@@ -13,6 +13,8 @@
 
 -- ── migration_zona_revision.sql ────────────────────────────────────────────
 -- Estado: LISTO PARA EJECUTAR — la app de campo ya lo consume (módulo SIG)
+-- Re-verificado 2026-07-16 por REST: GET .../geo.zona_revision → 404 PGRST205
+-- (la tabla sigue sin existir). Sigue pendiente, sin cambios.
 -- Script: docs/sql/migration_zona_revision.sql
 -- Crea geo.zona_revision (auditoría SIG II) + RPC geo.revisar_zona (única
 -- puerta de escritura de la PWA) + estado 'descartada' en geo.zonas +
@@ -20,6 +22,20 @@
 -- Sin esto: las correcciones de zonas hechas en campo quedan "pendientes de
 -- sincronizar" en el celular (no se pierden), el resto de la app funciona.
 -- Verificar tras correr: select to_regclass('geo.zona_revision');
+
+
+-- ── migration_ras_documentos_familia.sql ───────────────────────────────────
+-- Estado: LISTO PARA EJECUTAR — verificado por REST 2026-07-22 que NO existe aún
+-- (ras.documentos_familia → PGRST205; no hay bucket ras-documentos-privados).
+-- Script: docs/sql/migration_ras_documentos_familia.sql
+-- Crea ras.documentos_familia (cesión de derechos de imagen y otros documentos
+-- legales por familia, 1→N, soporta varios titulares) + bucket PRIVADO
+-- ras-documentos-privados + RLS solo-autenticados (NO anon).
+-- Lo consume el módulo de conservación: sección "Cesión de derechos de imagen"
+-- en /intranet/ras/conservacion/[id] y el API /api/ras/conservacion/[id]/documentos.
+-- Sin esto: esa sección responde vacío / la subida da error (tabla y bucket
+-- inexistentes); el resto del módulo funciona igual.
+-- Verificar tras correr: select to_regclass('ras.documentos_familia');
 
 
 -- ════════════════════════════════════════════════════════════

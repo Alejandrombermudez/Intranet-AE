@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { listCasos, findOrCreateAliado, subirDocumento } from '@/lib/juridica-core'
+import { listCasos, findOrCreateAliado, subirDocumento, placeholderDocumento, SIN_PROPIETARIO, SIN_MUNICIPIO } from '@/lib/juridica-core'
 
 async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
   const { data: profile, error } = await supabase
@@ -47,12 +47,19 @@ export async function POST(req: NextRequest) {
     const ok = await authorize(supabase, email)
     if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
+    // Datos mínimos: solo el nombre del predio es obligatorio. Los campos que la BD
+    // exige NOT NULL se rellenan con marcadores si llegan vacíos (se completan luego).
+    const nombreCompleto  = String(data.nombre_completo ?? '').trim() || SIN_PROPIETARIO
+    const numeroDocumento = String(data.numero_documento ?? '').trim() || placeholderDocumento()
+    const municipio       = String(data.municipio ?? '').trim() || SIN_MUNICIPIO
+
     // 1) Persona: reusar si ya existe ese documento, si no crearla.
+    //    (Con documento vacío se generó un placeholder único → siempre crea una nueva.)
     let aliadoId: string
     try {
       const r = await findOrCreateAliado(supabase, {
-        numero_documento: data.numero_documento,
-        nombre_completo:  data.nombre_completo,
+        numero_documento: numeroDocumento,
+        nombre_completo:  nombreCompleto,
         tipo_documento:   data.tipo_documento ?? 'CC',
         created_by:       email,
       })
@@ -74,7 +81,7 @@ export async function POST(req: NextRequest) {
         aliado_id:              aliadoId,
         nombre_predio:          data.nombre_predio || null,
         departamento:           data.departamento || null,
-        municipio:              data.municipio,
+        municipio:              municipio,
         vereda:                 data.vereda || null,
         zona_ae:                data.zona_ae || null,
         matricula_inmobiliaria: matriculas[0] || null,

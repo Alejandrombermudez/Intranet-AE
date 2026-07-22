@@ -1,7 +1,12 @@
 # Ecosistema de Proyectos — Amazonia Emprende
 
-> **Fecha:** Mayo 2026
+> **Fecha:** Mayo 2026 · **Actualizado (parcial):** 2026-07-16 — ver nota abajo.
 > **Proyecto Supabase compartido:** `lbxysovesmbgesxooghw` (usado por todos salvo los indicados)
+>
+> **Este archivo es el mapa de carpetas/stack — para arquitectura y estado real de los datos, la fuente
+> de verdad es [`ARQUITECTURA_DATOS.md`](ARQUITECTURA_DATOS.md) y [`EMPEZAR_AQUI.md`](EMPEZAR_AQUI.md).**
+> Este documento tiende a quedarse atrás porque no se toca en cada sesión — si algo aquí contradice esos
+> dos, gana el más reciente.
 
 ---
 
@@ -10,12 +15,17 @@
 | Carpeta | Nombre | Stack | Supabase | Estado |
 |---------|--------|-------|----------|--------|
 | `Intranet-AE/` | Intranet AE | Next.js 16, React 19, Tailwind 4 | ✅ mismo proyecto | En producción |
-| `GeoAE/` | Geovisor AE | Next.js, Leaflet/Mapbox | ✅ mismo proyecto | En producción |
-| `familias-res/` | PWA Campo (AE-CAMPO) | React + Vite, Dexie (offline) | ✅ mismo proyecto | En producción |
-| `amazonia-escuela-bosque/` | Escuela Bosque | Next.js | ❓ sin .env visible | En desarrollo |
-| `app_vivero/` | App Vivero | Node.js | ❌ sin conexión Supabase | Prototipo / Excel |
-| `modelo-web/` | Modelo Web | HTML + CSS + JS vanilla | ❌ sin Supabase | Template estático |
-| `juridica/` | Módulo Jurídico (Fase 1) | (futuro: Next.js dentro de Intranet) | ⏳ Schema `juridica` pendiente | Documentado, SQL listo, sin código aún |
+| `GeoAE/` | Geovisor AE | Next.js, Leaflet | ✅ mismo proyecto (service role server-side) | En producción — capa Siembra desactualizada, ver `../../GeoAE/CLAUDE.md` |
+| `app_campo/` | PWA Campo (AE-CAMPO) | React + Vite, Dexie (offline), Supabase anon | ✅ mismo proyecto | **App productiva desde 2026-07-08** — reconectada a `core`/`geo` |
+| `familias-res/` | PWA Campo — versión anterior | React + Vite, Dexie (offline) | ✅ mismo proyecto | **Prueba de concepto, superada por `app_campo/`** (pendiente decidir si se archiva) |
+| `amazonia-escuela-bosque/` | Escuela Bosque | Next.js, pnpm | ❌ sin `.env`, sin integración Supabase en el código | En desarrollo |
+| `app_vivero/` | App Vivero | — (sin código aún) | ❌ sin conexión Supabase | Por construir / hoy solo Excel |
+| `modelo-web/` | Modelo Web | HTML + CSS + JS vanilla, ONNX | ❌ sin Supabase | Prototipo de teledetección (5 bandas), desconectado |
+
+> **`juridica/` ya no es una carpeta aparte.** El módulo se implementó **dentro de `Intranet-AE/`**
+> (rutas `/intranet/juridica`, schema `juridica` sobre `core`) y está **en producción** desde 2026-06-19.
+> La sección "Módulo Jurídico" más abajo describe el diseño original (Fase 1) — el estado real está en
+> `ARQUITECTURA_DATOS.md` §3.2.
 
 ---
 
@@ -25,7 +35,7 @@
 
 **Autenticación:** Microsoft 365 / Azure AD (OAuth via Supabase)
 
-**URL esquemas Supabase:** `people`, `fleet`, `ejecutivo`, `siembra`, `ras`, `public`
+**URL esquemas Supabase:** `people`, `fleet`, `ejecutivo`, `siembra`, `ras`, `public`, `core`, `geo`, `catalogo`, `juridica` (los últimos 4 se agregaron después de mayo 2026 — ver `ARQUITECTURA_DATOS.md`)
 
 **Documentación interna:**
 - `SUPABASE_SCHEMAS.md` — estructura completa de BD con conteos actuales
@@ -42,39 +52,39 @@
 
 **Tecnología:** Next.js, Leaflet o Mapbox GL JS, `shpjs` para parsear shapefiles ZIP.
 
-**Conexión Supabase:** mismo proyecto (`lbxysovesmbgesxooghw`), usa anon key. Lee:
-- `siembra.familias` → `shapefile_finca_url`, `shapefile_restauracion_url`
-- `siembra.camaras_trampa` → lat/lon
-- `ras.familias` → `shapefile_finca_url`, `shapefile_conservacion_url`
-- `ras.camaras_trampa` → lat/lon
+**Conexión Supabase:** mismo proyecto (`lbxysovesmbgesxooghw`), service role server-side vía `/api/geovisor-data`. Lee:
+- `siembra.familias` → columnas propias + identidad (`nombre_propietario`, `nombre_finca`, `municipio`, `vereda`) resuelta con un segundo query a `core.predios`/`core.aliados` por `predio_id` (fix 2026-07-16, tras el rediseño de `migration_campo_core.sql` — detalle en `../../GeoAE/CLAUDE.md`)
+- `siembra.camaras_trampa` → lat/lon, identidad resuelta igual que arriba vía `familias.predio_id`
+- `ras.familias` → `shapefile_finca_url`, `shapefile_conservacion_url` (sin cambios, vigente)
+- `ras.camaras_trampa` → lat/lon (vigente)
 
 **Buckets de Storage:** `siembra-shapefiles`, `ras-shapefiles` (acceso público).
 
-**Documentación:** `CONTEXTO_GEOVISOR.md` (en `Intranet-AE/docs/`)
+**Documentación:** `CONTEXTO_GEOVISOR.md` (en `Intranet-AE/docs/`) — desactualizado en la parte de `siembra.familias` (describe las columnas de identidad como si siguieran en esa tabla); el código ya no las usa así, ver `GeoAE/lib/queries.ts`.
 
 ---
 
-## PWA Campo (`familias-res/`)
+## PWA Campo (`app_campo/`) — productiva desde 2026-07-08
 
-**Propósito:** Aplicación web progresiva para trabajo de campo sin internet. Permite registrar predios, evaluaciones AE-CAMPO-001 y encuestas prediales. Al recuperar señal, sincroniza con Supabase.
+**Propósito:** Aplicación web progresiva para trabajo de campo sin internet. Un predio solo aparece si
+Jurídica aprobó + SIG subió zonas + se pulsó "Enviar a Campo" (SIG I obligatorio). Módulos: SIG (verificar/
+corregir zonas, SIG II), Evaluación AE-CAMPO-001, Encuesta Predial.
 
-**Tecnología:** React + Vite, Dexie.js (IndexedDB offline), `@supabase/supabase-js`
+**Tecnología:** React + Vite, Dexie.js (IndexedDB offline), `@supabase/supabase-js`, Leaflet + leaflet-geoman, turf.
 
-**Offline → Supabase (al sincronizar):**
-- `db.familias` (Dexie) → `siembra.predios` (FK padre)
-- `db.predios` (Dexie) → `siembra.evaluaciones_campo` + `siembra.familias` (upsert dual)
-- `db.encuestas` (Dexie) → `siembra.familias` (encuesta socioeconómica)
-- `db.evaluaciones` (Dexie) → `siembra.evaluaciones_campo`
-- `db.photos` (Dexie) → Storage bucket `campo-fotos` → URL en JSONB de la evaluación
+**Offline → Supabase (al sincronizar):** lee `core.v_predios_campo` (vista angosta sobre `core.*`) +
+RPC `geo.zonas_de_predio`; escribe correcciones de zona **solo** vía RPC `geo.revisar_zona`; evaluación →
+`siembra.evaluaciones_campo`; encuesta → `siembra.familias` (ninguna identidad se duplica, todo por FK a `core`).
 
-**Acceso Supabase:** usa anon key + RLS especiales que permiten INSERT/UPDATE sin auth (la PWA no usa login).
+**Acceso Supabase:** anon key, sin login (RLS vía la vista + RPCs SECURITY DEFINER, no acceso directo a `core.*`).
 
-**Versiones del schema Dexie (IndexedDB):**
-- v1: evaluaciones + photos
-- v2: + encuestas
-- v3: + predios
-- v4: + familias (relación familia → evaluación/encuesta)
-- v5: + supabase_id en todas las tablas (para merge colaborativo)
+**Detalle completo:** `../../app_campo/CONTEXTO_APP_CAMPO.md` y `../../app_campo/CLAUDE.md`.
+
+### `familias-res/` — versión anterior, superada
+
+Fue la prueba de concepto (registrar predios "en blanco", sin conexión al flujo Jurídica→SIG). Quedó
+desactualizada tras `migration_campo_core.sql` (asume `siembra.predios`, que ya no existe). Pendiente
+decidir si se archiva — no usarla como referencia de arquitectura actual.
 
 ---
 
@@ -106,20 +116,20 @@
 
 **Propósito:** Captura de debida diligencia jurídica realizada por la abogada antes de autorizar la visita de campo al equipo RAS. Centraliza identificación del aliado, revisión de listas restrictivas (Procuraduría, OFAC, INTERPOL...) y análisis del folio de matrícula inmobiliaria.
 
-**Origen del requerimiento:** Excel `juridica/Libro(Fase 1).csv` con 3 hojas/módulos.
+**Origen del requerimiento:** Excel `Libro(Fase 1).csv` con 3 hojas/módulos.
 
-**Estado:**
-- 📄 Contexto funcional completo: `juridica/CONTEXTO_MODULO_JURIDICO.md`
-- 💾 Migración SQL lista: `Intranet-AE/docs/sql/migration_modulo_juridico.sql`
-- ⏳ Pendiente ejecutar en Supabase + implementar frontend en Intranet
+**Estado: ✅ en producción desde 2026-06-19**, dentro de `Intranet-AE/` (ruta `/intranet/juridica`,
+no una carpeta aparte). El diseño original se ajustó al cutover a `core`: la identidad de persona/predio
+salió de `juridica.aliados` (que se archivó y luego se borró) y ahora vive en `core.aliados`/`core.predios`.
 
-**Tablas que creará el módulo:**
-- `juridica.aliados` — datos básicos + catastrales + manifestación de interés (HOJA 1)
-- `juridica.antecedentes` — 14 listas restrictivas + PEP + prensa (HOJA 2)
-- `juridica.analisis_juridico` — folio matrícula + semáforo final (HOJA 3)
-- `siembra.familias.aliado_id` — FK opcional para prellenar la encuesta de campo desde el aliado aprobado
+**Tablas reales (schema `juridica`, sobre `core`):**
+- `juridica.debida_diligencia` — workflow + soportes, 1:1 con `core.predios` (HOJA 1)
+- `juridica.antecedentes` — 14 listas restrictivas + PEP + prensa, 1:1 con `core.aliados` (HOJA 2)
+- `juridica.analisis_juridico` — folio matrícula + semáforo, 1:1 con `core.predios` (HOJA 3)
 
-**Punto clave de integración:** evita reprocesos. Los 6 campos básicos (nombre, cédula, departamento, municipio, vereda, nombre del predio) capturados en el módulo jurídico se prellenan automáticamente en la encuesta de campo cuando RAS crea la familia.
+**Punto clave de integración:** evita reprocesos. Los datos básicos capturados en jurídica se leen por JOIN
+desde `core` en las etapas siguientes (SIG, Campo vía `core.v_predios_campo`) — no se copian a mano.
+Detalle completo: `ARQUITECTURA_DATOS.md` §3.2 y `CORE_MIGRACION.md`.
 
 ---
 
