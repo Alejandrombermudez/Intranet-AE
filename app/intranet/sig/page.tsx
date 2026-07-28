@@ -8,6 +8,15 @@ import {
   Map as MapIcon, ArrowLeft, Search, Loader2, ChevronRight, MapPin, Layers, Info,
 } from 'lucide-react'
 
+// Estado del predio en el tablero SIG, derivado de la etapa del expediente.
+const SIG_ESTADO: Record<string, { label: string; cls: string }> = {
+  juridica: { label: 'Por zonificar', cls: 'bg-amber-50 text-amber-600' },
+  sig_i:    { label: 'Por zonificar', cls: 'bg-amber-50 text-amber-600' },
+  campo:    { label: 'En campo',      cls: 'bg-emerald-50 text-emerald-600' },
+}
+const sigEstado = (e: string | null) =>
+  SIG_ESTADO[e ?? ''] ?? { label: e ?? '—', cls: 'bg-stone-100 text-stone-500' }
+
 export default function SigPage() {
   const router = useRouter()
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -35,10 +44,10 @@ export default function SigPage() {
     fetch(`/api/expedientes?email=${encodeURIComponent(userEmail)}`)
       .then((r) => r.json())
       .then((data: ExpedienteRow[]) => {
-        // Tablero SIG: SIG ve el predio desde que Jurídica lo crea (etapa 'juridica'),
-        // sigue en 'sig_i' (legado) y en 'campo' (ya enviado, visible para poder cancelar).
-        setRows((Array.isArray(data) ? data : []).filter(
-          (r) => r.etapa === 'juridica' || r.etapa === 'sig_i' || r.etapa === 'campo'))
+        // Tablero SIG: SIG ve TODOS los predios desde que Jurídica los crea — el
+        // análisis SIG se hace pase o no pase jurídica. El estado (por zonificar /
+        // en campo / etc.) se muestra por etapa, sin ocultar ninguno.
+        setRows(Array.isArray(data) ? data : [])
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -78,7 +87,7 @@ export default function SigPage() {
             </div>
           </div>
           <span className="text-sm font-bold text-stone-500">
-            {porZonificar} por zonificar{enCampo > 0 && <> · <span className="text-emerald-600">{enCampo} en campo</span></>}
+            {rows.length} predios · {porZonificar} por zonificar{enCampo > 0 && <> · <span className="text-emerald-600">{enCampo} en campo</span></>}
           </span>
         </div>
       </div>
@@ -141,15 +150,13 @@ export default function SigPage() {
                       </td>
                       <td className="px-4 py-3 text-stone-600 whitespace-nowrap">{r.area_registral != null ? `${r.area_registral} ha` : <span className="text-stone-300">—</span>}</td>
                       <td className="px-4 py-3">
-                        {r.etapa === 'campo' ? (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">En campo</span>
-                        ) : (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">Por zonificar</span>
-                        )}
+                        {(() => { const s = sigEstado(r.etapa); return (
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full capitalize ${s.cls}`}>{s.label}</span>
+                        ) })()}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link href={`/intranet/sig/${r.predio_id}`} className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 hover:text-teal-700 transition-colors whitespace-nowrap">
-                          {r.etapa === 'campo' ? 'Gestionar' : 'Zonificar'} <ChevronRight size={12} />
+                          {r.etapa === 'campo' ? 'Gestionar' : (r.etapa === 'juridica' || r.etapa === 'sig_i') ? 'Zonificar' : 'Ver'} <ChevronRight size={12} />
                         </Link>
                       </td>
                     </tr>

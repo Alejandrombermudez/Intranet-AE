@@ -29,22 +29,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .schema('core').from('predios').select('*').eq('id', predioId).single()
     if (prErr || !predio) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 })
 
-    const [{ data: aliado }, { data: dd }, { data: exp }, { count: zonasCount }] = await Promise.all([
+    const [{ data: aliado }, { data: exp }, { count: zonasCount }] = await Promise.all([
       supabase.schema('core').from('aliados').select('*').eq('id', predio.aliado_id).single(),
-      supabase.schema('juridica').from('debida_diligencia').select('estado').eq('predio_id', predioId).maybeSingle(),
       supabase.schema('core').from('expedientes').select('id, etapa').eq('predio_id', predioId).maybeSingle(),
       supabase.schema('geo').from('zonas').select('id', { count: 'exact', head: true })
         .eq('predio_id', predioId).eq('tipo', 'restauracion'),
     ])
     if (!aliado) return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 })
 
-    if (dd?.estado !== 'aprobado') {
-      return NextResponse.json(
-        { error: 'La debida diligencia debe estar en estado "aprobado" para enviar el predio a Campo' },
-        { status: 422 }
-      )
-    }
-
+    // El análisis SIG y la activación a Campo se hacen pase o no pase la debida
+    // diligencia (decisión de reunión): NO se exige DD 'aprobado'. El candado real
+    // de Campo es SIG: expediente en 'juridica'/'sig_i' + al menos una zona de siembra.
     if (exp?.etapa !== 'sig_i' && exp?.etapa !== 'juridica') {
       return NextResponse.json(
         { error: `El expediente debe estar en etapa "jurídica" o "sig_i" para enviarse a Campo (etapa actual: ${exp?.etapa ?? 'sin expediente'})` },
