@@ -35,5 +35,6 @@ documentos maestros de arquitectura de todo el ecosistema (no solo de esta app).
 ## Estado vivo — no lo memorices, verifícalo
 
 `docs/sql/pending.sql` lleva la lista de migraciones que **aún no se han corrido** en producción
-(hoy: `migration_zona_revision.sql` — verificado por REST 2026-07-16, la tabla `geo.zona_revision` todavía no existe).
+(hoy: `migration_ras_documentos_familia.sql` — verificado por REST 2026-07-22, `ras.documentos_familia` todavía no existe;
+`migration_zona_revision.sql` ya se corrió el 2026-07-28).
 Antes de asumir que una tabla/columna existe, verifica por REST en vez de confiar en un doc que puede estar desactualizado.

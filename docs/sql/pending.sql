@@ -11,19 +11,6 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── migration_zona_revision.sql ────────────────────────────────────────────
--- Estado: LISTO PARA EJECUTAR — la app de campo ya lo consume (módulo SIG)
--- Re-verificado 2026-07-16 por REST: GET .../geo.zona_revision → 404 PGRST205
--- (la tabla sigue sin existir). Sigue pendiente, sin cambios.
--- Script: docs/sql/migration_zona_revision.sql
--- Crea geo.zona_revision (auditoría SIG II) + RPC geo.revisar_zona (única
--- puerta de escritura de la PWA) + estado 'descartada' en geo.zonas +
--- v_predios_campo excluye descartadas.
--- Sin esto: las correcciones de zonas hechas en campo quedan "pendientes de
--- sincronizar" en el celular (no se pierden), el resto de la app funciona.
--- Verificar tras correr: select to_regclass('geo.zona_revision');
-
-
 -- ── migration_ras_documentos_familia.sql ───────────────────────────────────
 -- Estado: LISTO PARA EJECUTAR — verificado por REST 2026-07-22 que NO existe aún
 -- (ras.documentos_familia → PGRST205; no hay bucket ras-documentos-privados).
@@ -36,21 +23,6 @@
 -- Sin esto: esa sección responde vacío / la subida da error (tabla y bucket
 -- inexistentes); el resto del módulo funciona igual.
 -- Verificar tras correr: select to_regclass('ras.documentos_familia');
-
-
--- ── seed_juridica_aliados.sql ──────────────────────────────────────────────
--- Estado: LISTO PARA EJECUTAR — seed de datos (no toca esquema). Correr UNA vez.
--- Origen: "Aliados territoriales.xlsx" (hoja 'Datos básicos' + 'Análisis legal'),
--- trabajo de jurídica. Verificado contra BD por REST 2026-07-28.
--- Inserta 85 aliados nuevos + 100 predios (con expediente etapa 'juridica' + DD
--- en 'borrador') + 13 análisis jurídicos (HOJA 3). Sin cédulas en el Excel:
--- documento va como marcador 'S/D-*' (la UI pide completarlo). departamento='Caquetá'.
--- Idempotente (NOT EXISTS por matrícula/documento): salta lo que ya existe
--- (Los Andes 420-16765, La Esperanza 420-21020, La Guajira 420-3545) y cuelga
--- los 2 predios extra de Edilberto Lozano del aliado ya existente.
--- Verificar tras correr: select count(*) from core.predios;  (esperado +100)
--- HOJA 2 (antecedentes) NO viene en el Excel → la HOJA 3 queda cargada pero
--- bloqueada en la UI hasta que jurídica apruebe antecedentes a mano.
 
 
 -- ════════════════════════════════════════════════════════════
@@ -99,4 +71,9 @@
 --             ras.arboles_semilleros (normalizada, FK especie_id → catalogo.especies)
 --             + vistas ras.v_indicadores_predio y ras.v_arboles_con_especie.
 --             Verificado por REST: 523 filas (coincide con "523 árboles listos para subir").
+-- ── 2026-07-28  seed_juridica_aliados.sql (85 aliados + 100 predios del Excel de jurídica) ─
+--             Verificado por REST: core.aliados 89, core.predios 104. Etapa 'juridica', DD 'borrador'.
+-- ── 2026-07-28  migration_zona_revision.sql (SIG II: geo.zona_revision + RPC geo.revisar_zona) ─
+--             Verificado por REST: la tabla existe y el RPC responde a anon (P0001 en acción
+--             inválida, sin escribir). Las correcciones de zonas hechas en campo ya sincronizan.
 -- (Ver SQL completo en SUPABASE_SCHEMAS.md)
