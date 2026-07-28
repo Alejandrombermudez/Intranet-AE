@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 // POST /api/juridica/aliados/[id]/crear-en-siembra   ([id] = predio_id)
 // "Enviar a Campo": crea la familia en siembra (enlazada a core, sin duplicar
-// identidad) y avanza el expediente de 'sig_i' a 'campo'. Es la acción que
+// identidad) y avanza el expediente de 'juridica'/'sig_i' a 'campo'. Es la acción que
 // habilita el predio en la app de Campo (core.v_predios_campo) — por eso
 // exige que el SIG ya haya subido al menos una zona real (geo.zonas), no
 // solo que Jurídica haya aprobado. Ver ARQUITECTURA_DATOS.md §3.3/§3.1.
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .select('is_admin, department')
       .eq('email', email)
       .single()
-    if (pErr || (!profile?.is_admin && !['Juridica', 'RAS'].includes(profile?.department ?? ''))) {
+    if (pErr || (!profile?.is_admin && !['Juridica', 'RAS', 'SIG'].includes(profile?.department ?? ''))) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
@@ -45,9 +45,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       )
     }
 
-    if (exp?.etapa !== 'sig_i') {
+    if (exp?.etapa !== 'sig_i' && exp?.etapa !== 'juridica') {
       return NextResponse.json(
-        { error: `El expediente debe estar en etapa "sig_i" para enviarse a Campo (etapa actual: ${exp?.etapa ?? 'sin expediente'})` },
+        { error: `El expediente debe estar en etapa "jurídica" o "sig_i" para enviarse a Campo (etapa actual: ${exp?.etapa ?? 'sin expediente'})` },
         { status: 422 }
       )
     }
@@ -61,10 +61,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const expedienteId = exp.id
 
-    // ¿Ya existe una familia para este expediente?
+    // ¿Ya existe una familia ACTIVA para este expediente? (Las soft-deleted por
+    // un "cancelar-campo" previo no cuentan: permiten reenviar tras cancelar.)
     const { data: existing } = await supabase
       .schema('siembra').from('familias')
-      .select('id').eq('expediente_id', expedienteId).maybeSingle()
+      .select('id').eq('expediente_id', expedienteId).is('deleted_at', null).maybeSingle()
     if (existing) {
       return NextResponse.json(
         { error: 'Ya existe una familia en Siembra para este caso', familia_id: existing.id },

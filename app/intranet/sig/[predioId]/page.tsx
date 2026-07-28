@@ -8,10 +8,9 @@ import { parsearShapefile, perimetroGeom, type ShapefileParseado } from '@/lib/s
 import { area as turfArea } from '@turf/area'
 import { booleanIntersects } from '@turf/boolean-intersects'
 import type { Feature } from 'geojson'
-import { useRouter } from 'next/navigation'
 import {
   Map as MapIcon, ArrowLeft, Loader2, FileUp, Save, AlertCircle, AlertTriangle,
-  CheckCircle2, Ruler, Layers, Hexagon as Sq, ExternalLink, MousePointerClick, Check, Send,
+  CheckCircle2, Ruler, Layers, Hexagon as Sq, ExternalLink, MousePointerClick, Check, Send, Undo2,
 } from 'lucide-react'
 
 const MapaZonas = dynamic(() => import('@/app/components/MapaZonas'), {
@@ -65,9 +64,10 @@ function ListaSeleccion({ parse, sel, setSel }: { parse: ShapefileParseado; sel:
 
 export default function SigPredioPage() {
   const { predioId } = useParams<{ predioId: string }>()
-  const router = useRouter()
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [enviandoCampo, setEnviandoCampo] = useState(false)
+  const [cancelandoCampo, setCancelandoCampo] = useState(false)
+  const [confirmarCancelar, setConfirmarCancelar] = useState(false)
   const [authReady, setAuthReady] = useState(false)
   const [caso, setCaso] = useState<CasoInfo | null>(null)
   const [zonas, setZonas] = useState<ZonaGuardada[]>([])
@@ -103,13 +103,20 @@ export default function SigPredioPage() {
     const d = await r.json(); setZonas(Array.isArray(d) ? d : [])
   }, [predioId])
 
+  const cargarCaso = useCallback(async (email: string) => {
+    const r = await fetch(`/api/juridica/aliados/${predioId}?email=${encodeURIComponent(email)}`)
+    const c = r.ok ? await r.json() : null
+    setCaso(c)
+    return c
+  }, [predioId])
+
   useEffect(() => {
     if (!authReady || !userEmail || !predioId) return
     Promise.all([
-      fetch(`/api/juridica/aliados/${predioId}?email=${encodeURIComponent(userEmail)}`).then((r) => r.ok ? r.json() : null),
+      cargarCaso(userEmail),
       cargarZonas(userEmail),
-    ]).then(([c]) => { setCaso(c); setLoading(false) }).catch(() => setLoading(false))
-  }, [authReady, userEmail, predioId, cargarZonas])
+    ]).then(() => setLoading(false)).catch(() => setLoading(false))
+  }, [authReady, userEmail, predioId, cargarCaso, cargarZonas])
 
   const fincaZonas = useMemo(() => zonas.filter((z) => z.tipo === 'finca'), [zonas])
   const siembraZonas = useMemo(() => zonas.filter((z) => z.tipo === 'restauracion'), [zonas])
@@ -152,6 +159,8 @@ export default function SigPredioPage() {
 
   // ── Enviar a Campo: exige al menos 1 sitio de siembra guardado; el server
   // vuelve a validar (etapa sig_i + geo.zonas) antes de avanzar el expediente.
+  // No redirige: recarga el caso en sitio para que el predio siga visible y
+  // quede a la mano la opción de cancelar el envío.
   async function enviarACampo() {
     if (!userEmail || siembraZonas.length === 0 || enviandoCampo) return
     setEnviandoCampo(true)
@@ -163,9 +172,30 @@ export default function SigPredioPage() {
       const body = await res.json()
       if (!res.ok) { showToast('error', body.error ?? 'No se pudo enviar a Campo'); return }
       showToast('ok', 'Predio enviado a Campo')
-      router.push('/intranet/sig')
+      await cargarCaso(userEmail)
     } finally {
       setEnviandoCampo(false)
+    }
+  }
+
+  // ── Cancelar envío a Campo: devuelve el expediente a 'sig_i' y soft-borra la
+  // familia. El server bloquea si ya hay evaluaciones de campo. Sirve para
+  // corregir las zonas y reenviar, o para deshacer un envío por error.
+  async function cancelarCampo() {
+    if (!userEmail || cancelandoCampo) return
+    setCancelandoCampo(true)
+    try {
+      const res = await fetch(`/api/juridica/aliados/${predioId}/cancelar-campo`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ created_by: userEmail }),
+      })
+      const body = await res.json()
+      if (!res.ok) { showToast('error', body.error ?? 'No se pudo cancelar el envío'); return }
+      showToast('ok', 'Envío a Campo cancelado — el predio volvió a SIG I')
+      await cargarCaso(userEmail)
+    } finally {
+      setCancelandoCampo(false)
+      setConfirmarCancelar(false)
     }
   }
 
@@ -212,8 +242,9 @@ export default function SigPredioPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
-        {/* Enviar a Campo — obligatorio: exige sitios de siembra guardados */}
-        {caso?.etapa === 'sig_i' && (
+        {/* Enviar a Campo — obligatorio: exige sitios de siembra guardados.
+            Disponible desde 'juridica' (SIG ve el predio desde su creación) o 'sig_i' (legado). */}
+        {(caso?.etapa === 'juridica' || caso?.etapa === 'sig_i') && (
           <section className="bg-white rounded-2xl border border-stone-100 p-5 flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Enviar a Campo</h2>
@@ -230,9 +261,30 @@ export default function SigPredioPage() {
             </button>
           </section>
         )}
-        {caso && caso.etapa !== 'sig_i' && caso.etapa && (
+        {/* Ya en Campo: sigue visible + opción de cancelar el envío. */}
+        {caso?.etapa === 'campo' && (
+          <section className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <h2 className="font-black text-emerald-800 text-sm">Enviado a Campo</h2>
+                <p className="text-xs text-emerald-700 mt-0.5">
+                  El predio ya aparece en la app de Campo. Si necesitas corregir las zonas o lo enviaste
+                  por error, cancela el envío: vuelve a SIG I y sale de la app de Campo.
+                </p>
+              </div>
+            </div>
+            <button onClick={() => setConfirmarCancelar(true)} disabled={cancelandoCampo}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-emerald-300 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-colors disabled:opacity-50 shrink-0">
+              {cancelandoCampo ? <Loader2 size={15} className="animate-spin" /> : <Undo2 size={15} />}
+              Cancelar envío
+            </button>
+          </section>
+        )}
+        {/* Ya avanzó más allá de Campo: no cancelable desde aquí. */}
+        {caso?.etapa && !['juridica', 'sig_i', 'campo'].includes(caso.etapa) && (
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-sm text-emerald-700">
-            <CheckCircle2 size={16} /> Este predio ya está en etapa <strong className="lowercase">{caso.etapa}</strong> — fue enviado a Campo.
+            <CheckCircle2 size={16} /> Este predio ya está en etapa <strong className="lowercase">{caso.etapa}</strong> — el proceso avanzó más allá de Campo.
           </div>
         )}
 
@@ -365,6 +417,31 @@ export default function SigPredioPage() {
               <button onClick={() => setOverlap(null)} disabled={guardando} className="py-2.5 border border-stone-200 text-stone-600 rounded-xl text-sm font-bold hover:bg-stone-50 transition-colors">Cancelar</button>
             </div>
             <p className="text-[11px] text-stone-400 mt-3"><strong>Sobreescribir</strong>: reemplaza el/los anterior(es). <strong>Unir</strong>: los fusiona en uno solo.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar cancelación del envío a Campo */}
+      {confirmarCancelar && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full">
+            <div className="flex items-center gap-2 mb-2"><Undo2 size={20} className="text-emerald-600" /><h3 className="font-black text-stone-900 text-lg">Cancelar envío a Campo</h3></div>
+            <p className="text-sm text-stone-600 mb-3">
+              El predio <strong>{caso?.nombre_predio ?? 'sin nombre'}</strong> volverá a <strong>SIG I</strong> y
+              dejará de aparecer en la app de Campo. Podrás corregir las zonas y reenviarlo.
+            </p>
+            <p className="text-[11px] text-stone-400 mb-5">Las zonas guardadas (polígono y sitios de siembra) se conservan. No se puede cancelar si ya se registraron evaluaciones de campo.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmarCancelar(false)} disabled={cancelandoCampo}
+                className="flex-1 py-2.5 border border-stone-200 text-stone-600 rounded-xl text-sm font-bold hover:bg-stone-50 transition-colors">
+                No, mantener
+              </button>
+              <button onClick={cancelarCampo} disabled={cancelandoCampo}
+                className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                {cancelandoCampo ? <Loader2 size={14} className="animate-spin" /> : null}
+                Sí, cancelar envío
+              </button>
+            </div>
           </div>
         </div>
       )}

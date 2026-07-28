@@ -9,7 +9,7 @@ import {
 } from '@/lib/juridica-schema'
 import {
   Shield, ArrowLeft, Pencil, ChevronRight, Loader2,
-  CheckCircle2, Circle, Lock, ExternalLink, AlertCircle, Plus,
+  CheckCircle2, Lock, ExternalLink, AlertCircle, Plus,
 } from 'lucide-react'
 
 function label(v: unknown) {
@@ -113,9 +113,6 @@ export default function AliadoDetailPage() {
   const [authReady, setAuthReady] = useState(false)
   const [aliado, setAliado]       = useState<Aliado | null>(null)
   const [loading, setLoading]     = useState(true)
-  const [creando, setCreando]     = useState(false)
-  const [toast, setToast]         = useState<{ tipo: 'ok' | 'error'; msg: string } | null>(null)
-  const [confirmar, setConfirmar] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -141,36 +138,6 @@ export default function AliadoDetailPage() {
       .catch(() => { router.push('/intranet/juridica') })
   }, [authReady, userEmail, id, router])
 
-  const showToast = (tipo: 'ok' | 'error', msg: string) => {
-    setToast({ tipo, msg })
-    setTimeout(() => setToast(null), 3500)
-  }
-
-  async function enviarSig() {
-    if (!userEmail || !aliado) return
-    setCreando(true)
-    try {
-      const res = await fetch(`/api/juridica/aliados/${aliado.id}/enviar-sig`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ created_by: userEmail }),
-      })
-      const body = await res.json()
-      if (!res.ok && res.status !== 409) {
-        showToast('error', body.error ?? 'Error')
-        return
-      }
-      showToast('ok', res.status === 409 ? 'El predio ya estaba en SIG' : 'Predio enviado a SIG')
-      // Jurídica envía y listo: no entra al módulo SIG. Recargamos el caso para
-      // reflejar la nueva etapa (oculta el botón "Enviar a SIG").
-      const r2 = await fetch(`/api/juridica/aliados/${aliado.id}?email=${encodeURIComponent(userEmail)}`)
-      if (r2.ok) setAliado(await r2.json())
-    } finally {
-      setCreando(false)
-      setConfirmar(false)
-    }
-  }
-
   if (!authReady || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
@@ -184,7 +151,6 @@ export default function AliadoDetailPage() {
   const estadoCfg = ESTADO_CONFIG[aliado.estado as EstadoAliado]
   const semaforo  = aliado.analisis_juridico?.semaforo as Semaforo | null
   const semCfg    = semaforo ? SEMAFORO_CONFIG[semaforo] : null
-  const enviadoASig = !!aliado.etapa && aliado.etapa !== 'juridica'
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -221,46 +187,23 @@ export default function AliadoDetailPage() {
             <p className="text-sm text-red-700 font-medium">Este aliado fue rechazado y no puede proceder al proceso de siembra.</p>
           </div>
         )}
-        {aliado.estado === 'juridico_ok' && !enviadoASig && (
+        {aliado.estado === 'juridico_ok' && (
           <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
             <AlertCircle size={18} className="text-amber-500 shrink-0" />
-            <p className="text-sm text-amber-700 font-medium">Semáforo naranja — conviene revisión del comité, pero no impide enviarlo a SIG.</p>
+            <p className="text-sm text-amber-700 font-medium">Semáforo naranja — conviene revisión del comité.</p>
           </div>
         )}
-        {/* Enviar a SIG: disponible en CUALQUIER estado (salvo rechazado / ya enviado).
-            La debida diligencia se completa en paralelo; el candado "DD aprobada" se aplica
-            más adelante, en SIG → Campo. */}
-        {enviadoASig ? (
-          <div className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 flex items-center gap-3">
+        {/* SIG ve el predio desde que se crea en Jurídica; la zonificación avanza en
+            paralelo a la debida diligencia. No hay acción de "Enviar a SIG". */}
+        {aliado.estado !== 'rechazado' && (
+          <div className="flex items-center gap-3 bg-sky-50 border border-sky-200 rounded-xl px-4 py-3">
             <CheckCircle2 size={20} className="text-sky-600 shrink-0" />
             <div>
-              <p className="text-sm font-bold text-sky-800">Enviado a SIG</p>
+              <p className="text-sm font-bold text-sky-800">Visible para SIG</p>
               <p className="text-xs text-sky-600">
-                El predio ya está en zonificación. Puedes seguir completando la debida diligencia aquí en paralelo.
+                SIG ya puede zonificar este predio. Completa la debida diligencia (antecedentes, análisis, documentos) en paralelo.
               </p>
             </div>
-          </div>
-        ) : aliado.estado !== 'rechazado' && (
-          <div className={`rounded-xl px-4 py-4 flex items-center justify-between gap-3 border ${aliado.estado === 'aprobado' ? 'bg-teal-50 border-teal-200' : 'bg-stone-50 border-stone-200'}`}>
-            <div className="flex items-center gap-3">
-              <CheckCircle2 size={20} className={`shrink-0 ${aliado.estado === 'aprobado' ? 'text-teal-600' : 'text-stone-400'}`} />
-              <div>
-                <p className={`text-sm font-bold ${aliado.estado === 'aprobado' ? 'text-teal-800' : 'text-stone-700'}`}>
-                  {aliado.estado === 'aprobado' ? 'Aliado aprobado' : 'Listo para enviar a SIG'}
-                </p>
-                <p className={`text-xs ${aliado.estado === 'aprobado' ? 'text-teal-600' : 'text-stone-500'}`}>
-                  {aliado.estado === 'aprobado'
-                    ? 'Listo para generar las zonas potenciales.'
-                    : 'Puedes enviarlo a SIG ahora y completar la debida diligencia (antecedentes, análisis, documentos) en paralelo.'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setConfirmar(true)}
-              className={`shrink-0 px-4 py-2 text-white rounded-xl text-sm font-bold transition-colors ${aliado.estado === 'aprobado' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-stone-700 hover:bg-stone-800'}`}
-            >
-              Enviar a SIG →
-            </button>
           </div>
         )}
 
@@ -390,37 +333,6 @@ export default function AliadoDetailPage() {
           )}
         </section>
       </div>
-
-      {/* Modal confirmar crear en Siembra */}
-      {confirmar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
-            <h3 className="font-black text-stone-900 text-lg mb-2">Enviar a SIG</h3>
-            <p className="text-sm text-stone-600 mb-5">
-              El predio <strong>{aliado.nombre_predio || aliado.nombre_completo}</strong> pasará a <strong>SIG I</strong> para
-              generar las zonas potenciales. El equipo SIG lo verá en su lista de trabajo. Puedes seguir
-              completando la debida diligencia después, en paralelo.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmar(false)} disabled={creando}
-                className="flex-1 py-2.5 border border-stone-200 rounded-xl text-sm font-bold text-stone-600 hover:bg-stone-50 transition-colors">
-                Cancelar
-              </button>
-              <button onClick={enviarSig} disabled={creando}
-                className="flex-1 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
-                {creando ? <Loader2 size={14} className="animate-spin" /> : null}
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-bold text-white ${toast.tipo === 'ok' ? 'bg-teal-600' : 'bg-red-500'}`}>
-          {toast.msg}
-        </div>
-      )}
     </div>
   )
 }

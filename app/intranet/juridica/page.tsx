@@ -9,7 +9,7 @@ import {
 } from '@/lib/juridica-schema'
 import {
   Plus, Search, Filter, ChevronRight, Loader2,
-  FileText, Shield, BarChart3, CheckCircle2, Circle, LayoutGrid,
+  FileText, Shield, BarChart3, CheckCircle2, Circle, LayoutGrid, ArrowLeft,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -65,10 +65,7 @@ function MiniStepper({ estado }: { estado: EstadoAliado }) {
 
 // ─── Tarjeta de aliado ────────────────────────────────────────────────────────
 
-function AliadoCard({ aliado, onCrearSiembra }: {
-  aliado: Aliado
-  onCrearSiembra: (id: string) => void
-}) {
+function AliadoCard({ aliado }: { aliado: Aliado }) {
   const estadoCfg  = ESTADO_CONFIG[aliado.estado]
   const semaforo   = aliado.analisis_juridico?.semaforo as Semaforo | null
   const semCfg     = semaforo ? SEMAFORO_CONFIG[semaforo] : null
@@ -113,22 +110,12 @@ function AliadoCard({ aliado, onCrearSiembra }: {
 
       <div className="flex items-center justify-between">
         <MiniStepper estado={aliado.estado} />
-        <div className="flex items-center gap-1.5">
-          {aliado.estado === 'aprobado' && (!aliado.etapa || aliado.etapa === 'juridica') && (
-            <button
-              onClick={() => onCrearSiembra(aliado.id)}
-              className="text-[11px] font-bold px-2.5 py-1 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-            >
-              → SIG
-            </button>
-          )}
-          <Link
-            href={`/intranet/juridica/${aliado.id}`}
-            className="flex items-center gap-0.5 text-[11px] font-bold text-stone-500 hover:text-stone-800 transition-colors"
-          >
-            Ver <ChevronRight size={12} />
-          </Link>
-        </div>
+        <Link
+          href={`/intranet/juridica/${aliado.id}`}
+          className="flex items-center gap-0.5 text-[11px] font-bold text-stone-500 hover:text-stone-800 transition-colors"
+        >
+          Ver <ChevronRight size={12} />
+        </Link>
       </div>
     </div>
   )
@@ -146,9 +133,6 @@ export default function JuridicaPage() {
   const [loading, setLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState<FiltroEstado>('todos')
-  const [modal, setModal] = useState<{ id: string; nombre: string } | null>(null)
-  const [creando, setCreando] = useState(false)
-  const [toast, setToast] = useState<{ tipo: 'ok' | 'error'; msg: string } | null>(null)
 
   // Auth
   useEffect(() => {
@@ -211,41 +195,6 @@ export default function JuridicaPage() {
     rechazados: aliados.filter((a) => a.estado === 'rechazado').length,
   }), [aliados])
 
-  const showToast = (tipo: 'ok' | 'error', msg: string) => {
-    setToast({ tipo, msg })
-    setTimeout(() => setToast(null), 3500)
-  }
-
-  async function handleCrearSiembra(id: string) {
-    const aliado = aliados.find((a) => a.id === id)
-    if (!aliado) return
-    setModal({ id, nombre: aliado.nombre_completo })
-  }
-
-  async function confirmarCrearSiembra() {
-    if (!modal || !userEmail) return
-    setCreando(true)
-    try {
-      const res = await fetch(`/api/juridica/aliados/${modal.id}/enviar-sig`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ created_by: userEmail }),
-      })
-      const body = await res.json()
-      if (!res.ok && res.status !== 409) {
-        showToast('error', body.error ?? 'Error al enviar a SIG')
-        return
-      }
-      showToast('ok', res.status === 409 ? 'El predio ya estaba en SIG' : 'Predio enviado a SIG')
-      // Jurídica envía y listo: recargamos la lista (no entramos al módulo SIG)
-      const r2 = await fetch(`/api/juridica/aliados?email=${encodeURIComponent(userEmail)}`)
-      if (r2.ok) { const d = await r2.json(); setAliados(Array.isArray(d) ? d : []) }
-    } finally {
-      setCreando(false)
-      setModal(null)
-    }
-  }
-
   if (!authReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
@@ -259,12 +208,18 @@ export default function JuridicaPage() {
       {/* Header */}
       <div className="bg-white border-b border-stone-100 px-6 py-5">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Shield size={18} className="text-teal-600" />
-              <h1 className="text-xl font-black text-stone-900">Módulo Jurídico</h1>
+          <div className="flex items-center gap-3">
+            <Link href="/intranet" title="Volver a la intranet"
+              className="text-stone-400 hover:text-stone-700 transition-colors">
+              <ArrowLeft size={20} />
+            </Link>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Shield size={18} className="text-teal-600" />
+                <h1 className="text-xl font-black text-stone-900">Módulo Jurídico</h1>
+              </div>
+              <p className="text-sm text-stone-400">Debida diligencia jurídica de aliados</p>
             </div>
-            <p className="text-sm text-stone-400">Debida diligencia jurídica de aliados</p>
           </div>
           <div className="flex items-center gap-2">
             <Link
@@ -355,48 +310,11 @@ export default function JuridicaPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {visibles.map((a) => (
-              <AliadoCard key={a.id} aliado={a} onCrearSiembra={handleCrearSiembra} />
+              <AliadoCard key={a.id} aliado={a} />
             ))}
           </div>
         )}
       </div>
-
-      {/* Modal confirmar crear en Siembra */}
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
-            <h3 className="font-black text-stone-900 text-lg mb-2">Enviar a SIG</h3>
-            <p className="text-sm text-stone-600 mb-5">
-              El predio de <strong>{modal.nombre}</strong> pasará a <strong>SIG I</strong> para
-              generar las zonas potenciales. El equipo SIG lo verá en su lista de trabajo.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setModal(null)}
-                disabled={creando}
-                className="flex-1 py-2.5 border border-stone-200 rounded-xl text-sm font-bold text-stone-600 hover:bg-stone-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmarCrearSiembra}
-                disabled={creando}
-                className="flex-1 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-              >
-                {creando ? <Loader2 size={14} className="animate-spin" /> : null}
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toast */}
-      {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-bold text-white transition-all ${toast.tipo === 'ok' ? 'bg-teal-600' : 'bg-red-500'}`}>
-          {toast.msg}
-        </div>
-      )}
     </div>
   )
 }

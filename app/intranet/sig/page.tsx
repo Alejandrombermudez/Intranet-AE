@@ -35,12 +35,17 @@ export default function SigPage() {
     fetch(`/api/expedientes?email=${encodeURIComponent(userEmail)}`)
       .then((r) => r.json())
       .then((data: ExpedienteRow[]) => {
-        // SIG I: predios cuyo expediente está en la etapa sig_i
-        setRows((Array.isArray(data) ? data : []).filter((r) => r.etapa === 'sig_i'))
+        // Tablero SIG: SIG ve el predio desde que Jurídica lo crea (etapa 'juridica'),
+        // sigue en 'sig_i' (legado) y en 'campo' (ya enviado, visible para poder cancelar).
+        setRows((Array.isArray(data) ? data : []).filter(
+          (r) => r.etapa === 'juridica' || r.etapa === 'sig_i' || r.etapa === 'campo'))
         setLoading(false)
       })
       .catch(() => setLoading(false))
   }, [authReady, userEmail])
+
+  const porZonificar = useMemo(() => rows.filter((r) => r.etapa === 'juridica' || r.etapa === 'sig_i').length, [rows])
+  const enCampo = useMemo(() => rows.filter((r) => r.etapa === 'campo').length, [rows])
 
   const visibles = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
@@ -63,7 +68,7 @@ export default function SigPage() {
       <div className="bg-white border-b border-stone-100 px-6 py-5">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Link href="/intranet/expedientes" className="text-stone-400 hover:text-stone-700 transition-colors">
+            <Link href="/intranet" title="Volver a la intranet" className="text-stone-400 hover:text-stone-700 transition-colors">
               <ArrowLeft size={20} />
             </Link>
             <MapIcon size={18} className="text-teal-600" />
@@ -72,7 +77,9 @@ export default function SigPage() {
               <p className="text-sm text-stone-400">SIG I — Zonas potenciales</p>
             </div>
           </div>
-          <span className="text-sm font-bold text-stone-500">{rows.length} predios por zonificar</span>
+          <span className="text-sm font-bold text-stone-500">
+            {porZonificar} por zonificar{enCampo > 0 && <> · <span className="text-emerald-600">{enCampo} en campo</span></>}
+          </span>
         </div>
       </div>
 
@@ -81,8 +88,8 @@ export default function SigPage() {
         <div className="flex items-start gap-3 bg-sky-50 border border-sky-200 rounded-xl px-4 py-3">
           <Info size={18} className="text-sky-500 shrink-0 mt-0.5" />
           <p className="text-sm text-sky-800">
-            Estos predios fueron aprobados en jurídica y enviados a SIG. Abre cada uno con
-            <strong> «Zonificar»</strong> para cargar su shapefile y generar las zonas potenciales.
+            SIG ve cada predio desde que Jurídica lo crea; la zonificación va en paralelo a la debida
+            diligencia. Abre uno con <strong>«Zonificar»</strong> para cargar su shapefile y generar las zonas potenciales.
           </p>
         </div>
 
@@ -104,7 +111,7 @@ export default function SigPage() {
           <div className="text-center py-20 text-stone-400">
             <Layers size={40} className="mx-auto mb-3 opacity-30" />
             <p className="font-bold">{rows.length === 0 ? 'Aún no hay predios en SIG' : 'Ningún predio coincide con la búsqueda'}</p>
-            {rows.length === 0 && <p className="text-sm mt-1">Llegan cuando jurídica los aprueba y los envía a SIG.</p>}
+            {rows.length === 0 && <p className="text-sm mt-1">Aparecen apenas jurídica los crea.</p>}
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
@@ -112,7 +119,7 @@ export default function SigPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="bg-stone-50 border-b border-stone-100">
-                    {['Persona', 'Predio', 'Ubicación', 'Área registral', 'Zonas', ''].map((h) => (
+                    {['Persona', 'Predio', 'Ubicación', 'Área registral', 'Estado', ''].map((h) => (
                       <th key={h} className="px-4 py-2.5 text-[11px] font-bold text-stone-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -134,11 +141,15 @@ export default function SigPage() {
                       </td>
                       <td className="px-4 py-3 text-stone-600 whitespace-nowrap">{r.area_registral != null ? `${r.area_registral} ha` : <span className="text-stone-300">—</span>}</td>
                       <td className="px-4 py-3">
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">sin cargar</span>
+                        {r.etapa === 'campo' ? (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">En campo</span>
+                        ) : (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">Por zonificar</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link href={`/intranet/sig/${r.predio_id}`} className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 hover:text-teal-700 transition-colors whitespace-nowrap">
-                          Zonificar <ChevronRight size={12} />
+                          {r.etapa === 'campo' ? 'Gestionar' : 'Zonificar'} <ChevronRight size={12} />
                         </Link>
                       </td>
                     </tr>

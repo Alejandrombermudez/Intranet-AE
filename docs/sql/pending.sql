@@ -38,6 +38,21 @@
 -- Verificar tras correr: select to_regclass('ras.documentos_familia');
 
 
+-- ── seed_juridica_aliados.sql ──────────────────────────────────────────────
+-- Estado: LISTO PARA EJECUTAR — seed de datos (no toca esquema). Correr UNA vez.
+-- Origen: "Aliados territoriales.xlsx" (hoja 'Datos básicos' + 'Análisis legal'),
+-- trabajo de jurídica. Verificado contra BD por REST 2026-07-28.
+-- Inserta 85 aliados nuevos + 100 predios (con expediente etapa 'juridica' + DD
+-- en 'borrador') + 13 análisis jurídicos (HOJA 3). Sin cédulas en el Excel:
+-- documento va como marcador 'S/D-*' (la UI pide completarlo). departamento='Caquetá'.
+-- Idempotente (NOT EXISTS por matrícula/documento): salta lo que ya existe
+-- (Los Andes 420-16765, La Esperanza 420-21020, La Guajira 420-3545) y cuelga
+-- los 2 predios extra de Edilberto Lozano del aliado ya existente.
+-- Verificar tras correr: select count(*) from core.predios;  (esperado +100)
+-- HOJA 2 (antecedentes) NO viene en el Excel → la HOJA 3 queda cargada pero
+-- bloqueada en la UI hasta que jurídica apruebe antecedentes a mano.
+
+
 -- ════════════════════════════════════════════════════════════
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
