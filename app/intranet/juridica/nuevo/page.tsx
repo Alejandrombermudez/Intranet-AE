@@ -8,6 +8,7 @@ import { aliadoSchema, type AliadoForm } from '@/lib/juridica-schema'
 import { Shield, ArrowLeft, Loader2, Upload, X } from 'lucide-react'
 import Link from 'next/link'
 import { MUNICIPIOS_CAQUETA, VEREDAS_POR_MUNICIPIO, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
+import { parsearRespuestaGuardado } from '@/lib/fetch-guardar'
 
 const TIPOS_DOC = ['CC', 'NUIP', 'CE', 'TI', 'PP', 'NIT'] as const
 
@@ -107,6 +108,12 @@ export default function NuevoAliadoPage() {
       })
   }, [setValue])
 
+  // Red de seguridad: si la validación falla, react-hook-form no llama a onSubmit
+  // y el botón parece no hacer nada. Esto garantiza que siempre haya un mensaje.
+  function onInvalid() {
+    setError('Hay campos con datos inválidos. Revisa los marcados en rojo más arriba.')
+  }
+
   async function onSubmit(values: AliadoForm) {
     if (!userEmail) return
     setSaving(true)
@@ -124,9 +131,16 @@ export default function NuevoAliadoPage() {
       if (pdfManif)  fd.append('manifestacion', pdfManif)
 
       const res = await fetch('/api/juridica/aliados', { method: 'POST', body: fd })
-      const body = await res.json()
-      if (!res.ok) { setError(body.error ?? 'Error al guardar'); return }
-      router.push(`/intranet/juridica/${body.id}`)
+      const result = await parsearRespuestaGuardado(res)
+      if (!result.ok) { setError(result.error); return }
+      // El caso ya quedó creado: no se puede reintentar aquí sin duplicarlo. Si algún
+      // archivo falló, llevar a la edición (con el aviso) para re-adjuntarlo ahí.
+      const nuevoId = result.body?.id
+      if (!nuevoId) { setError('El caso se creó pero el servidor no devolvió su identificador. Búscalo en el listado.'); return }
+      const fallidos = result.body?.documentos_fallidos ?? []
+      router.push(fallidos.length
+        ? `/intranet/juridica/${nuevoId}/editar?docs=${encodeURIComponent(fallidos.join(','))}`
+        : `/intranet/juridica/${nuevoId}`)
     } finally {
       setSaving(false)
     }
@@ -155,7 +169,7 @@ export default function NuevoAliadoPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl mx-auto px-6 py-8 space-y-8">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="max-w-2xl mx-auto px-6 py-8 space-y-8">
 
         {aliadoLock && (
           <div className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 text-sm text-sky-800">
@@ -226,7 +240,7 @@ export default function NuevoAliadoPage() {
                 className={`${INPUT} ${!selectedMunicipio ? 'bg-stone-50 text-stone-400 cursor-not-allowed' : ''}`}
               >
                 <option value="">— Seleccione vereda —</option>
-                {selectedMunicipio && VEREDAS_POR_MUNICIPIO[selectedMunicipio].map((v) => (
+                {selectedMunicipio && VEREDAS_POR_MUNICIPIO[selectedMunicipio]?.map((v) => (
                   <option key={v} value={v}>{v}</option>
                 ))}
               </select>
@@ -260,8 +274,8 @@ export default function NuevoAliadoPage() {
                 className="text-xs font-bold text-teal-600 hover:underline">+ Agregar matrícula</button>
             </div>
           </Field>
-          <Field label="Área registral (ha)">
-            <input {...register('area_registral')} type="number" step="0.0001" min="0" className={INPUT} placeholder="25.5" />
+          <Field label="Área registral (ha)" error={errors.area_registral?.message}>
+            <input {...register('area_registral')} type="number" step="0.0001" min="0" className={errors.area_registral ? INPUT_ERR : INPUT} placeholder="25.5" />
           </Field>
           <Field label="Código catastral" hint="Se preservan ceros a la izquierda">
             <input {...register('codigo_catastral')} className={INPUT} placeholder="18001000400..." />
@@ -278,8 +292,8 @@ export default function NuevoAliadoPage() {
         {/* Sección 4: Predial */}
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Impuesto predial</h2>
-          <Field label="Año último pago predial">
-            <input {...register('anio_ultimo_pago_predial')} type="number" min="1990" max="2100" className={INPUT} placeholder="2024" />
+          <Field label="Año último pago predial" error={errors.anio_ultimo_pago_predial?.message}>
+            <input {...register('anio_ultimo_pago_predial')} type="number" min="1990" max="2100" className={errors.anio_ultimo_pago_predial ? INPUT_ERR : INPUT} placeholder="2024" />
           </Field>
           <FileInput
             label="Recibo del último pago predial (PDF)"

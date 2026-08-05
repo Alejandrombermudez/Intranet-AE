@@ -19,6 +19,15 @@ export const MUNICIPIOS_CAQUETA = [
 
 export type MunicipioCaqueta = typeof MUNICIPIOS_CAQUETA[number]
 
+// Datos existentes en BD pueden traer el municipio en otra capitalización
+// (p. ej. "Morelia" en vez de "MORELIA"). Normaliza contra la lista oficial
+// para que el selector de vereda no reciba una clave que no existe.
+export function normalizarMunicipio(valor?: string | null): MunicipioCaqueta | '' {
+  if (!valor) return ''
+  const encontrado = MUNICIPIOS_CAQUETA.find((m) => m.localeCompare(valor, 'es', { sensitivity: 'base' }) === 0)
+  return encontrado ?? ''
+}
+
 export const VEREDAS_POR_MUNICIPIO: Record<MunicipioCaqueta, string[]> = {
   "ALBANIA": ["ALBANIA", "ALTO CASTAÑAL", "ARANZASU", "BETANIA", "BUENOS AIRES", "CARMEN BALATA", "EL DORADO", "EL RECREO", "FLORIDA BLANCA", "FRAGUA RECREO", "LA CAÑADA", "LA FRGUA FORTUNA", "LA RAYA", "LA SARDINA", "LA UNION", "SAMARIA", "SAN PEDRO", "SANTA CRUZ"],
   "BELÉN DE LOS ANDAQUÍES": ["AGUA AZUL", "AGUA DULCE", "ALTAMIRA", "ALTO MASAYA", "ALTO PUEBLITOS", "ALTO SAN JUAN", "AZABACHE", "BAJO PUEBLITOS", "BELLA VISTA", "BOCANA LAS VERDES", "BRUSELAS", "BUENAVISTA", "BUENOS AIRES", "CHAPINERO", "EL CARBON", "EL CHOCHO", "EL DIAMANTE", "EL MESON", "EL MIRADOR", "EL PORVENIR", "EL PRADO", "EL SALADO", "FRAGUA DELICIAS", "GALÁN", "LA CHOCHO ALTO", "LA CRISTALINA", "LA ESTRELLA", "LA ONDINA", "LA PRADERA", "LA REFORMA", "LA UNION", "LAS COLONIAS", "LAS DELICIAS", "LAS MINAS", "LAS PLATAS", "LOS ALETONES", "LOS ÁNGELES", "MASAYA BAJA", "MASAYA MEDIA", "MONO ALTA", "PARQUE BOSQUE LA RESACA", "PNN ALTO FRAGUA INDI WASI", "PRIMAVERA", "PUERTO LONDOÑO", "PUERTO TORRES", "QUISAYA", "RESERVA FORESTAL", "RESGUARDO INDÍGENA CERINDA DE LOS ANGELES", "RESGUARDO INDÍGENA LA ESPERANZA", "SAN ANTONIO", "SAN ISIDRO ALTO", "SAN LUIS", "SANCHEZ", "SANTA HELENA", "SANTA ROSA", "SANTA TERESA", "SARABANDO ALTO", "SARABANDO MEDIO", "SINAI", "SOLEDAD", "TORTUGA ESTRELLA", "VENADITO", "VENTANAS PARTE ALTA", "VENTANAS PARTE BAJA"],

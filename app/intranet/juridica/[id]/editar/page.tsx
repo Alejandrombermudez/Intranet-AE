@@ -7,7 +7,8 @@ import { supabase } from '@/lib/supabase'
 import { aliadoSchema, type AliadoForm, type Aliado } from '@/lib/juridica-schema'
 import { Shield, ArrowLeft, Loader2, Upload, X, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
-import { MUNICIPIOS_CAQUETA, VEREDAS_POR_MUNICIPIO, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
+import { MUNICIPIOS_CAQUETA, VEREDAS_POR_MUNICIPIO, normalizarMunicipio, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
+import { parsearRespuestaGuardado, mensajeDocumentosFallidos } from '@/lib/fetch-guardar'
 
 const TIPOS_DOC = ['CC', 'NUIP', 'CE', 'TI', 'PP', 'NIT'] as const
 const INPUT     = 'w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:border-teal-400 transition-colors bg-white'
@@ -76,6 +77,14 @@ export default function EditarAliadoPage() {
 
   const manifestacion = watch('manifestacion_interes')
 
+  // Aviso heredado de la creación: documentos que no se pudieron subir al crear
+  // el caso (?docs=cedula,recibo_predial). Se leen de window para no depender de
+  // useSearchParams (que exigiría un Suspense boundary).
+  useEffect(() => {
+    const docs = new URLSearchParams(window.location.search).get('docs')
+    if (docs) setError(mensajeDocumentosFallidos(docs.split(',').filter(Boolean)))
+  }, [])
+
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push('/'); return }
@@ -96,13 +105,14 @@ export default function EditarAliadoPage() {
       .then((r) => { if (!r.ok) throw new Error(); return r.json() })
       .then((data: Aliado) => {
         setAliado(data)
-        setSelectedMunicipio((data.municipio ?? '') as MunicipioCaqueta | '')
+        const municipioNormalizado = normalizarMunicipio(data.municipio)
+        setSelectedMunicipio(municipioNormalizado)
         reset({
           nombre_completo:             data.nombre_completo,
           tipo_documento:              data.tipo_documento as AliadoForm['tipo_documento'],
           numero_documento:            data.numero_documento,
           departamento:                'Caquetá',
-          municipio:                   data.municipio,
+          municipio:                   municipioNormalizado || data.municipio,
           vereda:                      data.vereda ?? '',
           zona_ae:                     data.zona_ae ?? '',
           nombre_predio:               data.nombre_predio ?? '',
@@ -118,6 +128,12 @@ export default function EditarAliadoPage() {
       })
       .catch(() => router.push('/intranet/juridica'))
   }, [authReady, userEmail, id, reset, router])
+
+  // Red de seguridad: si la validación falla, react-hook-form no llama a onSubmit
+  // y el botón parece no hacer nada. Esto garantiza que siempre haya un mensaje.
+  function onInvalid() {
+    setError('Hay campos con datos inválidos. Revisa los marcados en rojo más arriba.')
+  }
 
   async function onSubmit(values: AliadoForm) {
     if (!userEmail) return
@@ -135,8 +151,11 @@ export default function EditarAliadoPage() {
       if (pdfManif)  fd.append('manifestacion', pdfManif)
 
       const res = await fetch(`/api/juridica/aliados/${id}`, { method: 'PATCH', body: fd })
-      const body = await res.json()
-      if (!res.ok) { setError(body.error ?? 'Error al guardar'); return }
+      const result = await parsearRespuestaGuardado(res)
+      if (!result.ok) { setError(result.error); return }
+      // Los datos se guardaron; si algún archivo falló, quedarse aquí para reintentarlo.
+      const aviso = mensajeDocumentosFallidos(result.body?.documentos_fallidos)
+      if (aviso) { setError(aviso); return }
       router.push(`/intranet/juridica/${id}`)
     } finally {
       setSaving(false)
@@ -162,7 +181,7 @@ export default function EditarAliadoPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl mx-auto px-6 py-8 space-y-8">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="max-w-2xl mx-auto px-6 py-8 space-y-8">
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Identificación</h2>
           <Field label="Nombre completo" error={errors.nombre_completo?.message}>
@@ -214,7 +233,7 @@ export default function EditarAliadoPage() {
                 className={`${INPUT} ${!selectedMunicipio ? 'bg-stone-50 text-stone-400 cursor-not-allowed' : ''}`}
               >
                 <option value="">— Seleccione vereda —</option>
-                {selectedMunicipio && VEREDAS_POR_MUNICIPIO[selectedMunicipio].map((v) => (
+                {selectedMunicipio && VEREDAS_POR_MUNICIPIO[selectedMunicipio]?.map((v) => (
                   <option key={v} value={v}>{v}</option>
                 ))}
               </select>
@@ -245,7 +264,9 @@ export default function EditarAliadoPage() {
                 className="text-xs font-bold text-teal-600 hover:underline">+ Agregar matrícula</button>
             </div>
           </Field>
-          <Field label="Área registral (ha)"><input {...register('area_registral')} type="number" step="0.0001" min="0" className={INPUT} /></Field>
+          <Field label="Área registral (ha)" error={errors.area_registral?.message}>
+            <input {...register('area_registral')} type="number" step="0.0001" min="0" className={errors.area_registral ? INPUT_ERR : INPUT} />
+          </Field>
           <Field label="Código catastral"><input {...register('codigo_catastral')} className={INPUT} /></Field>
           <FileInput label="Certificado de tradición (PDF)" existingUrl={aliado?.certificado_tradicion_url}
             file={pdfCert} onChange={setPdfCert} onClear={() => setPdfCert(null)} />
@@ -253,8 +274,8 @@ export default function EditarAliadoPage() {
 
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Impuesto predial</h2>
-          <Field label="Año último pago">
-            <input {...register('anio_ultimo_pago_predial')} type="number" min="1990" max="2100" className={INPUT} />
+          <Field label="Año último pago" error={errors.anio_ultimo_pago_predial?.message}>
+            <input {...register('anio_ultimo_pago_predial')} type="number" min="1990" max="2100" className={errors.anio_ultimo_pago_predial ? INPUT_ERR : INPUT} />
           </Field>
           <FileInput label="Recibo predial (PDF)" existingUrl={aliado?.recibo_predial_url}
             file={pdfRecibo} onChange={setPdfRecibo} onClear={() => setPdfRecibo(null)} />

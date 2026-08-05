@@ -4,6 +4,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { type Antecedente } from '@/lib/juridica-schema'
+import { parsearRespuestaGuardado, mensajeDocumentosFallidos } from '@/lib/fetch-guardar'
 import { Shield, ArrowLeft, Loader2, Upload, X, ExternalLink, CheckCircle2, XCircle, HelpCircle } from 'lucide-react'
 
 // ─── Listas restrictivas ──────────────────────────────────────────────────────
@@ -33,18 +34,27 @@ type ListaValue = boolean | null  // null = no consultada, false = limpia, true 
 
 // ─── Componente de fila de lista ──────────────────────────────────────────────
 
-function ListaRow({ label, value, url, onChange, onPdf }: {
+function ListaRow({ label, value, url, onChange, onPdf, onClearPdf, sinArchivo }: {
   label: string
   value: ListaValue
   url?: string | null
   onChange: (v: ListaValue) => void
-  onPdf: (f: File) => void
+  onPdf?: (f: File) => void
+  onClearPdf?: () => void
+  sinArchivo?: boolean          // flags reputacionales: no llevan soporte adjunto
 }) {
   const [file, setFile] = useState<File | null>(null)
 
   function handleFile(f: File) {
     setFile(f)
-    onPdf(f)
+    onPdf?.(f)
+  }
+
+  // Quitar el archivo debe descartarlo también en el estado del formulario,
+  // si no se subía igual aunque la UI mostrara que se había quitado.
+  function handleClear() {
+    setFile(null)
+    onClearPdf?.()
   }
 
   return (
@@ -73,24 +83,29 @@ function ListaRow({ label, value, url, onChange, onPdf }: {
       </div>
       {/* PDF */}
       <div className="shrink-0">
-        {file ? (
+        {sinArchivo ? null : file ? (
           <div className="flex items-center gap-1">
             <span className="text-[11px] text-teal-600 font-medium max-w-[80px] truncate">{file.name}</span>
-            <button type="button" onClick={() => { setFile(null) }} className="text-stone-400 hover:text-red-400">
+            <button type="button" onClick={handleClear} className="text-stone-400 hover:text-red-400">
               <X size={12} />
             </button>
           </div>
-        ) : url ? (
-          <a href={url} target="_blank" rel="noreferrer"
-            className="flex items-center gap-0.5 text-[11px] text-teal-600 font-bold hover:underline">
-            Ver <ExternalLink size={10} />
-          </a>
         ) : (
-          <label className="flex items-center gap-1 cursor-pointer text-[11px] text-stone-400 hover:text-stone-600">
-            <Upload size={12} /> Archivo
-            <input type="file" accept="image/*,application/pdf,.doc,.docx" className="hidden"
-              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
-          </label>
+          // Con documento ya guardado se ofrecen ambas cosas: verlo y reemplazarlo.
+          // Antes solo se mostraba "Ver" y el soporte quedaba imposible de corregir.
+          <div className="flex items-center gap-2">
+            {url && (
+              <a href={url} target="_blank" rel="noreferrer"
+                className="flex items-center gap-0.5 text-[11px] text-teal-600 font-bold hover:underline">
+                Ver <ExternalLink size={10} />
+              </a>
+            )}
+            <label className="flex items-center gap-1 cursor-pointer text-[11px] text-stone-400 hover:text-stone-600">
+              <Upload size={12} /> {url ? 'Reemplazar' : 'Archivo'}
+              <input type="file" accept="image/*,application/pdf,.doc,.docx" className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+            </label>
+          </div>
         )}
       </div>
     </div>
@@ -171,6 +186,13 @@ export default function AntecedentesPage() {
   function setPdf(key: string, file: File) {
     setPdfs((prev) => ({ ...prev, [key]: file }))
   }
+  function clearPdf(key: string) {
+    setPdfs((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
 
   async function handleGuardar() {
     if (!userEmail) return
@@ -195,8 +217,11 @@ export default function AntecedentesPage() {
       }
 
       const res = await fetch(`/api/juridica/aliados/${id}/antecedentes`, { method: 'POST', body: fd })
-      const body = await res.json()
-      if (!res.ok) { setError(body.error ?? 'Error al guardar'); return }
+      const result = await parsearRespuestaGuardado(res)
+      if (!result.ok) { setError(result.error); return }
+      // Los datos se guardaron; si algún archivo falló, quedarse aquí para reintentarlo.
+      const aviso = mensajeDocumentosFallidos(result.body?.documentos_fallidos)
+      if (aviso) { setError(aviso); return }
       router.push(`/intranet/juridica/${id}`)
     } finally {
       setSaving(false)
@@ -249,6 +274,7 @@ export default function AntecedentesPage() {
               url={urlsExistentes[key]}
               onChange={(v) => setLista(key, v)}
               onPdf={(f) => setPdf(key, f)}
+              onClearPdf={() => clearPdf(key)}
             />
           ))}
         </section>
@@ -262,6 +288,7 @@ export default function AntecedentesPage() {
               url={urlsExistentes[key]}
               onChange={(v) => setLista(key, v)}
               onPdf={(f) => setPdf(key, f)}
+              onClearPdf={() => clearPdf(key)}
             />
           ))}
         </section>
@@ -270,11 +297,9 @@ export default function AntecedentesPage() {
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-3">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Flags reputacionales</h2>
           <ListaRow label="PEP — Persona Expuesta Políticamente"
-            value={pep} url={null}
-            onChange={setPep} onPdf={() => {}} />
+            value={pep} onChange={setPep} sinArchivo />
           <ListaRow label="Prensa negativa"
-            value={prensa} url={null}
-            onChange={setPrensa} onPdf={() => {}} />
+            value={prensa} onChange={setPrensa} sinArchivo />
         </section>
 
         {/* Observaciones */}

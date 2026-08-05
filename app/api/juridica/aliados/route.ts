@@ -123,11 +123,13 @@ export async function POST(req: NextRequest) {
     // 6) Documentos (PDF o imagen) → bucket bajo {predio_id}/...  y URLs en la DD
     const docFields = ['cedula', 'certificado_tradicion', 'recibo_predial', 'manifestacion'] as const
     const urlUpdates: Record<string, string> = {}
+    const documentosFallidos: string[] = []
     for (const campo of docFields) {
       const file = formData.get(campo) as File | null
       if (file) {
         const url = await subirDocumento(supabase, `${predioId}/${campo}`, file)
         if (url) urlUpdates[`${campo}_url`] = url
+        else documentosFallidos.push(campo)
       }
     }
     if (Object.keys(urlUpdates).length > 0) {
@@ -136,7 +138,7 @@ export async function POST(req: NextRequest) {
         .eq('predio_id', predioId)
     }
 
-    return NextResponse.json({ id: predioId }, { status: 201 })
+    return NextResponse.json({ id: predioId, documentos_fallidos: documentosFallidos }, { status: 201 })
   } catch (err) {
     console.error('POST /api/juridica/aliados error:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

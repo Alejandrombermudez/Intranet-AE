@@ -29,8 +29,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .schema('juridica').from('debida_diligencia')
       .select('predio_id, estado').eq('predio_id', predioId).single()
     if (ddSelErr || !dd) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 })
-    if (!['antecedentes_ok', 'juridico_ok', 'aprobado'].includes(dd.estado)) {
-      return NextResponse.json({ error: 'Debe completar la revisión de antecedentes primero' }, { status: 422 })
+
+    // La precondición real es que HOJA 2 esté aprobada, no el estado de la DD:
+    // el propio semáforo muta ese estado, así que usarlo dejaba un caso con
+    // semáforo rojo ('rechazado') bloqueado para siempre, imposible de corregir.
+    const { data: predioRef } = await supabase
+      .schema('core').from('predios').select('aliado_id').eq('id', predioId).single()
+    const { data: ant } = predioRef
+      ? await supabase.schema('juridica').from('antecedentes')
+          .select('aprobado').eq('aliado_id', predioRef.aliado_id).maybeSingle()
+      : { data: null }
+    if (ant?.aprobado !== true) {
+      return NextResponse.json({ error: 'Debe aprobar la revisión de antecedentes (HOJA 2) primero' }, { status: 422 })
     }
 
     const payload = {
@@ -79,6 +89,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         await supabase.schema('core').from('expedientes')
           .update({ estado: 'rechazado' })
           .eq('predio_id', predioId)
+      } else {
+        // Corregir un semáforo rojo debe levantar también el rechazo del expediente.
+        // El filtro por estado evita pisar un expediente 'archivado' o 'completado'.
+        await supabase.schema('core').from('expedientes')
+          .update({ estado: 'activo' })
+          .eq('predio_id', predioId)
+          .eq('estado', 'rechazado')
       }
     }
 

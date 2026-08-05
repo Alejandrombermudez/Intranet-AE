@@ -4,6 +4,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { type AnalisisJuridico, type Semaforo, SEMAFORO_CONFIG } from '@/lib/juridica-schema'
+import { parsearRespuestaGuardado } from '@/lib/fetch-guardar'
 import { Shield, ArrowLeft, Loader2, AlertCircle } from 'lucide-react'
 
 const TEXTAREA = 'w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:border-teal-400 transition-colors resize-none'
@@ -241,8 +242,8 @@ export default function AnalisisJuridicoPage() {
           semaforo,
         }),
       })
-      const body = await res.json()
-      if (!res.ok) { setError(body.error ?? 'Error al guardar'); return }
+      const result = await parsearRespuestaGuardado(res)
+      if (!result.ok) { setError(result.error); return }
       router.push(`/intranet/juridica/${id}`)
     } finally {
       setSaving(false)

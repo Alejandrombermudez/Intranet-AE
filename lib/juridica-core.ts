@@ -78,13 +78,18 @@ export async function subirDocumento(supabase: SB, basePath: string, file: File)
     contentType = tipo || MIME_POR_EXT[ext] || 'application/octet-stream'
   }
 
-  // Borrar versiones previas (cualquier extensión conocida) para evitar huérfanos
-  await supabase.storage.from(BUCKET_JURIDICA).remove(EXTENSIONES_DOC.map((e) => `${basePath}.${e}`))
-
+  // Subir PRIMERO. Si se borraran las versiones previas antes y la subida
+  // fallara, el documento anterior se perdería sin reemplazo. `upsert: true`
+  // ya sobreescribe una versión previa con la misma extensión.
   const path = `${basePath}.${ext}`
   const { error } = await supabase.storage.from(BUCKET_JURIDICA)
     .upload(path, data, { contentType, upsert: true })
   if (error) return null
+
+  // Ya con el archivo nuevo en su sitio, limpiar versiones con OTRA extensión
+  // (p. ej. se reemplazó un .jpg por un .pdf) para no dejar huérfanos.
+  const otrasExtensiones = EXTENSIONES_DOC.filter((e) => e !== ext).map((e) => `${basePath}.${e}`)
+  await supabase.storage.from(BUCKET_JURIDICA).remove(otrasExtensiones)
 
   const { data: signed } = await supabase.storage.from(BUCKET_JURIDICA)
     .createSignedUrl(path, 60 * 60 * 24 * 365 * 5) // 5 años

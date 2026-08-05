@@ -43,11 +43,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const aliadoId = predio.aliado_id
 
     // Documentos de cada consulta (PDF o imagen) → {aliado_id}/antecedentes/{lista}
-    const urlUpdates: Record<string, string | null> = {}
+    // Solo se registra la URL cuando la subida tuvo éxito: escribir null
+    // borraría el documento que ya estuviera guardado.
+    const urlUpdates: Record<string, string> = {}
+    const documentosFallidos: string[] = []
     for (const lista of LISTAS) {
       const file = formData.get(lista) as File | null
       if (file) {
-        urlUpdates[`${lista}_url`] = await subirDocumento(supabase, `${aliadoId}/antecedentes/${lista}`, file)
+        const url = await subirDocumento(supabase, `${aliadoId}/antecedentes/${lista}`, file)
+        if (url) urlUpdates[`${lista}_url`] = url
+        else documentosFallidos.push(lista)
       }
     }
 
@@ -61,7 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     for (const lista of LISTAS) {
       payload[lista] = data[lista] ?? null
-      if (urlUpdates[`${lista}_url`] !== undefined) payload[`${lista}_url`] = urlUpdates[`${lista}_url`]
+      if (urlUpdates[`${lista}_url`]) payload[`${lista}_url`] = urlUpdates[`${lista}_url`]
     }
 
     const { error: upsertErr } = await supabase
@@ -82,10 +87,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         await supabase.schema('core').from('expedientes')
           .update({ estado: 'rechazado' })
           .eq('predio_id', predioId)
+      } else {
+        // Revertir un rechazo de antecedentes debe levantar también el del expediente.
+        // El filtro por estado evita pisar un expediente 'archivado' o 'completado'.
+        await supabase.schema('core').from('expedientes')
+          .update({ estado: 'activo' })
+          .eq('predio_id', predioId)
+          .eq('estado', 'rechazado')
       }
     }
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, documentos_fallidos: documentosFallidos })
   } catch (err) {
     console.error('POST /api/juridica/aliados/[id]/antecedentes error:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

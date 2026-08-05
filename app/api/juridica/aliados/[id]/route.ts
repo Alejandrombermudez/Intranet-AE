@@ -109,11 +109,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     // 4) Documentos (PDF o imagen) → {predio_id}/...
     const docFields = ['cedula', 'certificado_tradicion', 'recibo_predial', 'manifestacion'] as const
+    const documentosFallidos: string[] = []
     for (const campo of docFields) {
       const file = formData.get(campo) as File | null
       if (file) {
         const url = await subirDocumento(supabase, `${predioId}/${campo}`, file)
         if (url) ddUpdates[`${campo}_url`] = url
+        else documentosFallidos.push(campo)
       }
     }
 
@@ -121,7 +123,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .upsert(ddUpdates, { onConflict: 'predio_id' })
     if (ddErr) return NextResponse.json({ error: ddErr.message }, { status: 500 })
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, documentos_fallidos: documentosFallidos })
   } catch (err) {
     console.error('PATCH /api/juridica/aliados/[id] error:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

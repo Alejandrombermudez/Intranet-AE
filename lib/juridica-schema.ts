@@ -7,6 +7,12 @@ import { z } from 'zod'
 // paralelo, incluso con el predio ya enviado a SIG. Los 3 campos que la BD exige
 // NOT NULL (aliados.nombre_completo, aliados.numero_documento, predios.municipio)
 // se rellenan con marcadores en el API cuando llegan vacíos — ver lib/juridica-core.ts.
+// Un <input type="number"> vacío entrega '' (no undefined). Sin este preprocesado
+// z.coerce.number() lo convierte en 0 y falla .positive()/.min(1900) — el submit
+// queda bloqueado en silencio aunque el campo sea opcional. Vaciar el campo debe
+// significar "sin dato", no "cero".
+const vacioAUndefined = (v: unknown) => (v === '' || v === null ? undefined : v)
+
 export const aliadoSchema = z.object({
   nombre_completo:             z.string().optional(),
   tipo_documento:              z.enum(['CC', 'NUIP', 'CE', 'TI', 'PP', 'NIT']).default('CC'),
@@ -16,9 +22,11 @@ export const aliadoSchema = z.object({
   vereda:                      z.string().optional(),
   nombre_predio:               z.string().trim().min(1, 'El nombre del predio es obligatorio'),
   matricula_inmobiliaria:      z.string().optional(),
-  area_registral:              z.coerce.number().positive().optional(),
+  area_registral:              z.preprocess(vacioAUndefined,
+                                 z.coerce.number().positive('El área debe ser mayor que 0').optional()),
   codigo_catastral:            z.string().optional(),
-  anio_ultimo_pago_predial:    z.coerce.number().int().min(1900).max(2100).optional(),
+  anio_ultimo_pago_predial:    z.preprocess(vacioAUndefined,
+                                 z.coerce.number().int().min(1900, 'Año inválido').max(2100, 'Año inválido').optional()),
   manifestacion_interes:       z.boolean().optional(),
   manifestacion_observaciones: z.string().optional(),
   zona_ae:                     z.string().optional(),
