@@ -32,8 +32,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const [{ data: aliado }, { data: exp }, { count: zonasCount }] = await Promise.all([
       supabase.schema('core').from('aliados').select('*').eq('id', predio.aliado_id).single(),
       supabase.schema('core').from('expedientes').select('id, etapa').eq('predio_id', predioId).maybeSingle(),
+      // Solo la versión vigente: las zonas de subidas anteriores del SIG
+      // siguen en la tabla como respaldo (vigente=false) y no deben contar.
       supabase.schema('geo').from('zonas').select('id', { count: 'exact', head: true })
-        .eq('predio_id', predioId).eq('tipo', 'restauracion'),
+        .eq('predio_id', predioId).eq('tipo', 'restauracion').eq('vigente', true),
     ])
     if (!aliado) return NextResponse.json({ error: 'Persona no encontrada' }, { status: 404 })
 

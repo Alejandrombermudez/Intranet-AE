@@ -76,12 +76,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, creadas: 1 })
     }
 
-    // SOBREESCRIBIR: borrar primero las zonas de ese tipo para el predio
-    if (modo === 'sobreescribir') {
-      await supabase.schema('geo').from('zonas').delete().eq('predio_id', predio_id).eq('tipo', t)
+    // Cada subida es un LOTE con versión (backup 1, backup 2...): nada se
+    // borra. Las zonas entran al lote como borrador (vigente=false) y solo se
+    // activan al cerrarlo, así una carga que se cae a mitad deja el predio
+    // con lo anterior intacto. Ver docs/sql/migration_geo_versionado.sql.
+    const { data: loteId, error: loteErr } = await supabase.schema('geo').rpc('abrir_lote', {
+      p_predio_id: predio_id,
+      p_tipo: t,
+      p_modo: modo === 'sobreescribir' ? 'sobreescribir' : 'insertar',
+      p_created_by: email,
+      p_nota: null,
+    })
+    if (loteErr || !loteId) {
+      const falta = loteErr?.code === 'PGRST202' || /abrir_lote/i.test(loteErr?.message ?? '')
+      return NextResponse.json({
+        error: falta
+          ? 'Falta correr docs/sql/migration_geo_versionado.sql en Supabase (versionado de zonas). No se guardó nada.'
+          : 'No se pudo abrir el lote de subida: ' + (loteErr?.message ?? 'sin id'),
+      }, { status: falta ? 503 : 500 })
     }
 
-    // INSERTAR (también el resto del flujo sobreescribir): una zona por feature
     let creadas = 0
     for (const f of features) {
       if (!f?.geometry) continue
@@ -91,15 +105,36 @@ export async function POST(req: NextRequest) {
         p_tipo: t, p_estado: 'potencial', p_origen: 'sig',
         p_nombre: deriveNombre(f.properties),
         p_expediente_id: expediente_id || null, p_created_by: email,
+        p_lote_id: loteId as string,
       })
       if (error) {
+        // El lote queda abierto (zonas en borrador, invisibles) y lo anterior
+        // sigue vigente: se puede reintentar la subida sin haber roto nada.
         return NextResponse.json({ error: 'Error guardando geometría: ' + error.message, creadas }, { status: 500 })
       }
       creadas++
       if (zonaId) await persistirProps(supabase, zonaId as string, f)
     }
 
-    return NextResponse.json({ ok: true, creadas })
+    // Activar el lote. Con 'sobreescribir' retira el anterior (soft), salvo
+    // las zonas que campo ya trabajó: esas sobreviven marcadas en conflicto,
+    // porque quien está parado en el predio tiene la última palabra.
+    const { data: cierre, error: cerrarErr } = await supabase.schema('geo').rpc('cerrar_lote', {
+      p_lote_id: loteId as string,
+      p_reemplazar: modo === 'sobreescribir',
+    })
+    if (cerrarErr) {
+      return NextResponse.json({ error: 'Zonas guardadas pero no se activó el lote: ' + cerrarErr.message, creadas }, { status: 500 })
+    }
+
+    const resumen = Array.isArray(cierre) ? cierre[0] : cierre
+    return NextResponse.json({
+      ok: true,
+      creadas,
+      lote_id: loteId,
+      retiradas:    resumen?.retiradas ?? 0,
+      en_conflicto: resumen?.en_conflicto ?? 0,
+    })
   } catch (err) {
     console.error('POST /api/sig/ingesta error:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

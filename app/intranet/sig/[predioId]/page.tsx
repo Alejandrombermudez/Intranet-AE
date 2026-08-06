@@ -81,6 +81,9 @@ export default function SigPredioPage() {
 
   const [parseSites, setParseSites] = useState<ShapefileParseado | null>(null)
   const [selSites, setSelSites] = useState<Set<number>>(new Set())
+  // Rehacer los sitios de siembra (versión nueva) en vez de sumarlos a los que
+  // ya están. No borra: la versión anterior queda como respaldo consultable.
+  const [reemplazarSitios, setReemplazarSitios] = useState(false)
   const [parseandoSites, setParseandoSites] = useState(false)
   const [errSites, setErrSites] = useState<string | null>(null)
 
@@ -133,6 +136,16 @@ export default function SigPredioPage() {
     const n = new Set(set); if (n.has(i)) n.delete(i); else n.add(i); setter(n)
   }
 
+  // Cada subida crea una versión (backup) y no borra la anterior. Si alguna
+  // zona ya la había trabajado Campo, esa NO se retira — el terreno tiene la
+  // última palabra — y queda marcada para resolverla aquí en la oficina.
+  function avisoConflicto(body: { retiradas?: number; en_conflicto?: number }): string {
+    const partes: string[] = []
+    if (body.retiradas) partes.push(`${body.retiradas} versión(es) anterior(es) guardada(s) como respaldo`)
+    if (body.en_conflicto) partes.push(`${body.en_conflicto} zona(s) que Campo ya verificó siguen vigentes — revisar en terreno antes de reemplazarlas`)
+    return partes.length ? ` · ${partes.join(' · ')}` : ''
+  }
+
   // ── Guardar polígono(s) del predio ──
   async function intentarGuardarPoligono() {
     if (!parsePoly || selPoly.size === 0) return
@@ -152,7 +165,7 @@ export default function SigPredioPage() {
       })
       const body = await res.json()
       if (!res.ok) { showToast('error', body.error ?? 'Error al guardar'); return }
-      showToast('ok', modo === 'unir' ? 'Polígono unido y guardado' : `${body.creadas} polígono(s) del predio guardado(s)`)
+      showToast('ok', (modo === 'unir' ? 'Polígono unido y guardado' : `${body.creadas} polígono(s) del predio guardado(s)`) + avisoConflicto(body))
       setParsePoly(null); setOverlap(null); await cargarZonas(userEmail)
     } finally { setGuardando(false) }
   }
@@ -207,12 +220,17 @@ export default function SigPredioPage() {
       const features = [...selSites].map((i) => parseSites.features[i]).map((f) => ({ geometry: f.geometry, properties: f.properties ?? {}, perimetro_m: perimetroGeom(f.geometry) }))
       const res = await fetch('/api/sig/ingesta', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ predio_id: predioId, expediente_id: caso?.expediente_id ?? null, email: userEmail, tipo: 'restauracion', modo: 'insertar', features }),
+        body: JSON.stringify({
+          predio_id: predioId, expediente_id: caso?.expediente_id ?? null, email: userEmail,
+          tipo: 'restauracion',
+          modo: reemplazarSitios && siembraZonas.length > 0 ? 'sobreescribir' : 'insertar',
+          features,
+        }),
       })
       const body = await res.json()
       if (!res.ok) { showToast('error', body.error ?? 'Error al guardar'); return }
-      showToast('ok', `${body.creadas} sitio(s) de siembra guardado(s)`)
-      setParseSites(null); await cargarZonas(userEmail)
+      showToast('ok', `${body.creadas} sitio(s) de siembra guardado(s)` + avisoConflicto(body))
+      setParseSites(null); setReemplazarSitios(false); await cargarZonas(userEmail)
     } finally { setGuardando(false) }
   }
 
@@ -391,6 +409,23 @@ export default function SigPredioPage() {
                   <div className="bg-stone-50 rounded-xl p-3"><div className="flex items-center gap-1.5 mb-1 text-teal-600"><Layers size={14} /><span className="text-[11px] font-bold text-stone-500">Área total</span></div><p className="text-lg font-black text-stone-900">{fmt(siteArea)} ha</p></div>
                 </div>
                 <ListaSeleccion parse={parseSites} sel={selSites} setSel={setSelSites} />
+
+                {siembraZonas.length > 0 && (
+                  <label className="flex items-start gap-2.5 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 cursor-pointer">
+                    <input type="checkbox" checked={reemplazarSitios} className="mt-0.5"
+                      onChange={(e) => setReemplazarSitios(e.target.checked)} />
+                    <span className="text-xs text-stone-600 leading-relaxed">
+                      <strong className="text-stone-800">Reemplazar los {siembraZonas.length} sitio(s) ya guardado(s)</strong> — esta subida
+                      queda como versión nueva y la anterior se conserva como respaldo. Sin marcar, los sitios nuevos
+                      se <em>suman</em> a los que ya están.
+                      <span className="block mt-1 text-amber-700">
+                        Los sitios que Campo ya verificó en terreno no se retiran: siguen vigentes y quedan marcados
+                        para que los revises — quien está parado en el predio tiene la última palabra.
+                      </span>
+                    </span>
+                  </label>
+                )}
+
                 <button onClick={guardarSitios} disabled={guardando || selSites.size === 0}
                   className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-60">
                   {guardando ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
