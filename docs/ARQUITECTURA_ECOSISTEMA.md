@@ -148,10 +148,11 @@ flowchart TB
 |-----|---------|----------------------|--------|
 | Intranet AE | `Intranet-AE/` | Vinculación, Finanzas, Personas, (futuro: Plan, Vivero) | Producción |
 | Geoportal | `GeoAE/` | Geoespacial (entrega) | Producción (visor) → evolucionar a PMTiles |
-| PWA Campo | `familias-res/` | Siembra (etapa campo) | **Prueba exitosa — no productiva** (se rehará al llegar la etapa Campo) |
+| PWA Campo | `app_campo/` | Siembra (etapa campo + SIG II) | **App productiva desde 2026-07-08** — reconectada a `core`/`geo`; `familias-res/` fue la prueba de concepto (superada) |
 | App Vivero | `app_vivero/` | Producción de vivero | **Solo Excel — por construir** |
 | Modelo IA | `modelo-web/` | Geoespacial (insumo SIG I) | Prototipo desconectado |
 | Escuela Bosque | `amazonia-escuela-bosque/` | Educación | En desarrollo |
+| Sitio público | `amazonia-emprende-web/` | — (periférico, marketing) | Landing estática, no toca Supabase |
 
 ---
 

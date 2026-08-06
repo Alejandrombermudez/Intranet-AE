@@ -1,6 +1,6 @@
 # Ecosistema de Proyectos — Amazonia Emprende
 
-> **Fecha:** Mayo 2026 · **Actualizado (parcial):** 2026-07-16 — ver nota abajo.
+> **Fecha:** Mayo 2026 · **Actualizado (parcial):** 2026-07-23 — ver nota abajo.
 > **Proyecto Supabase compartido:** `lbxysovesmbgesxooghw` (usado por todos salvo los indicados)
 >
 > **Este archivo es el mapa de carpetas/stack — para arquitectura y estado real de los datos, la fuente
@@ -16,6 +16,7 @@
 |---------|--------|-------|----------|--------|
 | `Intranet-AE/` | Intranet AE | Next.js 16, React 19, Tailwind 4 | ✅ mismo proyecto | En producción |
 | `GeoAE/` | Geovisor AE | Next.js, Leaflet | ✅ mismo proyecto (service role server-side) | En producción — capa Siembra desactualizada, ver `../../GeoAE/CLAUDE.md` |
+| `amazonia-emprende-web/` | Sitio público AE | HTML estático autocontenido (`index.html`) | ❌ no toca Supabase | Landing institucional (marca 2024) — repo propio en GitHub |
 | `app_campo/` | PWA Campo (AE-CAMPO) | React + Vite, Dexie (offline), Supabase anon | ✅ mismo proyecto | **App productiva desde 2026-07-08** — reconectada a `core`/`geo` |
 | `familias-res/` | PWA Campo — versión anterior | React + Vite, Dexie (offline) | ✅ mismo proyecto | **Prueba de concepto, superada por `app_campo/`** (pendiente decidir si se archiva) |
 | `amazonia-escuela-bosque/` | Escuela Bosque | Next.js, pnpm | ❌ sin `.env`, sin integración Supabase en el código | En desarrollo |
@@ -104,11 +105,23 @@ decidir si se archiva — no usarla como referencia de arquitectura actual.
 
 ---
 
+## Sitio público (`amazonia-emprende-web/`)
+
+**Propósito:** Sitio oficial de presentación de Amazonía Emprende (landing institucional): las dos escuelas (Bosque y Páramo), Centro de Semillas Nativas, ecosistema tecnológico y cursos.
+
+**Tecnología:** Página estática autocontenida (`index.html`) con la identidad de marca 2024 embebida (paleta, Josefin Sans + Poppins, isotipo de huella).
+
+**Estado:** Repo git propio (`github.com/Alejandrombermudez/amazonia-emprende-web`). No toca Supabase. Se sirve en cualquier host estático (GitHub Pages / Vercel / Netlify).
+
+---
+
 ## Modelo Web (`modelo-web/`)
 
-**Propósito:** Template HTML/CSS/JS estático para sitio institucional o prototipo de landing.
+**Propósito:** Prototipo de teledetección — clasificador de especies forestales (5 especies) a partir de imágenes multiespectrales de **5 bandas** `[B, G, R, RE, NIR]`. Ensemble de dos modelos ONNX (EfficientNet + ResNet) corriendo client-side. Rol en el ecosistema: insumo de SIG I (zonas potenciales).
 
-**Estado:** Estático, sin backend.
+**Tecnología:** HTML/CSS/JS vanilla + `onnxruntime-web`; pesos servidos desde HuggingFace (`AlejandroBermudez123/especies-arboreas`).
+
+**Estado:** Prototipo **desconectado** — no lee ni escribe en Supabase. Detalle: `../../modelo-web/CLAUDE.md`.
 
 ---
 

@@ -16,7 +16,7 @@ Este documento describe el dominio de **Siembra (Restauración)**. Hay un segund
 | Flujo | Jurídica → SIG I → Campo → SIG II → Vivero → Ejecución | Registro del predio + su red de árboles (uno por árbol) |
 | Objeto central | El **predio** avanzando por el expediente | El **árbol semillero** (uno por fila, colgado del predio) |
 | Schemas | `core`, `geo`, `siembra.*`, `catalogo`, `vivero` | `ras.*` |
-| Estado | `siembra.*` y la PWA de campo (`familias-res/`) son **pruebas exitosas, NO productivas**. Producción real arranca con Jurídica sobre `core`. | En **rediseño**: parámetros del formulario + carga de árboles + conexión al geovisor |
+| Estado | La PWA de campo productiva es **`app_campo/`** (reconectada a `core`/`geo` desde 2026-07-08; `familias-res/` fue la prueba de concepto). Los **datos** de `siembra.*` siguen siendo de prueba, NO productivos. Producción real arranca con Jurídica sobre `core`. | En **rediseño**: parámetros del formulario + carga de árboles + conexión al geovisor |
 
 > "Siembra" **no** es un módulo de familias: es la cadena de valor de la restauración completa. Lo que sigue (§1–§6) es ese proceso.
 
