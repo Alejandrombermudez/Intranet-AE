@@ -5,12 +5,13 @@ import { useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '@/lib/supabase'
 import { parsearShapefile, perimetroGeom, type ShapefileParseado } from '@/lib/shapefile-client'
+import { exportarZonas } from '@/lib/exportar-zonas'
 import { area as turfArea } from '@turf/area'
 import { booleanIntersects } from '@turf/boolean-intersects'
 import type { Feature, Geometry } from 'geojson'
 import {
   Map as MapIcon, ArrowLeft, Loader2, FileUp, Save, AlertCircle, AlertTriangle,
-  CheckCircle2, Ruler, Layers, Hexagon as Sq, ExternalLink, MousePointerClick, Check, Send, Undo2,
+  CheckCircle2, Ruler, Layers, Hexagon as Sq, ExternalLink, MousePointerClick, Check, Send, Undo2, Download,
   ClipboardList,
 } from 'lucide-react'
 
@@ -37,6 +38,42 @@ type Tab = 'poligono' | 'siembra' | 'campo'
 const zonaToFeature = (z: ZonaGuardada): Feature => ({ type: 'Feature', geometry: JSON.parse(z.geojson), properties: { nombre: z.nombre, tipo: z.tipo } })
 const todos = (n: number) => new Set(Array.from({ length: n }, (_, i) => i))
 const resumenProps = (f: Feature) => Object.values(f.properties ?? {}).filter((v) => v != null && v !== '').slice(0, 2).map(String).join(' · ')
+
+// Descarga las zonas ya guardadas como shapefile (.zip con .shp/.shx/.dbf/.prj),
+// en EPSG:4326 y con los atributos del sistema en el .dbf. Cierra el círculo de
+// la ingesta: lo que corrigió campo se puede llevar de vuelta al GIS.
+function BotonDescargar({
+  zonas, sufijo, predio, municipio,
+}: {
+  zonas: ZonaGuardada[]
+  sufijo: string
+  predio: string
+  municipio?: string
+}) {
+  const [bajando, setBajando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function bajar() {
+    setBajando(true); setError(null)
+    try {
+      await exportarZonas(zonas, { predio: predio || 'predio', municipio, sufijo })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo generar el shapefile.')
+    } finally { setBajando(false) }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {error && <span className="text-xs text-rose-600">{error}</span>}
+      <button onClick={bajar} disabled={bajando}
+        title="Descargar como shapefile (.zip) en EPSG:4326, con atributos"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-200 text-teal-700 text-xs font-bold hover:bg-teal-50 transition-colors disabled:opacity-50">
+        {bajando ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+        Descargar .shp
+      </button>
+    </div>
+  )
+}
 
 // Lista seleccionable de polígonos (con checkbox, "todos" y "limpiar")
 function ListaSeleccion({ parse, sel, setSel }: { parse: ShapefileParseado; sel: Set<number>; setSel: (s: Set<number>) => void }) {
@@ -337,6 +374,7 @@ export default function SigPredioPage() {
             predioId={predioId}
             email={userEmail}
             fincaGeoms={fincaZonas.map(z => JSON.parse(z.geojson) as Geometry)}
+            nombrePredio={caso?.nombre_predio ?? 'predio'}
           />
         )}
 
@@ -358,7 +396,10 @@ export default function SigPredioPage() {
 
             {(parsePoly || fincaFeatures.length > 0) && (
               <section className="bg-white rounded-2xl border border-stone-100 p-5">
-                <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider mb-3">{parsePoly ? 'Elige el/los polígono(s) del predio' : 'Polígono(s) guardado(s)'}</h2>
+                <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                  <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">{parsePoly ? 'Elige el/los polígono(s) del predio' : 'Polígono(s) guardado(s)'}</h2>
+                  {!parsePoly && fincaZonas.length > 0 && <BotonDescargar zonas={fincaZonas} sufijo="predio" predio={caso?.nombre_predio ?? "predio"} municipio={caso?.municipio} />}
+                </div>
                 {parsePoly && parsePoly.features.length > 1 && <p className="text-xs text-teal-600 font-bold mb-2 flex items-center gap-1"><MousePointerClick size={13} /> Haz clic en cada polígono que pertenezca al predio (o márcalos abajo).</p>}
                 <MapaZonas
                   features={parsePoly ? parsePoly.features : fincaFeatures}
@@ -414,7 +455,10 @@ export default function SigPredioPage() {
 
             {(parseSites || fincaFeatures.length > 0 || siembraZonas.length > 0) && (
               <section className="bg-white rounded-2xl border border-stone-100 p-5">
-                <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider mb-3">{parseSites ? 'Elige los sitios (sobre el polígono del predio)' : 'Sitios guardados'}</h2>
+                <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                  <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">{parseSites ? 'Elige los sitios (sobre el polígono del predio)' : 'Sitios guardados'}</h2>
+                  {!parseSites && siembraZonas.length > 0 && <BotonDescargar zonas={siembraZonas} sufijo="sitios_siembra" predio={caso?.nombre_predio ?? "predio"} municipio={caso?.municipio} />}
+                </div>
                 {parseSites && parseSites.features.length > 1 && <p className="text-xs text-teal-600 font-bold mb-2 flex items-center gap-1"><MousePointerClick size={13} /> Marca los sitios que vas a guardar.</p>}
                 <MapaZonas
                   baseFeatures={fincaFeatures}

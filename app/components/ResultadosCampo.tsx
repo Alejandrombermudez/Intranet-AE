@@ -5,8 +5,10 @@ import type { Geometry } from 'geojson'
 import {
   Loader2, ClipboardList, BarChart2, User, Calendar, MapPinned,
   Check, Pencil, Trash2, Plus, ChevronDown, ChevronRight, Image as ImageIcon,
+  Download, AlertCircle,
 } from 'lucide-react'
 import type { CapaCampo } from '@/app/components/MapaCampo'
+import { exportarRevisiones } from '@/lib/exportar-zonas'
 
 const MapaCampo = dynamic(() => import('@/app/components/MapaCampo'), {
   ssr: false,
@@ -127,16 +129,30 @@ function Seccion({ titulo, children, defaultOpen = false }: { titulo: string; ch
 
 // ─── Componente principal ────────────────────────────────────────────────────
 export default function ResultadosCampo({
-  predioId, email, fincaGeoms,
+  predioId, email, fincaGeoms, nombrePredio,
 }: {
   predioId: string
   email: string
   /** Polígono(s) del predio, para dar contexto al mapa. */
   fincaGeoms: Geometry[]
+  nombrePredio: string
 }) {
   const [data, setData] = useState<CampoResumen | null>(null)
   const [loading, setLoading] = useState(true)
   const [sel, setSel] = useState<string | null>(null)   // local_id de la revisión enfocada
+  const [bajando, setBajando] = useState<string | null>(null)
+  const [errorDescarga, setErrorDescarga] = useState<string | null>(null)
+
+  async function descargar(revs: Revision[], sufijo: string, clave: string) {
+    setBajando(clave); setErrorDescarga(null)
+    try {
+      await exportarRevisiones(revs, { predio: nombrePredio, sufijo })
+    } catch (e) {
+      setErrorDescarga(e instanceof Error ? e.message : 'No se pudo generar el shapefile.')
+    } finally {
+      setBajando(null)
+    }
+  }
 
   useEffect(() => {
     let vivo = true
@@ -241,8 +257,23 @@ export default function ResultadosCampo({
         <div className="bg-white rounded-2xl border border-stone-100 p-5 space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Cambios en el terreno</h2>
-            {sel && <button onClick={() => setSel(null)} className="text-xs font-bold text-teal-600 hover:underline">Ver todos los cambios</button>}
+            <div className="flex items-center gap-3">
+              {sel && <button onClick={() => setSel(null)} className="text-xs font-bold text-teal-600 hover:underline">Ver todos los cambios</button>}
+              <button
+                onClick={() => descargar(revisiones.filter(r => r.geom_original || r.geom_corregida), 'cambios_campo', 'todo')}
+                disabled={bajando !== null}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 text-white text-xs font-bold hover:bg-teal-700 transition-colors disabled:opacity-50">
+                {bajando === 'todo' ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                Descargar todos los cambios (.shp)
+              </button>
+            </div>
           </div>
+
+          {errorDescarga && (
+            <p className="flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+              <AlertCircle size={13} className="shrink-0 mt-0.5" /> {errorDescarga}
+            </p>
+          )}
 
           <MapaCampo capas={capas} />
 
@@ -256,7 +287,8 @@ export default function ResultadosCampo({
           </div>
           <p className="text-[11px] text-stone-400">
             El mapa muestra cómo quedó cada zona. Toca una fila de la bitácora para ver ese cambio en particular,
-            con la sombra gris del límite anterior.
+            con la sombra gris del límite anterior. Las descargas salen en <strong>EPSG:4326 (WGS84)</strong>,
+            el mismo sistema en el que quedan las geometrías después de la ingesta, con .prj y atributos en el .dbf.
           </p>
         </div>
       )}
@@ -266,15 +298,21 @@ export default function ResultadosCampo({
         <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
           <div className="px-5 py-3 border-b border-stone-100">
             <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Bitácora de revisiones</h2>
-            <p className="text-xs text-stone-400 mt-0.5">Cada acción del equipo de campo sobre una zona, en orden.</p>
+            <p className="text-xs text-stone-400 mt-0.5">
+              Cada acción del equipo de campo sobre una zona, en orden. El ícono de descarga baja
+              esa corrección como shapefile, con el polígono de antes y el de después.
+            </p>
           </div>
           <div className="divide-y divide-stone-50">
             {[...revisiones].reverse().map((r, i) => {
               const { label, cls, Icon } = ACCION[r.accion]
               const activo = sel === r.local_id
+              const tieneGeom = !!(r.geom_original || r.geom_corregida)
               return (
-                <button key={r.local_id ?? i} onClick={() => setSel(activo ? null : r.local_id)}
-                  className={`w-full text-left px-5 py-3 flex items-start gap-3 transition-colors ${activo ? 'bg-teal-50/60' : 'hover:bg-stone-50/70'}`}>
+                <div key={r.local_id ?? i}
+                  className={`px-5 py-3 flex items-start gap-3 transition-colors ${activo ? 'bg-teal-50/60' : 'hover:bg-stone-50/70'}`}>
+                  <button onClick={() => setSel(activo ? null : r.local_id)}
+                    className="flex-1 min-w-0 flex items-start gap-3 text-left">
                   <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border shrink-0 ${cls}`}>
                     <Icon size={11} /> {label}
                   </span>
@@ -292,7 +330,18 @@ export default function ResultadosCampo({
                       <span className="inline-flex items-center gap-1"><Calendar size={10} />{fmtFecha(r.fecha ?? r.created_at)}</span>
                     </p>
                   </div>
-                </button>
+                  </button>
+
+                  {tieneGeom && (
+                    <button
+                      onClick={() => descargar([r], `zona_${(r.zona_id ?? '').slice(0, 8)}_${r.accion}`, r.local_id ?? `i${i}`)}
+                      disabled={bajando !== null}
+                      title="Descargar este cambio como shapefile (antes y después)"
+                      className="shrink-0 p-2 rounded-lg text-stone-400 hover:text-teal-700 hover:bg-teal-50 transition-colors disabled:opacity-40">
+                      {bajando === (r.local_id ?? `i${i}`) ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                    </button>
+                  )}
+                </div>
               )
             })}
           </div>
