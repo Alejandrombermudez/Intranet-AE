@@ -7,15 +7,21 @@ import { supabase } from '@/lib/supabase'
 import { parsearShapefile, perimetroGeom, type ShapefileParseado } from '@/lib/shapefile-client'
 import { area as turfArea } from '@turf/area'
 import { booleanIntersects } from '@turf/boolean-intersects'
-import type { Feature } from 'geojson'
+import type { Feature, Geometry } from 'geojson'
 import {
   Map as MapIcon, ArrowLeft, Loader2, FileUp, Save, AlertCircle, AlertTriangle,
   CheckCircle2, Ruler, Layers, Hexagon as Sq, ExternalLink, MousePointerClick, Check, Send, Undo2,
+  ClipboardList,
 } from 'lucide-react'
 
 const MapaZonas = dynamic(() => import('@/app/components/MapaZonas'), {
   ssr: false,
   loading: () => <div className="w-full h-80 rounded-xl border border-stone-200 bg-stone-100 flex items-center justify-center"><Loader2 className="animate-spin text-stone-400" size={28} /></div>,
+})
+
+const ResultadosCampo = dynamic(() => import('@/app/components/ResultadosCampo'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin text-stone-300" size={32} /></div>,
 })
 
 const fmt = (n: number, d = 2) => n.toLocaleString('es-CO', { maximumFractionDigits: d, minimumFractionDigits: d })
@@ -26,7 +32,7 @@ interface ZonaGuardada {
   area_ha: number | null; perimetro_m: number | null
   propiedades: Record<string, unknown> | null; geojson: string
 }
-type Tab = 'poligono' | 'siembra'
+type Tab = 'poligono' | 'siembra' | 'campo'
 
 const zonaToFeature = (z: ZonaGuardada): Feature => ({ type: 'Feature', geometry: JSON.parse(z.geojson), properties: { nombre: z.nombre, tipo: z.tipo } })
 const todos = (n: number) => new Set(Array.from({ length: n }, (_, i) => i))
@@ -120,6 +126,10 @@ export default function SigPredioPage() {
       cargarZonas(userEmail),
     ]).then(() => setLoading(false)).catch(() => setLoading(false))
   }, [authReady, userEmail, predioId, cargarCaso, cargarZonas])
+
+  // El predio ya salió a terreno alguna vez: desde ahí tiene sentido mostrar
+  // lo que campo devolvió (aunque después se haya cancelado el envío).
+  const yaFueACampo = !!caso?.etapa && !['juridica', 'sig_i'].includes(caso.etapa)
 
   const fincaZonas = useMemo(() => zonas.filter((z) => z.tipo === 'finca'), [zonas])
   const siembraZonas = useMemo(() => zonas.filter((z) => z.tipo === 'restauracion'), [zonas])
@@ -306,16 +316,29 @@ export default function SigPredioPage() {
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-white rounded-xl p-1 border border-stone-100 w-fit">
-          {([['poligono', 'Polígono del predio'], ['siembra', 'Sitios de siembra']] as const).map(([k, label]) => (
+        {/* Tabs — "Resultados de campo" aparece apenas el predio sale a terreno */}
+        <div className="flex gap-1 bg-white rounded-xl p-1 border border-stone-100 w-fit flex-wrap">
+          {([
+            ['poligono', 'Polígono del predio'],
+            ['siembra',  'Sitios de siembra'],
+            ...(yaFueACampo ? [['campo', 'Resultados de campo'] as const] : []),
+          ] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k as Tab)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${tab === k ? 'bg-teal-600 text-white' : 'text-stone-500 hover:bg-stone-100'}`}>
-              {k === 'poligono' ? <Sq size={14} /> : <Layers size={14} />} {label}
+              {k === 'poligono' ? <Sq size={14} /> : k === 'siembra' ? <Layers size={14} /> : <ClipboardList size={14} />} {label}
               {k === 'poligono' && fincaZonas.length > 0 && <CheckCircle2 size={13} className={tab === k ? 'text-white' : 'text-teal-500'} />}
             </button>
           ))}
         </div>
+
+        {/* ════ Resultados de campo ════ */}
+        {tab === 'campo' && userEmail && (
+          <ResultadosCampo
+            predioId={predioId}
+            email={userEmail}
+            fincaGeoms={fincaZonas.map(z => JSON.parse(z.geojson) as Geometry)}
+          />
+        )}
 
         {/* ════ Polígono del predio ════ */}
         {tab === 'poligono' && (
