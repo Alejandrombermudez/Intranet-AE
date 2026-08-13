@@ -25,16 +25,25 @@ documentos maestros de arquitectura de todo el ecosistema (no solo de esta app).
 | Ruta | Módulo | Schema |
 |---|---|---|
 | `/intranet/juridica` | Debida diligencia, antecedentes, análisis jurídico | `juridica` sobre `core` |
-| `/intranet/sig` | Worklist SIG I, ingesta de shapefile → `geo.zonas` | `geo` |
+| `/intranet/sig` | Tablero por **fase cartográfica** (sin cartografía / falta zonificar / listo para campo / en campo) — las tarjetas son los filtros. Lo alimenta `/api/sig/worklist` | `geo`, `core` |
+| `/intranet/sig/[predioId]` | Ingesta de shapefile (por **lotes versionados**, no destructiva) + pestaña **"Resultados de campo"** (mapa antes/después, bitácora, formularios) vía `/api/sig/campo`. Descarga a `.shp` con `lib/exportar-zonas.ts` | `geo`, `siembra` |
 | `/intranet/expedientes` | Tablero "¿en qué etapa va cada predio?" | `core.expedientes` |
 | `/intranet/ras/siembra`, `/intranet/ras/conservacion` | Encuesta/evaluación de campo (legado `siembra.*`) y conservación (`ras.*`) | `siembra`, `ras` |
 | `/intranet/catalogo` | Catálogo de especies | `catalogo` |
 | `/intranet/ejecutivo` | Sesiones/indicaciones ejecutivas | `ejecutivo` |
 | `app/api/juridica/aliados/[id]/crear-en-siembra` | Paso SIG→Campo: valida SIG I obligatorio, crea `siembra.familias`, avanza expediente | `core`, `geo`, `siembra` |
 
+## El terreno tiene la última palabra (regla de negocio del SIG ↔ Campo)
+
+La oficina propone zonas, la persona parada en el predio dispone, y **ninguna de las dos versiones se
+destruye**. Traducido a datos: cada subida del SIG es un **lote versionado** (`geo.zonas_lote`), lo
+reemplazado queda `vigente=false` y consultable; `geo.revisar_zona` **nunca falla** porque el SIG haya
+cambiado algo (revive la zona retirada, o la recrea con la copia que manda el celular); y `cerrar_lote`
+no retira zonas que campo ya trabajó — las marca en `geo.v_zonas_conflicto` para resolverlas mirando las
+dos. Detalle en `docs/ARQUITECTURA_DATOS.md` §2.2 y `docs/CONTEXTO_MODULO_SIG.md`.
+
 ## Estado vivo — no lo memorices, verifícalo
 
-`docs/sql/pending.sql` lleva la lista de migraciones que **aún no se han corrido** en producción
-(hoy: `migration_ras_documentos_familia.sql` — verificado por REST 2026-07-22, `ras.documentos_familia` todavía no existe;
-`migration_zona_revision.sql` ya se corrió el 2026-07-28).
+`docs/sql/pending.sql` lleva la lista de migraciones que **aún no se han corrido** en producción.
+Verificado por REST el **2026-08-12: no queda ninguna pendiente** — todas las escritas están aplicadas.
 Antes de asumir que una tabla/columna existe, verifica por REST en vez de confiar en un doc que puede estar desactualizado.

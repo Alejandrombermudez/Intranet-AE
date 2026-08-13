@@ -2,7 +2,7 @@
 
 > **Backlog vivo.** Aquí se van anotando las cosas que faltan por módulo a medida que las detectamos, para no perderlas. Cuando algo se implemente, se marca ✅ (o se mueve al historial).
 >
-> **Fecha:** 2026-06-13 · **Relacionado:** [`ARQUITECTURA_ECOSISTEMA.md`](ARQUITECTURA_ECOSISTEMA.md) (decisiones D1–D5)
+> **Fecha:** 2026-06-13 · **Última revisión:** 2026-08-12 · **Relacionado:** [`ARQUITECTURA_ECOSISTEMA.md`](ARQUITECTURA_ECOSISTEMA.md) (decisiones D1–D5)
 
 **Cómo leer el estado:** 🆕 detectado · 🔧 en diseño · ⏳ esperando decisión · ✅ hecho
 
@@ -48,7 +48,14 @@
 | **SIG I en dos pasos: polígono del predio + sitios de siembra** | El SIG sube un `.zip` con varios polígonos → elige UNO (el predio, `tipo=finca`); y aparte los sitios de siembra (`tipo=restauracion`) dentro del polígono | `/intranet/sig/[predioId]` con 2 pestañas. Polígono: selección en mapa/lista + aviso de **sobreposición** → **sobreescribir** (borra y reemplaza) o **unir** (`ST_Union` vía `geo.crear_zona_union`). Sitios: previsualización **superpuesta** al polígono guardado. Mapa con capa base + clic para elegir. | ✅ (2026-06-20) · correr `migration_geo_v3.sql` |
 | Respaldo del `.zip` en Storage | Trazabilidad (el geom queda en PostGIS, pero el .zip es respaldo) | bucket `sig-shapefiles` + subir en la ingesta | 🆕 opcional |
 | Pipeline de publicación a PMTiles | Geoportal serverless con MapLibre | GeoAE | 🆕 |
-| App de campo debe **devolver las zonas corregidas (SIG II)** | El flujo lo exige antes del plan; tabla `geo.zona_revision`. Decidir: método (vértices/GPS/ambos), mapa base offline, versionado | PWA campo ↔ `geo.zonas` | 🔧 |
+| App de campo debe **devolver las zonas corregidas (SIG II)** | El flujo lo exige antes del plan | `geo.zona_revision` + RPC `geo.revisar_zona` en producción; 27 revisiones reales de 2 predios. Método: vértices con leaflet-geoman | ✅ (2026-07-28) |
+| **El SIG destruía lo anterior al resubir** | `modo='sobreescribir'` hacía `DELETE`, así que los `zona_id` que el celular tenía descargados desaparecían y la corrección de campo no se podía aplicar nunca | `migration_geo_versionado.sql`: cada subida es un lote con versión, lo reemplazado queda `vigente=false`. `revisar_zona` revive o recrea en vez de fallar | ✅ (2026-08-11) |
+| **Reemplazar sitios de siembra sin duplicar** | Solo existía `modo='insertar'`, que suma: por eso La Dalia tiene dos zonas "Lote 2" | Casilla "Reemplazar los sitios ya guardados" en `/intranet/sig/[predioId]` | ✅ (2026-08-11) |
+| **El SIG no veía qué pasó en terreno** | Mandaba predios a campo y no tenía dónde ver correcciones ni formularios | Pestaña "Resultados de campo": mapa antes/después, bitácora y los dos formularios. `/api/sig/campo` | ✅ (2026-08-12) |
+| **Tablero inutilizable con 111 predios** | Lista plana de nombres, sin forma de saber qué tiene cartografía | `/intranet/sig` por fase cartográfica + filtros; `/api/sig/worklist` | ✅ (2026-08-12) |
+| **No se podía sacar la geometría del sistema** | El SIG leía shapefiles pero no los devolvía: la corrección de campo se quedaba en la base | `lib/shapefile-write.ts` + `lib/exportar-zonas.ts`; descarga `.zip` en EPSG:4326 con atributos | ✅ (2026-08-12) |
+| Estrenar el versionado con una subida real | `geo.zonas_lote` está en cero: el SIG no ha subido nada desde la migración | `/intranet/sig/[predioId]` | 🆕 |
+| Revisar **Los Andes**: 315 ha medidas vs 65,5 registrales | Dos polígonos de finca cargados (El Olivo + Lagunilla); o es el shapefile equivocado o son varios predios en uno | `geo.zonas` del predio `4a25db35…` | 🆕 |
 
 ## Núcleo / modelo de datos
 

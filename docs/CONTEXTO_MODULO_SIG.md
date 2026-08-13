@@ -12,7 +12,25 @@ Hoy toda la geometría se guarda como un `.zip` (shapefile) en Storage y el geov
 
 ---
 
-## Estado de implementación (2026-06-19)
+## Estado de implementación (2026-08-12) — el vigente
+
+El módulo SIG ya es productivo de punta a punta: **el SIG sube, campo corrige, y el SIG ve y descarga el resultado.**
+
+**Tablero `/intranet/sig`** — se reorganizó por *fase cartográfica* en vez de ser una lista plana de nombres (con 111 predios era inutilizable). Cuatro tarjetas, que además son los filtros: **sin cartografía** (ni polígono de predio) · **falta zonificar** (predio sí, zonas no) · **listo para campo** · **en campo**. Hoy: 107 / 0 / 2 / 2. Filtros por municipio y zona AE, búsqueda por vereda, y cada fila muestra en chips si tiene predio, cuántas zonas, cuántas descartó campo y si ya devolvió formularios. Lo alimenta `/api/sig/worklist` (expediente + resumen de geo en una sola llamada).
+
+**Dos áreas que no son lo mismo, y confundían:** `core.predios.area_registral` la captura **Jurídica a mano** desde la escritura o el certificado de tradición — *no* sale del shapefile (por eso hay predios con área y sin cartografía; solo 11 de 111 la tienen). El área que manda es la **medida** por PostGIS sobre el `.zip`. El tablero muestra la medida grande y la registral debajo. La comparación ya destapó casos: **Los Andes** tiene 315 ha medidas (dos polígonos de finca: El Olivo 251 + Lagunilla 64) contra 65,5 ha escrituradas — o es el shapefile equivocado o son varios predios en uno.
+
+**Versionado de subidas (`migration_geo_versionado.sql`, corrida 2026-08-11)** — responde la pregunta 11 de este documento. Cada subida es un **lote con versión** (backup 1, 2, 3…); lo reemplazado queda `vigente=false`, consultable, **no borrado**. Antes se hacía `DELETE`, lo que rompía las correcciones que campo tenía pendientes. Se agregó la casilla **"Reemplazar los sitios ya guardados"** en la pestaña de siembra: hasta entonces la única forma de cambiar las zonas era volver a subirlas y que se acumularan duplicadas (por eso La Dalia tiene dos zonas llamadas "Lote 2").
+
+**Pestaña "Resultados de campo"** (aparece apenas el predio sale a terreno) — mapa satelital con lo que corrigió el técnico, con los mismos colores que ve él en el celular y la sombra gris del límite anterior; bitácora de revisiones (quién, cuándo, acción, área, observaciones); y las respuestas completas de la **evaluación de campo AE-CAMPO-001** y la **encuesta predial**. Lo alimenta `/api/sig/campo`.
+
+**Descarga a shapefile** — `lib/shapefile-write.ts` (escrito a mano siguiendo la especificación ESRI: las librerías de JS tratan mal los MultiPolygon, que es como PostGIS guarda todo, y no dejan controlar el `.dbf`). Sale `.zip` con `.shp/.shx/.dbf/.prj/.cpg` en **EPSG:4326** — el sistema en que quedan las geometrías tras la ingesta — con los atributos del sistema. Cada corrección exporta dos polígonos (`momento` = `antes`/`despues`). Verificado de ida y vuelta con shpjs (`scripts/verificar-shapefile.mjs`) y con la corrección real de La Dalia.
+
+**Lo que falta:** estrenar el versionado con una subida real (`geo.zonas_lote` está en cero — el SIG no ha subido nada desde la migración); respaldo del `.zip` en Storage; y el pipeline a PMTiles.
+
+---
+
+## Estado de implementación (2026-06-19) — histórico
 
 Arrancó **SIG I**. **Hecho:** el flujo **Jurídica → SIG** (la abogada aprueba y "Envía a SIG"; el expediente avanza a `sig_i`); el módulo **`/intranet/sig`** (worklist de predios por zonificar, enlazado desde el tablero `/intranet/expedientes`); y el modelo de datos **`geo.zonas` + PostGIS** escrito en [`sql/migration_geo.sql`](sql/migration_geo.sql) (PostGIS + tabla + RPC `geo.crear_zona`, que recibe GeoJSON, repara la geometría con `ST_MakeValid`/`ST_Multi` y calcula el área). **Decisiones tomadas (defaults de este doc):** G1 = sí PostGIS; G3 = incremental (GeoJSON ya, PMTiles después); G4 = `geo.zonas` central; carga = el SIG **sube `.zip`** (no edita en el navegador — eso es "futuro" D10). PostGIS ya corrido y expuesto. **Ingesta HECHA (2026-06-19):** `/intranet/sig/[predioId]` sube el `.zip` → parsea (shpjs) → reproyecta a 4326 leyendo el `.prj` (proj4) → **previsualiza en mapa Leaflet/OpenStreetMap + tabla de atributos + métricas** (área ha/km², perímetro, nº de zonas) → guarda en `geo.zonas` vía `geo.crear_zona`. La pregunta A1 del SRID queda resuelta: se lee del `.prj` (si las coords ya están en lon/lat, no reproyecta). **Falta:** correr `migration_geo_v2.sql` (persistir `propiedades`/`perimetro_m` + RPC `geo.zonas_de_predio` para ver las zonas guardadas en el mapa al recargar) y **probar con un shapefile real del SIG**. Opcional: respaldo del `.zip` en Storage (`sig-shapefiles`).
 
@@ -107,7 +125,7 @@ Como en Fase I son ~6 predios, no hace falta construirlo todo de golpe:
 
 ### D. Futuro (lo más estratégico)
 10. **¿Quieren editar polígonos DENTRO de la Intranet** (dibujar/ajustar zonas en el navegador), o seguir editando en QGIS y solo subir?
-11. **¿Cómo quieren manejar el versionado** `potencial → validada → avalada` que pide el flujo? ¿Sobrescribir o guardar versiones?
+11. ~~**¿Cómo quieren manejar el versionado**? ¿Sobrescribir o guardar versiones?~~ → **RESUELTA (2026-08-11): guardar versiones.** Cada subida es un lote (`geo.zonas_lote`) y lo anterior queda `vigente=false`, consultable. Nada se borra. Ver el estado vigente arriba.
 12. **¿Las capas de cobertura del modelo de IA** (`modelo-web`) deben entrar como insumo de las zonas potenciales (SIG I)?
 
 ---

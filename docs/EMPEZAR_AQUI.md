@@ -12,15 +12,28 @@ El sistema tiene **dos dominios distintos** que no comparten tablas ni flujo:
 
 1. **Siembra (Restauración) = un proceso completo de extremo a extremo**, no un módulo de "familias". Es la cadena de valor de la restauración:
    **Jurídica → SIG I → Campo → SIG II → Vivero → Ejecución.**
-   > **Estado real (2026-07-08):** la app de campo productiva es **`app_campo/`** (`familias-res/` fue la prueba de concepto). Ya está **conectada al proceso real**: lee `core.v_predios_campo` (solo predios que pasaron Jurídica + SIG I), sus zonas vienen de `geo.zonas`, y tiene **módulo SIG** (mapa satelital + GPS + corrección de zonas = SIG II). Contexto completo: `../../app_campo/CONTEXTO_APP_CAMPO.md`.
+   > **Estado real (2026-08-12): el tramo Jurídica → SIG I → Campo → SIG II corre CON DATOS REALES.** La app de campo productiva es **`app_campo/`** (`familias-res/` fue la prueba de concepto): lee `core.v_predios_campo`, sus zonas vienen de `geo.zonas`, y su **módulo SIG** (mapa satelital + GPS + corrección de zonas) es el SIG II. Hoy hay 2 predios en campo (**Versalles** y **La Dalia**), 27 revisiones de zonas sincronizadas y evaluadores reales. La intranet ya muestra y descarga lo que devuelve campo. Contexto completo: `../../app_campo/CONTEXTO_APP_CAMPO.md` y [`CONTEXTO_MODULO_SIG.md`](CONTEXTO_MODULO_SIG.md).
+   >
+   > **Regla de negocio que atraviesa todo el tramo SIG ↔ Campo: el terreno tiene la última palabra.** La oficina propone zonas, la persona parada en el predio dispone, y ninguna versión se destruye (el SIG versiona en lotes, lo reemplazado queda consultable). Ver `ARQUITECTURA_DATOS.md` §2.2.
 
 2. **Conservación (RAS = Red de Árboles Semilleros) = dominio aparte.** Familias en conservación que **alojan** la red de árboles semilleros. El **árbol semillero es el objeto principal** (uno por fila, colgado del predio), no un conteo. Vive en `ras.*` y está **en rediseño** (parámetros del formulario + carga de árboles + conexión al geovisor).
 
 > Cuidado con la palabra "RAS": en los diagramas del proceso de restauración aparece como el **equipo** responsable de algunas etapas; como **schema/dominio** (`ras.*`) significa **Conservación / Red de Árboles Semilleros**. Son cosas distintas.
 
-## Estado
+## Estado (2026-08-12)
 
-Diseño conceptual **completo**. **Semana 1 IMPLEMENTADA y en producción (2026-06-19):** el modelo central `core` (aliados/predios/expedientes) está creado y el módulo **Jurídico ya escribe sobre él** (cutover completo, verificado con un caso real; `juridica.aliados_legacy` ya borrada). Qué se hizo y cómo: [`CORE_MIGRACION.md`](CORE_MIGRACION.md). Lo que sigue es continuar conectando el proceso aguas abajo de jurídica.
+Diseño conceptual **completo**. En producción y con datos reales:
+
+| Etapa | Estado |
+|---|---|
+| **Jurídica** (`core` + `juridica`) | 🟢 productivo desde 2026-06-19 — 111 predios cargados. Ver [`CORE_MIGRACION.md`](CORE_MIGRACION.md) |
+| **SIG I** (ingesta de shapefile → `geo.zonas`) | 🟢 productivo, con **versionado por lotes** (nada se borra al resubir) |
+| **Campo** (`app_campo`, PWA offline) | 🟢 **en uso con gente real**: 2 predios, evaluación + encuesta diligenciadas |
+| **SIG II** (corrección de zonas en terreno) | 🟢 27 revisiones sincronizadas vía `geo.revisar_zona` |
+| **Devolución a la oficina** | 🟢 la intranet muestra el mapa antes/después, la bitácora y los formularios, y **exporta a shapefile** |
+| **Plan de siembra / Vivero / Ejecución** | 🔴 por construir — es el siguiente tramo del proceso |
+
+**Migraciones SQL: ninguna pendiente** (verificado por REST el 2026-08-12). Ver [`sql/pending.sql`](sql/pending.sql).
 
 ## Orden de lectura
 
@@ -46,8 +59,26 @@ Diseño conceptual **completo**. **Semana 1 IMPLEMENTADA y en producción (2026-
 
 ## Siguiente paso
 
-**Semana 1 (core + jurídica) — HECHA.** El flujo se ajustó: Jurídica → **SIG** (ya no a Siembra). Hecho (2026-06-19): el módulo **SIG** (`/intranet/sig`, worklist de SIG I), el cambio de flujo ("Enviar a SIG" avanza el expediente a `sig_i`), el **tablero de predios** (`/intranet/expedientes`), y el modelo `geo.zonas` + PostGIS (`docs/sql/migration_geo.sql`, falta correrlo). **Siguiente:** la **ingesta del shapefile** en SIG I (subir `.zip` → reproyectar a 4326 → `geo.zonas`); necesita PostGIS activo + un shapefile de muestra. Estado vivo: [`PENDIENTES_INTEGRACION.md`](PENDIENTES_INTEGRACION.md).
+El tramo Jurídica → SIG → Campo → SIG II está cerrado y operando. **Lo siguiente es el Plan de siembra**
+(`área del SIG × densidad × %especie × (1+reposición)` → demanda al vivero; diseñado en
+[`ARQUITECTURA_DATOS.md`](ARQUITECTURA_DATOS.md) §3.4), que es lo que desbloquea Vivero y Ejecución.
+
+Pendientes menores del tramo ya hecho, en [`PENDIENTES_INTEGRACION.md`](PENDIENTES_INTEGRACION.md):
+estrenar el versionado con una subida real del SIG, revisar **Los Andes** (315 ha medidas vs 65,5 registrales),
+mapa base offline (PMTiles) para la app de campo, y respaldo del `.zip` en Storage.
+
+## Cómo trabaja este proyecto (importante para una sesión nueva)
+
+- **Hay gente usando esto ahora.** Antes de tocar `geo.*`, la sincronización de `app_campo` o la ingesta del SIG,
+  asume que hay trabajo de terreno real en juego. Ya se perdieron correcciones de campo una vez por un bug de
+  ese tipo (ver `app_campo/CONTEXTO_APP_CAMPO.md` §6).
+- **Nunca ejecutar DDL contra Supabase.** Las migraciones son `.sql` en `docs/sql/` que **corre el usuario** en
+  el SQL Editor. Verificar por **lectura** REST sí; alterar el esquema no.
+- **Verificar antes de afirmar.** Estos documentos se desactualizan; la BD es la fuente de verdad. Patrón de
+  consulta REST en `SUPABASE_SCHEMAS.md`.
 
 ## Prompt para el chat nuevo
 
-> Retomo el proyecto Amazonía Emprende. Todo el diseño está documentado. Lee `Intranet-AE/docs/EMPEZAR_AQUI.md` y los archivos que indica. Vamos a empezar la implementación por la Semana 1 del cronograma: el modelo central `core` (aliados, predios, expedientes) y el mapeo de migración desde las tablas actuales.
+> Retomo el proyecto Amazonía Emprende. Todo el diseño está documentado. Lee `Intranet-AE/docs/EMPEZAR_AQUI.md`
+> y los archivos que indica. El tramo Jurídica → SIG → Campo → SIG II ya está en producción con datos reales;
+> no lo rompas. Cuéntame en qué estado está y qué sigue.

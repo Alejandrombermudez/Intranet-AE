@@ -42,3 +42,7 @@ next-env.d.ts
 
 # Datos sensibles/pesados de carga (cédulas, cesiones, fotos, zips) — NO versionar
 docs/temporales/
+
+# Configuración local de Claude Code (permisos de esta máquina) — no compartir.
+# .claude/launch.json SÍ se versiona: es cómo se levanta el dev server.
+.claude/settings.local.json

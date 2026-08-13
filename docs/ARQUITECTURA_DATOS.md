@@ -124,7 +124,7 @@ erDiagram
 | proyecto_fase / responsable | text | | |
 | fecha_inicio | timestamptz | | |
 
-### 2.2 `geo` — geoespacial (PostGIS) 🟢 (creado, vacío)
+### 2.2 `geo` — geoespacial (PostGIS) 🟢 productivo (25 zonas, 2 predios en campo)
 
 **`geo.zonas`** — geometría editable, fuente de verdad del área. 🟢
 | Parámetro | Tipo | Llave | Notas |
@@ -132,19 +132,35 @@ erDiagram
 | id | uuid | PK | |
 | predio_id | uuid | FK→ core.predios | |
 | tipo | text | | `finca` \| `restauracion` \| `conservacion` |
-| estado | text | | `potencial`→`validada`→`definitiva`→`avalada` (versionado) |
+| estado | text | | `potencial`→`validada`→`definitiva`→`avalada`, más `descartada` (campo dijo que no aplica) |
 | geom | geometry(MultiPolygon,4326) | | geometría real — índice GIST |
 | area_ha | numeric | | `ST_Area(geom::geography)/10000` |
 | perimetro_m | numeric | | |
 | propiedades | jsonb | | atributos del shapefile origen |
 | origen | text | | `sig` \| `campo` \| `ia` |
 | shapefile_url | text | | `.zip` de respaldo (Storage) — opcional |
-| version | integer | | versionado de la zona |
-| created_at | timestamptz | | |
+| version | integer | | sube con cada corrección de campo |
+| **lote_id** | uuid | FK→ geo.zonas_lote | de qué subida del SIG vino (null = anterior al versionado) |
+| **vigente** | boolean | | `false` = reemplazada por un lote posterior. **No borrada:** sigue consultable como respaldo |
+| **reemplazada_at / reemplazada_por_lote** | timestamptz / uuid | | cuándo y por qué lote dejó de estar vigente |
+| **revivida_por_campo** | boolean | | campo la trabajó después de que el SIG la reemplazó, y campo manda |
+| **conflicto_con_lote / conflicto_con_zona** | uuid | | la oficina y el terreno se contradicen aquí — resolver en el SIG |
+| created_at / updated_at | timestamptz | | |
 
-> RPCs: `geo.crear_zona(geojson)`, `geo.crear_zona_union(...)`, `geo.zonas_de_predio(predio_id)`. Migraciones v1/v2/v3 corridas.
+**`geo.zonas_lote`** — cada subida de geometrías del SIG = una versión (backup 1, 2, 3…). 🟢
+| Parámetro | Tipo | Notas |
+|---|---|---|
+| id | uuid PK | |
+| predio_id / tipo / version | uuid / text / int | únicos juntos: la versión es por predio+tipo |
+| origen / modo | text | `sig`; `insertar` \| `sobreescribir` \| `unir` |
+| nota / created_by / created_at | | |
+| cerrado_at | timestamptz | null = subida a medias, sus zonas siguen en borrador (`vigente=false`) |
 
-**`geo.zona_revision`** — corrección de zonas en campo (SIG II). 🔧 construido (`migration_zona_revision.sql`, 2026-07-07 — falta correr)
+> **Nada se borra.** Antes, `modo='sobreescribir'` hacía `DELETE` sobre `geo.zonas` (y `crear_zona_union` también): los `zona_id` que el celular ya había descargado dejaban de existir, `geo.revisar_zona` levantaba excepción y **la corrección hecha en terreno no se podía aplicar nunca**. Desde `migration_geo_versionado.sql` (2026-08-11) la versión anterior queda `vigente=false` y consultable.
+>
+> RPCs: `geo.crear_zona(..., p_lote_id)`, `geo.abrir_lote(...)`, `geo.cerrar_lote(lote, reemplazar)` (activa el lote nuevo y retira el anterior **en una sola transacción**), `geo.crear_zona_union(...)` (ya no borra: retira), `geo.zonas_de_predio(predio_id)` (**solo vigentes**), `geo.zonas_historial(predio_id)` (los backups). Vista `geo.v_zonas_conflicto`.
+
+**`geo.zona_revision`** — corrección de zonas en campo (SIG II). 🟢 en producción (`migration_zona_revision.sql`, corrida 2026-07-28; 27 revisiones reales)
 | Parámetro | Tipo | Llave | Notas |
 |---|---|---|---|
 | id | uuid | PK | |
@@ -160,7 +176,11 @@ erDiagram
 | fecha | date | | |
 | sync_origin | text | | `pwa` |
 
-> **Única puerta de escritura para la PWA (anon): RPC `geo.revisar_zona`** (SECURITY DEFINER) — valida, aplica el cambio a `geo.zonas` y deja la auditoría; la app no tiene UPDATE/INSERT directo. `geo.zonas.estado` ganó el valor `descartada`. La app de campo (módulo SIG) muestra finca + zonas sobre satelital, geolocaliza al técnico (dentro de / distancia y rumbo a la zona) y edita por vértices con leaflet-geoman, todo offline-first (Dexie `revisiones`).
+> **Única puerta de escritura para la PWA (anon): RPC `geo.revisar_zona`** (SECURITY DEFINER, 10 argumentos) — valida, aplica el cambio a `geo.zonas` y deja la auditoría; la app no tiene UPDATE/INSERT directo. La app de campo (módulo SIG) muestra finca + zonas sobre satelital, geolocaliza al técnico (dentro de / distancia y rumbo a la zona) y edita por vértices con leaflet-geoman, todo offline-first (Dexie `revisiones`).
+>
+> **Regla de negocio: el terreno tiene la última palabra.** La oficina propone, campo dispone, y ninguna de las dos versiones se destruye. En concreto, `revisar_zona` **nunca falla** por un cambio hecho en el SIG: si la zona fue retirada por un lote nuevo la **revive**; si el SIG la borró de raíz (subidas anteriores al versionado) la **recrea** con `p_geojson_respaldo`, la copia que el propio celular guardaba; y si no hay geometría con qué recrearla, registra la revisión con `zona_id` nulo en vez de levantar excepción. En sentido inverso, `cerrar_lote` **no retira** zonas que campo ya tocó (tienen revisión, u `origen='campo'`): sobreviven marcadas en `geo.v_zonas_conflicto` para que el SIG lo resuelva viendo las dos versiones.
+>
+> **Salida:** la intranet exporta zonas y correcciones a shapefile (`.zip` con `.shp/.shx/.dbf/.prj/.cpg`, EPSG:4326 y atributos en el `.dbf`) desde `lib/shapefile-write.ts` + `lib/exportar-zonas.ts`. Cierra el círculo: lo que campo corrigió vuelve al GIS de escritorio del SIG. Cada corrección exporta dos polígonos (`momento` = `antes`/`despues`) para superponerlos.
 
 ### 2.3 `catalogo` — maestro de especies 🔴 por construir
 

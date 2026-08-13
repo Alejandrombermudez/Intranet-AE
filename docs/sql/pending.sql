@@ -1,6 +1,6 @@
 -- ============================================================
 -- SQL Pendiente — Intranet AE
--- Última revisión: 2026-07-08 (verificado contra BD real vía REST API)
+-- Última revisión: 2026-08-12 (verificado contra BD real vía REST API)
 --
 -- REGLA: solo están aquí cosas que NO se han podido verificar
 -- vía REST API. Una vez ejecutadas, mover al historial abajo.
@@ -11,46 +11,8 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── migration_geo_versionado.sql ───────────────────────────── BLOQUEANTE ──
--- Estado: LISTO PARA EJECUTAR — escrito 2026-08-05, NO verificado contra la BD.
--- Script: docs/sql/migration_geo_versionado.sql
---
--- CORRERLA ANTES DE DESPLEGAR la intranet: /api/sig/ingesta ya llama a
--- geo.abrir_lote / geo.cerrar_lote y a geo.crear_zona con p_lote_id. Sin la
--- migración, subir shapefiles responde 503 con el mensaje que dice esto mismo
--- (no se pierde nada, pero el SIG no puede cargar zonas).
--- La PWA de campo sí es compatible con las dos versiones: si el RPC todavía
--- tiene la firma vieja de 9 argumentos, reintenta sin p_geojson_respaldo.
---
--- Qué arregla: hoy el SIG DESTRUYE lo anterior (modo 'sobreescribir' hacía
--- DELETE de geo.zonas; crear_zona_union también), así que los zona_id que el
--- celular descargó dejaban de existir y geo.revisar_zona levantaba excepción
--- ('La zona X no existe') — el trabajo de terreno quedaba atascado sin poder
--- aplicarse nunca. Ahora:
---   · geo.zonas_lote  = cada subida del SIG es una versión (backup 1, 2, 3...).
---   · geo.zonas.vigente = soft delete; lo anterior queda consultable.
---   · geo.revisar_zona NUNCA falla por un cambio del SIG: revive la zona
---     retirada, o la recrea con la geometría de respaldo que manda el celular.
---   · cerrar_lote no retira zonas que Campo ya trabajó: las marca en conflicto
---     (geo.v_zonas_conflicto) para resolverlas en la oficina.
--- Verificar tras correr:
---   select to_regclass('geo.zonas_lote');
---   select count(*) filter (where vigente) as vigentes, count(*) from geo.zonas;
---   select proname, pronargs from pg_proc p join pg_namespace n on n.oid=p.pronamespace
---     where nspname='geo' and proname in ('revisar_zona','crear_zona');  -- 10 y 10 args, sin duplicados
-
--- ── migration_ras_documentos_familia.sql ───────────────────────────────────
--- Estado: LISTO PARA EJECUTAR — verificado por REST 2026-07-22 que NO existe aún
--- (ras.documentos_familia → PGRST205; no hay bucket ras-documentos-privados).
--- Script: docs/sql/migration_ras_documentos_familia.sql
--- Crea ras.documentos_familia (cesión de derechos de imagen y otros documentos
--- legales por familia, 1→N, soporta varios titulares) + bucket PRIVADO
--- ras-documentos-privados + RLS solo-autenticados (NO anon).
--- Lo consume el módulo de conservación: sección "Cesión de derechos de imagen"
--- en /intranet/ras/conservacion/[id] y el API /api/ras/conservacion/[id]/documentos.
--- Sin esto: esa sección responde vacío / la subida da error (tabla y bucket
--- inexistentes); el resto del módulo funciona igual.
--- Verificar tras correr: select to_regclass('ras.documentos_familia');
+-- (ninguna) — verificado por REST el 2026-08-12: todas las migraciones
+-- escritas están aplicadas en producción. Ver el historial abajo.
 
 
 -- ════════════════════════════════════════════════════════════
@@ -104,4 +66,22 @@
 -- ── 2026-07-28  migration_zona_revision.sql (SIG II: geo.zona_revision + RPC geo.revisar_zona) ─
 --             Verificado por REST: la tabla existe y el RPC responde a anon (P0001 en acción
 --             inválida, sin escribir). Las correcciones de zonas hechas en campo ya sincronizan.
+-- ── ~2026-08   migration_ras_documentos_familia.sql ──────────────────────────
+--             Verificado por REST 2026-08-12: ras.documentos_familia existe con 9 filas.
+--             (Estuvo listado como pendiente desde 2026-07-22; se corrió en algún momento
+--             entre esa fecha y hoy.)
+-- ── 2026-08-11  migration_geo_versionado.sql ─────────────────────────────────
+--             Versionado de zonas del SIG y tolerancia de la app de campo.
+--             Verificado por REST 2026-08-12: geo.zonas_lote y geo.v_zonas_conflicto existen;
+--             geo.revisar_zona quedó con la firma de 10 argumentos SIN sobrecarga duplicada
+--             (una llamada con los 9 viejos resuelve limpio); las 25 zonas existentes siguen
+--             vigentes — la migración no retiró ninguna.
+--             Qué cambió: cada subida del SIG es un LOTE con versión (geo.zonas_lote =
+--             backup 1, 2, 3...) y lo reemplazado queda vigente=false, consultable, NO borrado.
+--             Antes, modo 'sobreescribir' hacía DELETE de geo.zonas y crear_zona_union también,
+--             así que los zona_id que el celular había descargado dejaban de existir y
+--             geo.revisar_zona levantaba excepción: el trabajo de terreno quedaba atascado sin
+--             poder aplicarse nunca. Ahora el RPC revive la zona retirada o la recrea con la
+--             geometría de respaldo que manda el celular, y cerrar_lote no retira zonas que
+--             campo ya trabajó (las marca en geo.v_zonas_conflicto para resolver en la oficina).
 -- (Ver SQL completo en SUPABASE_SCHEMAS.md)
