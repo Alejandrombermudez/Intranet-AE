@@ -11,8 +11,16 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- (ninguna) — verificado por REST el 2026-08-12: todas las migraciones
--- escritas están aplicadas en producción. Ver el historial abajo.
+-- ── 2026-09-01  merge_aliados_duplicados.sql — BLOQUE 2, opcional ───────────
+-- El BLOQUE 1 (fusión de "Álvaro Marlés Artunduaga" + "… 2") YA SE CORRIÓ:
+-- verificado por REST el 2026-09-01 — quedan 94 aliados (eran 95), los dos
+-- predios San Francisco Lote 1 y 2 cuelgan del aliado conservado.
+-- Queda pendiente solo el BLOQUE 2 (borrar la ficha sin predio de Rodrigo Silva
+-- Hermida), comentado a propósito: es una decisión del usuario.
+-- El BLOQUE 3 son consultas de lectura, se pueden correr cuando sea.
+
+-- Migraciones de ESQUEMA: ninguna — verificado por REST el 2026-08-12, todas
+-- las escritas están aplicadas en producción. Ver el historial abajo.
 
 
 -- ════════════════════════════════════════════════════════════

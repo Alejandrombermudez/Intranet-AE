@@ -5,7 +5,13 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { type Antecedente } from '@/lib/juridica-schema'
 import { parsearRespuestaGuardado, mensajeDocumentosFallidos } from '@/lib/fetch-guardar'
+import { comprimirAdjuntos, avisoPeso, formatearBytes } from '@/lib/comprimir-imagen'
 import { Shield, ArrowLeft, Loader2, Upload, X, ExternalLink, CheckCircle2, XCircle, HelpCircle } from 'lucide-react'
+
+// Los soportes de antecedentes son casi siempre pantallazos de la consulta, pero
+// varias entidades (Rama Judicial, RNMC) entregan el resultado como descarga de
+// planilla: se aceptan también CSV/Excel.
+const ACEPTA = 'image/*,application/pdf,.doc,.docx,.csv,text/csv,.xls,.xlsx'
 
 // ─── Listas restrictivas ──────────────────────────────────────────────────────
 
@@ -102,7 +108,7 @@ function ListaRow({ label, value, url, onChange, onPdf, onClearPdf, sinArchivo }
             )}
             <label className="flex items-center gap-1 cursor-pointer text-[11px] text-stone-400 hover:text-stone-600">
               <Upload size={12} /> {url ? 'Reemplazar' : 'Archivo'}
-              <input type="file" accept="image/*,application/pdf,.doc,.docx" className="hidden"
+              <input type="file" accept={ACEPTA} className="hidden"
                 onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
             </label>
           </div>
@@ -123,6 +129,8 @@ export default function AntecedentesPage() {
   const [authReady, setAuthReady] = useState(false)
   const [loading, setLoading]     = useState(true)
   const [saving, setSaving]       = useState(false)
+  const [comprimiendo, setComprimiendo] = useState(false)
+  const [notaCompresion, setNotaCompresion] = useState<string | null>(null)
   const [error, setError]         = useState<string | null>(null)
   const [aliadoNombre, setAliadoNombre] = useState('')
 
@@ -210,9 +218,21 @@ export default function AntecedentesPage() {
         payload[key] = listas[key] ?? null
       }
 
+      // Los 14 soportes viajan en una sola petición: sin comprimir, tres
+      // pantallazos de celular ya la revientan (413 de Vercel).
+      setComprimiendo(true)
+      const comprimidos = await comprimirAdjuntos(pdfs)
+      setComprimiendo(false)
+      const etiquetas = Object.fromEntries(allListas.map(({ key, label }) => [key, label]))
+      const avisoTamano = avisoPeso(comprimidos, etiquetas)
+      if (avisoTamano) { setError(avisoTamano); return }
+      if (comprimidos.bytesAntes > comprimidos.bytesDespues) {
+        setNotaCompresion(`Soportes comprimidos: ${formatearBytes(comprimidos.bytesAntes)} → ${formatearBytes(comprimidos.bytesDespues)}`)
+      }
+
       const fd = new FormData()
       fd.append('data', JSON.stringify(payload))
-      for (const [key, file] of Object.entries(pdfs)) {
+      for (const [key, file] of Object.entries(comprimidos.archivos)) {
         fd.append(key, file)
       }
 
@@ -224,6 +244,7 @@ export default function AntecedentesPage() {
       if (aviso) { setError(aviso); return }
       router.push(`/intranet/juridica/${id}`)
     } finally {
+      setComprimiendo(false)
       setSaving(false)
     }
   }
@@ -267,7 +288,11 @@ export default function AntecedentesPage() {
 
         {/* Listas nacionales */}
         <section className="bg-white rounded-2xl border border-stone-100 p-5">
-          <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider mb-3">Listas nacionales — Colombia</h2>
+          <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider mb-1">Listas nacionales — Colombia</h2>
+          <p className="text-[11px] text-stone-400 mb-3">
+            El soporte puede ser pantallazo, PDF o el <strong>CSV/Excel</strong> que descarga la consulta
+            (es como entrega el resultado la Rama Judicial). Las imágenes se comprimen solas al guardar.
+          </p>
           {LISTAS_NACIONALES.map(({ key, label }) => (
             <ListaRow key={key} label={label}
               value={listas[key] ?? null}
@@ -338,6 +363,9 @@ export default function AntecedentesPage() {
           )}
         </section>
 
+        {notaCompresion && !error && (
+          <div className="bg-stone-50 border border-stone-200 text-stone-500 text-xs px-4 py-2.5 rounded-xl">{notaCompresion}</div>
+        )}
         {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm font-bold px-4 py-3 rounded-xl">{error}</div>}
 
         <div className="flex gap-3 pb-8">
@@ -348,7 +376,7 @@ export default function AntecedentesPage() {
           <button onClick={handleGuardar} disabled={saving}
             className="flex-1 py-3 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
             {saving && <Loader2 size={14} className="animate-spin" />}
-            Guardar antecedentes
+            {comprimiendo ? 'Comprimiendo soportes…' : 'Guardar antecedentes'}
           </button>
         </div>
       </div>

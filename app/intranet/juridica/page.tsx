@@ -65,21 +65,37 @@ function MiniStepper({ estado }: { estado: EstadoAliado }) {
 
 // ─── Tarjeta de aliado ────────────────────────────────────────────────────────
 
-function AliadoCard({ aliado }: { aliado: Aliado }) {
+// `prediosDelPropietario` = cuántos casos tiene esa misma persona en el listado.
+// Un aliado con varios predios genera una tarjeta por predio; sin el nombre del
+// predio a la vista las tarjetas se leen como propietarios duplicados.
+function AliadoCard({ aliado, prediosDelPropietario }: { aliado: Aliado; prediosDelPropietario: number }) {
   const estadoCfg  = ESTADO_CONFIG[aliado.estado]
   const semaforo   = aliado.analisis_juridico?.semaforo as Semaforo | null
   const semCfg     = semaforo ? SEMAFORO_CONFIG[semaforo] : null
   const { hechos, total } = h1Completitud(aliado)
   const pct = Math.round((hechos / total) * 100)
+  // El documento placeholder (S/D-…) no identifica a nadie: no vale mostrarlo.
+  const documento = aliado.numero_documento.startsWith('S/D-')
+    ? 'sin documento'
+    : `${aliado.tipo_documento} ${aliado.numero_documento}`
 
   return (
     <div className="bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition-shadow p-4">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
-          <p className="font-bold text-stone-900 text-sm truncate">{aliado.nombre_completo}</p>
-          <p className="text-xs text-stone-400 mt-0.5">
-            {aliado.tipo_documento} {aliado.numero_documento} · {aliado.municipio}
+          <p className="font-bold text-stone-900 text-sm truncate">
+            {aliado.nombre_predio || 'Predio sin nombre'}
           </p>
+          <p className="text-xs text-stone-500 mt-0.5 truncate">{aliado.nombre_completo}</p>
+          <p className="text-xs text-stone-400 mt-0.5 truncate">
+            {documento} · {aliado.municipio}
+            {aliado.matricula_inmobiliaria && ` · MI ${aliado.matricula_inmobiliaria}`}
+          </p>
+          {prediosDelPropietario > 1 && (
+            <p className="text-[10px] text-stone-400 mt-1">
+              Este propietario tiene <strong>{prediosDelPropietario} predios</strong> — una ficha por predio, no están duplicados.
+            </p>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${estadoCfg.bg} ${estadoCfg.text}`}>
@@ -161,6 +177,17 @@ export default function JuridicaPage() {
       .catch(() => setLoading(false))
   }, [authReady, userEmail])
 
+  // Cuántos casos tiene cada persona: sirve para explicar en la tarjeta por qué
+  // el mismo propietario aparece varias veces (un predio = una ficha).
+  const prediosPorPropietario = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const a of aliados) {
+      const k = a.aliado_id ?? a.numero_documento
+      m.set(k, (m.get(k) ?? 0) + 1)
+    }
+    return m
+  }, [aliados])
+
   // Filtrado
   const visibles = useMemo(() => {
     let list = aliados
@@ -170,7 +197,9 @@ export default function JuridicaPage() {
         (a) =>
           a.nombre_completo.toLowerCase().includes(q) ||
           a.numero_documento.toLowerCase().includes(q) ||
-          a.municipio.toLowerCase().includes(q)
+          a.municipio.toLowerCase().includes(q) ||
+          (a.nombre_predio ?? '').toLowerCase().includes(q) ||
+          (a.matricula_inmobiliaria ?? '').toLowerCase().includes(q)
       )
     }
     if (filtro === 'pendiente_h1') {
@@ -261,7 +290,7 @@ export default function JuridicaPage() {
             <input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por nombre, documento o municipio…"
+              placeholder="Buscar por predio, matrícula, propietario, documento o municipio…"
               className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-stone-200 rounded-xl focus:outline-none focus:border-teal-400 transition-colors"
             />
           </div>
@@ -310,7 +339,8 @@ export default function JuridicaPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {visibles.map((a) => (
-              <AliadoCard key={a.id} aliado={a} />
+              <AliadoCard key={a.id} aliado={a}
+                prediosDelPropietario={prediosPorPropietario.get(a.aliado_id ?? a.numero_documento) ?? 1} />
             ))}
           </div>
         )}

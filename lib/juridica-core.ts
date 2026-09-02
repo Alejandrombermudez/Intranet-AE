@@ -36,19 +36,27 @@ export function esMarcador(valor: string | null | undefined): boolean {
 }
 
 const BUCKET_JURIDICA = 'juridica-documentos'
-// Tipos permitidos (sirve para validar y para borrar versiones previas al reemplazar)
-const EXTENSIONES_DOC = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'gif', 'doc', 'docx'] as const
+// Tipos permitidos (sirve para validar y para borrar versiones previas al reemplazar).
+// `csv`/`xlsx`/`xls`: la Rama Judicial (y varias consultas de antecedentes) entregan
+// el resultado como descarga de hoja de cálculo, no como PDF.
+const EXTENSIONES_DOC = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'gif', 'doc', 'docx', 'csv', 'xls', 'xlsx'] as const
 const MIME_POR_EXT: Record<string, string> = {
   pdf:  'application/pdf',
   jpg:  'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', heic: 'image/heic', gif: 'image/gif',
   doc:  'application/msword',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  csv:  'text/csv',
+  xls:  'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 }
 
 /**
- * Sube un documento (PDF, imagen o Word) al bucket de jurídica y devuelve su URL firmada.
+ * Sube un documento (PDF, imagen, Word o planilla CSV/Excel) al bucket de jurídica
+ * y devuelve su URL firmada.
  *  - PDF   → se comprime con pdf-lib.
- *  - Imagen (jpg/png/webp/heic…) o Word (doc/docx) → se sube tal cual, con su content-type.
+ *  - Imagen (jpg/png/webp/heic…), Word (doc/docx) o planilla (csv/xls/xlsx) → se
+ *    sube tal cual, con su content-type. Las imágenes ya llegan comprimidas desde
+ *    el navegador (`lib/comprimir-imagen.ts`).
  * `basePath` es la ruta SIN extensión (ej. `${predioId}/cedula`). Antes de subir
  * borra cualquier versión previa (cualquier extensión) para no dejar archivos
  * huérfanos al cambiar de formato.
@@ -73,6 +81,11 @@ export async function subirDocumento(supabase: SB, basePath: string, file: File)
   if (ext === 'pdf') {
     data = await comprimirPdf(buf)                          // solo los PDF se comprimen
     contentType = 'application/pdf'
+  } else if (ext === 'csv' || ext === 'xls' || ext === 'xlsx') {
+    // Windows reporta MIME inconsistente para las planillas (a un .csv le pone
+    // application/vnd.ms-excel): manda la extensión, no lo que diga el navegador.
+    data = new Uint8Array(buf)
+    contentType = MIME_POR_EXT[ext]
   } else {
     data = new Uint8Array(buf)                              // imagen o Word: tal cual
     contentType = tipo || MIME_POR_EXT[ext] || 'application/octet-stream'

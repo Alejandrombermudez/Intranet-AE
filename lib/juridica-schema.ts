@@ -7,11 +7,42 @@ import { z } from 'zod'
 // paralelo, incluso con el predio ya enviado a SIG. Los 3 campos que la BD exige
 // NOT NULL (aliados.nombre_completo, aliados.numero_documento, predios.municipio)
 // se rellenan con marcadores en el API cuando llegan vacíos — ver lib/juridica-core.ts.
-// Un <input type="number"> vacío entrega '' (no undefined). Sin este preprocesado
+// Un input numérico vacío entrega '' (no undefined). Sin este preprocesado
 // z.coerce.number() lo convierte en 0 y falla .positive()/.min(1900) — el submit
 // queda bloqueado en silencio aunque el campo sea opcional. Vaciar el campo debe
 // significar "sin dato", no "cero".
-const vacioAUndefined = (v: unknown) => (v === '' || v === null ? undefined : v)
+//
+// Además hay que tolerar cómo se escriben los números aquí: "25,5" (coma
+// decimal), "2.024" (punto de miles), espacios pegados al pegar de otro lado.
+// Un campo OPCIONAL nunca debe bloquear el guardado: si tras normalizar no queda
+// un número, se toma como "sin dato" en vez de tumbar todo el formulario. Solo
+// `nombre_predio` es obligatorio — ver la nota de arriba.
+function limpiar(v: unknown): string | undefined {
+  if (v === '' || v === null || v === undefined) return undefined
+  const s = String(v).trim().replace(/\s+/g, '')
+  return s === '' ? undefined : s
+}
+
+/** Entero tolerante: quita separadores de miles ("2.024" → 2024). Sin número → undefined. */
+const enteroFlexible = (v: unknown) => {
+  const s = limpiar(v)
+  if (s === undefined) return undefined
+  const n = Number(s.replace(/[.,]/g, ''))
+  return Number.isFinite(n) ? n : undefined
+}
+
+/** Decimal tolerante: acepta coma o punto como separador decimal ("25,5" → 25.5). */
+const decimalFlexible = (v: unknown) => {
+  const s = limpiar(v)
+  if (s === undefined) return undefined
+  // El último separador que aparezca es el decimal; los anteriores son de miles.
+  const corte = Math.max(s.lastIndexOf(','), s.lastIndexOf('.'))
+  const normalizado = corte === -1
+    ? s
+    : s.slice(0, corte).replace(/[.,]/g, '') + '.' + s.slice(corte + 1)
+  const n = Number(normalizado)
+  return Number.isFinite(n) ? n : undefined
+}
 
 export const aliadoSchema = z.object({
   nombre_completo:             z.string().optional(),
@@ -22,11 +53,11 @@ export const aliadoSchema = z.object({
   vereda:                      z.string().optional(),
   nombre_predio:               z.string().trim().min(1, 'El nombre del predio es obligatorio'),
   matricula_inmobiliaria:      z.string().optional(),
-  area_registral:              z.preprocess(vacioAUndefined,
-                                 z.coerce.number().positive('El área debe ser mayor que 0').optional()),
+  area_registral:              z.preprocess(decimalFlexible,
+                                 z.number().positive('El área debe ser mayor que 0').optional()),
   codigo_catastral:            z.string().optional(),
-  anio_ultimo_pago_predial:    z.preprocess(vacioAUndefined,
-                                 z.coerce.number().int().min(1900, 'Año inválido').max(2100, 'Año inválido').optional()),
+  anio_ultimo_pago_predial:    z.preprocess(enteroFlexible,
+                                 z.number().int().min(1900, 'Año inválido').max(2100, 'Año inválido').optional()),
   manifestacion_interes:       z.boolean().optional(),
   manifestacion_observaciones: z.string().optional(),
   zona_ae:                     z.string().optional(),
@@ -196,6 +227,24 @@ export const SEMAFORO_CONFIG: Record<Semaforo, { label: string; color: string; d
   amarillo: { label: 'Amarillo', color: 'text-yellow-600',  dot: 'bg-yellow-400'  },
   naranja:  { label: 'Naranja',  color: 'text-orange-600',  dot: 'bg-orange-500'  },
   rojo:     { label: 'Rojo',     color: 'text-red-600',     dot: 'bg-red-500'     },
+}
+
+// Nombre legible de cada campo de HOJA 1, para poder decirle al usuario CUÁL
+// campo quedó mal en vez de un genérico "hay campos inválidos".
+export const ETIQUETAS_ALIADO: Record<string, string> = {
+  nombre_completo:             'Nombre completo',
+  tipo_documento:              'Tipo de documento',
+  numero_documento:            'Número de documento',
+  municipio:                   'Municipio',
+  vereda:                      'Vereda',
+  zona_ae:                     'Zona AE',
+  nombre_predio:               'Nombre del predio',
+  matricula_inmobiliaria:      'Matrícula inmobiliaria',
+  area_registral:              'Área registral (ha)',
+  codigo_catastral:            'Código catastral',
+  anio_ultimo_pago_predial:    'Año último pago predial',
+  manifestacion_interes:       'Manifestación de interés',
+  manifestacion_observaciones: 'Observaciones de la manifestación',
 }
 
 // Campos de HOJA 1 que se consideran "completos" para calcular completitud

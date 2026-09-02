@@ -1,14 +1,22 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { useForm } from 'react-hook-form'
+import { useForm, type FieldErrors } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { supabase } from '@/lib/supabase'
-import { aliadoSchema, type AliadoForm, type Aliado } from '@/lib/juridica-schema'
+import { aliadoSchema, ETIQUETAS_ALIADO, type AliadoForm, type Aliado } from '@/lib/juridica-schema'
 import { Shield, ArrowLeft, Loader2, Upload, X, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { MUNICIPIOS_CAQUETA, VEREDAS_POR_MUNICIPIO, normalizarMunicipio, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
 import { parsearRespuestaGuardado, mensajeDocumentosFallidos } from '@/lib/fetch-guardar'
+import { comprimirAdjuntos, avisoPeso } from '@/lib/comprimir-imagen'
+
+const ETIQUETAS_DOC: Record<string, string> = {
+  cedula:                'Documento de identidad',
+  certificado_tradicion: 'Certificado de tradición',
+  recibo_predial:        'Recibo predial',
+  manifestacion:         'Manifestación firmada',
+}
 
 const TIPOS_DOC = ['CC', 'NUIP', 'CE', 'TI', 'PP', 'NIT'] as const
 const INPUT     = 'w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:border-teal-400 transition-colors bg-white'
@@ -64,6 +72,7 @@ export default function EditarAliadoPage() {
   const [aliado, setAliado]       = useState<Aliado | null>(null)
   const [loading, setLoading]     = useState(true)
   const [saving, setSaving]       = useState(false)
+  const [comprimiendo, setComprimiendo] = useState(false)
   const [error, setError]         = useState<string | null>(null)
   const [pdfCedula, setPdfCedula] = useState<File | null>(null)
   const [pdfCert, setPdfCert]     = useState<File | null>(null)
@@ -130,25 +139,43 @@ export default function EditarAliadoPage() {
   }, [authReady, userEmail, id, reset, router])
 
   // Red de seguridad: si la validación falla, react-hook-form no llama a onSubmit
-  // y el botón parece no hacer nada. Esto garantiza que siempre haya un mensaje.
-  function onInvalid() {
-    setError('Hay campos con datos inválidos. Revisa los marcados en rojo más arriba.')
+  // y el botón parece no hacer nada. Se nombra el campo culpable en vez de mandar
+  // a recorrer el formulario a ojo.
+  function onInvalid(errs: FieldErrors<AliadoForm>) {
+    const detalle = Object.entries(errs)
+      .map(([campo, e]) => {
+        const msg = (e as { message?: string } | undefined)?.message
+        return `${ETIQUETAS_ALIADO[campo] ?? campo}${msg ? `: ${msg}` : ''}`
+      })
+      .join(' · ')
+    setError(`No se pudo guardar por estos campos → ${detalle}. Todo lo demás es opcional: puedes dejarlo vacío.`)
+    const primero = Object.keys(errs)[0]
+    document.querySelector<HTMLElement>(`[name="${primero}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
   async function onSubmit(values: AliadoForm) {
     if (!userEmail) return
     setSaving(true); setError(null)
     try {
+      // Comprimir las imágenes antes de armar el multipart (ver lib/comprimir-imagen.ts).
+      setComprimiendo(true)
+      const comprimidos = await comprimirAdjuntos({
+        cedula: pdfCedula,
+        certificado_tradicion: pdfCert,
+        recibo_predial: pdfRecibo,
+        manifestacion: pdfManif,
+      })
+      setComprimiendo(false)
+      const avisoTamano = avisoPeso(comprimidos, ETIQUETAS_DOC)
+      if (avisoTamano) { setError(avisoTamano); return }
+
       const fd = new FormData()
       fd.append('data', JSON.stringify({
         ...values,
         matriculas: matriculas.map((m) => m.trim()).filter(Boolean),
         departamento: 'Caquetá', updated_by: userEmail,
       }))
-      if (pdfCedula) fd.append('cedula', pdfCedula)
-      if (pdfCert)   fd.append('certificado_tradicion', pdfCert)
-      if (pdfRecibo) fd.append('recibo_predial', pdfRecibo)
-      if (pdfManif)  fd.append('manifestacion', pdfManif)
+      for (const [campo, file] of Object.entries(comprimidos.archivos)) fd.append(campo, file)
 
       const res = await fetch(`/api/juridica/aliados/${id}`, { method: 'PATCH', body: fd })
       const result = await parsearRespuestaGuardado(res)
@@ -158,6 +185,7 @@ export default function EditarAliadoPage() {
       if (aviso) { setError(aviso); return }
       router.push(`/intranet/juridica/${id}`)
     } finally {
+      setComprimiendo(false)
       setSaving(false)
     }
   }
@@ -181,7 +209,9 @@ export default function EditarAliadoPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="max-w-2xl mx-auto px-6 py-8 space-y-8">
+      {/* noValidate: valida solo zod. La validación nativa del navegador bloqueaba
+          el envío con un globo propio al escribir "25,5" o "2.024". */}
+      <form noValidate onSubmit={handleSubmit(onSubmit, onInvalid)} className="max-w-2xl mx-auto px-6 py-8 space-y-8">
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Identificación</h2>
           <Field label="Nombre completo" error={errors.nombre_completo?.message}>
@@ -264,8 +294,9 @@ export default function EditarAliadoPage() {
                 className="text-xs font-bold text-teal-600 hover:underline">+ Agregar matrícula</button>
             </div>
           </Field>
-          <Field label="Área registral (ha)" error={errors.area_registral?.message}>
-            <input {...register('area_registral')} type="number" step="0.0001" min="0" className={errors.area_registral ? INPUT_ERR : INPUT} />
+          {/* type="text": con type="number" el navegador vacía el campo al escribir "25,5". */}
+          <Field label="Área registral (ha) — opcional, acepta coma o punto" error={errors.area_registral?.message}>
+            <input {...register('area_registral')} type="text" inputMode="decimal" className={errors.area_registral ? INPUT_ERR : INPUT} />
           </Field>
           <Field label="Código catastral"><input {...register('codigo_catastral')} className={INPUT} /></Field>
           <FileInput label="Certificado de tradición (PDF)" existingUrl={aliado?.certificado_tradicion_url}
@@ -274,8 +305,8 @@ export default function EditarAliadoPage() {
 
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Impuesto predial</h2>
-          <Field label="Año último pago" error={errors.anio_ultimo_pago_predial?.message}>
-            <input {...register('anio_ultimo_pago_predial')} type="number" min="1990" max="2100" className={errors.anio_ultimo_pago_predial ? INPUT_ERR : INPUT} />
+          <Field label="Año último pago — opcional, se puede dejar vacío" error={errors.anio_ultimo_pago_predial?.message}>
+            <input {...register('anio_ultimo_pago_predial')} type="text" inputMode="numeric" className={errors.anio_ultimo_pago_predial ? INPUT_ERR : INPUT} />
           </Field>
           <FileInput label="Recibo predial (PDF)" existingUrl={aliado?.recibo_predial_url}
             file={pdfRecibo} onChange={setPdfRecibo} onClear={() => setPdfRecibo(null)} />
@@ -308,7 +339,7 @@ export default function EditarAliadoPage() {
           <button type="submit" disabled={saving}
             className="flex-1 py-3 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
             {saving && <Loader2 size={14} className="animate-spin" />}
-            Guardar cambios
+            {comprimiendo ? 'Comprimiendo imágenes…' : 'Guardar cambios'}
           </button>
         </div>
       </form>
