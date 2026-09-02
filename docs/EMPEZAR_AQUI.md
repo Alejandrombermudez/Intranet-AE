@@ -45,7 +45,12 @@ Diseño conceptual **completo**. En producción y con datos reales:
 6. **`ARQUITECTURA_ECOSISTEMA.md`** — el documento maestro (4 vistas + decisiones D1–D5).
 7. **`CORE_MIGRACION.md`** — qué se implementó en la Semana 1 (modelo `core` + cutover de jurídica) y cómo está hecho. **Leer para entender el estado actual del código.**
 
-> La carpeta `arquitectura-visual/` (diagramas `.svg/.html` + Excel `parametros_ER.xlsx`/`cronograma_actividades.xlsx`) se eliminó (2026-06-27). Todo su contenido se consolidó en [`ARQUITECTURA_DATOS.md`](ARQUITECTURA_DATOS.md); los diagramas vivos son los **Mermaid embebidos** en los `.md`.
+> **Mapa visual del proceso:** [`flujo-trabajo.html`](flujo-trabajo.html) (2026-08-13) — la cadena
+> completa Jurídica → SIG I → Campo → SIG II → Plan → Vivero → Ejecución dibujada con el estado real
+> de cada etapa, el mecanismo del versionado SIG ↔ Campo y las cifras leídas de la base. Autocontenido,
+> se abre en cualquier navegador. Es la vista de conjunto; el detalle sigue en los `.md`.
+>
+> La carpeta `arquitectura-visual/` (diagramas `.svg/.html` + Excel `parametros_ER.xlsx`/`cronograma_actividades.xlsx`) se eliminó (2026-06-27). Todo su contenido se consolidó en [`ARQUITECTURA_DATOS.md`](ARQUITECTURA_DATOS.md); los demás diagramas vivos son los **Mermaid embebidos** en los `.md`.
 
 ## Decisiones tomadas (resumen)
 

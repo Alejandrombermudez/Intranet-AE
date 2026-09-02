@@ -26,18 +26,24 @@ Este documento describe el dominio de **Siembra (Restauración)**. Hay un segund
 
 Un predio recorre el sistema de extremo a extremo. Cada componente **produce** algo que es la **entrada** del siguiente. Esa es la articulación.
 
+> **Versión gráfica, con el estado real de cada etapa:** [`flujo-trabajo.html`](flujo-trabajo.html).
+
 ```mermaid
 flowchart LR
-    J1[Jurídica I<br/>aliado aprobado] --> S1[SIG I<br/>zonas potenciales]
-    S1 --> C[Campo · PWA<br/>evaluación + encuesta]
-    C --> CS[Campo_SIG<br/>corrige zonas]
-    CS --> S2[SIG II<br/>zonas definitivas + área]
-    S2 --> P[Plan de siembra<br/>receta × área = demanda]
-    P --> V[(Vivero<br/>produce bajo demanda)]
-    P --> J2[Jurídica II<br/>aval CorpoAmazonia]
-    J2 --> EJ[Ejecución<br/>siembra + monitoreo]
+    J1["Jurídica I 🟢<br/>aliado aprobado<br/>111 predios"] --> S1["SIG I 🟢<br/>zonas potenciales<br/>25 zonas"]
+    S1 --> C["Campo · PWA 🟢<br/>evaluación + encuesta<br/>2 predios"]
+    C --> CS["SIG II 🟢<br/>corrige zonas en terreno<br/>27 revisiones"]
+    CS -->|"zonas en firme + export .shp"| S1
+    CS --> P["Plan de siembra 🔴<br/>receta × área = demanda"]
+    P --> V[("Vivero 🔴<br/>produce bajo demanda")]
+    P --> J2["Jurídica II 🟡<br/>aval CorpoAmazonia"]
+    J2 --> EJ["Ejecución 🔴<br/>siembra + monitoreo"]
     V -.suministro.-> EJ
 ```
+
+> **Ojo con el nombre:** lo que antes se llamaba "Campo_SIG" **es** el SIG II. No son dos etapas
+> distintas: el mismo evaluador, en el mismo dispositivo y en la misma visita, primero llena la
+> evaluación (Campo) y después corrige las zonas sobre el mapa satelital (SIG II).
 
 | Etapa | Produce | Lo consume |
 |-------|---------|-----------|

@@ -30,6 +30,7 @@ documentos maestros de arquitectura de todo el ecosistema (no solo de esta app).
 | `/intranet/expedientes` | Tablero "¿en qué etapa va cada predio?" | `core.expedientes` |
 | `/intranet/ras/siembra`, `/intranet/ras/conservacion` | Encuesta/evaluación de campo (legado `siembra.*`) y conservación (`ras.*`) | `siembra`, `ras` |
 | `/intranet/catalogo` | Catálogo de especies | `catalogo` |
+| `/intranet/reporte`, `/intranet/reporte/[predioId]` | **Módulo Reporte**: expediente completo del predio en un solo documento (predial, jurídica, cartografía, correcciones de terreno, evaluación biofísica, encuesta). Se arma solo desde `/api/reporte/expediente`; diseñado sobre el Manual de Identidad de Marca 2024 (Josefin Sans + Poppins, paleta hueso/verde bosque) y pensado para imprimir | `core`, `juridica`, `geo`, `siembra` |
 | `/intranet/ejecutivo` | Sesiones/indicaciones ejecutivas | `ejecutivo` |
 | `app/api/juridica/aliados/[id]/crear-en-siembra` | Paso SIG→Campo: valida SIG I obligatorio, crea `siembra.familias`, avanza expediente | `core`, `geo`, `siembra` |
 

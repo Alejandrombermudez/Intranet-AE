@@ -11,7 +11,7 @@ import {
   ArrowLeft, ShieldCheck, Shield, Pencil, Check, X,
   Users, Loader2, AlertCircle, AlertTriangle, BarChart2, ImageOff, Construction,
   Leaf, ArrowRight, Filter, CalendarDays, ChevronDown,
-  Link2, Copy, CheckCheck, FileSpreadsheet, FileDown, BarChart3, Trash2,
+  Link2, Copy, CheckCheck, FileSpreadsheet, FileDown, BarChart3, Trash2, Sprout,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -809,6 +809,22 @@ function ModuloRAS() {
           Gestión de <strong>Familias en Restauración</strong>. Carga y consulta los datos que alimentan el geovisor ambiental.
         </p>
         <Link href="/intranet/ras"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white shadow-md hover:shadow-lg transition-all"
+          style={{ backgroundColor: PRIMARY }}>
+          Abrir módulo <ArrowRight size={15} />
+        </Link>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-lg p-8 max-w-md w-full text-center">
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <Sprout size={32} className="text-primary" />
+        </div>
+        <h2 className="text-2xl font-black text-stone-900 mb-2">Reporte</h2>
+        <p className="text-stone-500 text-sm mb-6">
+          <strong>Expediente completo por predio</strong>: jurídica, cartografía, evaluación
+          biofísica y encuesta socioeconómica en un solo informe, listo para imprimir.
+        </p>
+        <Link href="/intranet/reporte"
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white shadow-md hover:shadow-lg transition-all"
           style={{ backgroundColor: PRIMARY }}>
           Abrir módulo <ArrowRight size={15} />

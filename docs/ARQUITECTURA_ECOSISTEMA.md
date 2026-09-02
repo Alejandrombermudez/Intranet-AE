@@ -32,38 +32,51 @@ El sistema se construyó **módulo por módulo** (flota, jurídica, RAS, ejecuti
 
 Un predio interesado recorre esta cadena. Cada etapa produce un **entregable** y termina en una **compuerta** (rombo) que decide si avanza.
 
+> **Versión gráfica de esta vista:** [`flujo-trabajo.html`](flujo-trabajo.html) — la misma cadena
+> dibujada con el estado real de cada etapa y las cifras vivas de la base. Ábrelo en el navegador.
+
 ```mermaid
 flowchart TD
     Start([Propietario interesado]) --> J1[1 · Jurídica I — Debida diligencia<br/>Abogada · Intranet]
     J1 --> G1{Semáforo}
     G1 -->|rojo| Rech[Rechazado / archivo]
-    G1 -->|verde · amarillo| S1[2 · SIG I — Zonas potenciales<br/>SIG · GeoAE + Modelo IA]
-    S1 --> C[3 · Campo — Evaluación biofísica + encuesta<br/>RAS · PWA Campo]
-    C --> P[4 · Plan de siembra — Modelos florísticos<br/>Restauración · Intranet]
-    P -->|demanda de plántulas| V[(Vivero — producción)]
-    P --> S2[5 · SIG II — Zonificación definitiva<br/>recálculo de área · GeoAE]
-    S2 --> J2[6 · Jurídica II — Aval CorpoAmazonia<br/>Abogada + autoridad ambiental]
+    G1 -->|verde · amarillo| S1[2 · SIG I — Zonas potenciales<br/>Equipo SIG · Intranet /sig]
+    S1 --> G0{¿≥1 zona cargada?}
+    G0 -->|no · 422| S1
+    G0 -->|sí| C[3 · Campo — Evaluación biofísica + encuesta<br/>Evaluador · PWA app_campo offline]
+    C --> S2[4 · SIG II — Corrección de zonas en terreno<br/>el mismo evaluador · módulo SIG de la PWA]
+    S2 -->|zonas corregidas · export .shp| S1
+    S2 --> P[5 · Plan de siembra — Modelos florísticos<br/>Restauración · Intranet · POR CONSTRUIR]
+    P -->|demanda de plántulas| V[(6 · Vivero — producción bajo demanda<br/>App aparte · POR CONSTRUIR)]
+    P --> J2[Jurídica II — Aval CorpoAmazonia<br/>Abogada + autoridad ambiental]
     J2 --> G2{Aval 'áreas de vida'}
-    G2 -->|observaciones| S2
-    G2 -->|aprobado| EJ[7 · Ejecución de siembra + Monitoreo<br/>supervivencia · MRV carbono]
+    G2 -->|observaciones| P
+    G2 -->|aprobado| EJ[7 · Ejecución de siembra + Monitoreo<br/>supervivencia · MRV carbono · POR CONSTRUIR]
     V -. suministro de plántulas .-> EJ
 ```
 
 ### Tabla de etapas
 
-| # | Etapa | Responsable | Entrada | Entregable | App | Compuerta |
-|---|-------|-------------|---------|-----------|-----|-----------|
-| 1 | Jurídica I · Debida diligencia | Abogada | Manifestación de interés | Aliado con semáforo | Intranet `/juridica` | 🚦 verde/amarillo continúa; rojo se archiva |
-| 2 | SIG I · Zonas potenciales | Equipo SIG | Predio aprobado | Polígonos candidatos de restauración | GeoAE + Modelo IA | Existe ≥1 zona potencial |
-| 3 | Campo · Evaluación | RAS | Zonas potenciales | Evaluación biofísica (AE-CAMPO-001) + encuesta socioeconómica | PWA Campo | Datos completos y validados en terreno |
-| 4 | Plan de siembra | Restauración | Evaluación de campo | Modelo florístico + demanda de plántulas | Intranet (módulo nuevo) | Plan aprobado técnicamente |
-| 5 | SIG II · Zonificación definitiva | Equipo SIG | Plan de siembra | Polígonos ajustados + área efectiva (ha) | GeoAE | Área recalculada y cerrada |
-| 6 | Jurídica II · Aval | Abogada + CorpoAmazonia | Zonas definitivas | Aval "áreas de vida" / Ley del árbol | Intranet `/juridica` | Aval otorgado |
-| 7 | Ejecución + Monitoreo | RAS + Vivero | Aval | Siembra ejecutada, supervivencia, MRV | Intranet + PWA | (ciclo de monitoreo continuo) |
+> **Orden corregido (2026-08-13):** este diagrama tenía Campo → Plan → SIG II. El orden real, y el que
+> corre hoy en producción, es **Campo → SIG II → Plan**: la app de campo corrige las zonas *antes* del
+> plan, porque el plan necesita el área en firme para calcular la demanda.
+
+| # | Etapa | Responsable | Entrada | Entregable | App | Compuerta | Estado |
+|---|-------|-------------|---------|-----------|-----|-----------|--------|
+| 1 | Jurídica I · Debida diligencia | Abogada | Manifestación de interés | Aliado y predio con semáforo | Intranet `/juridica` | 🚦 verde/amarillo continúa; rojo se archiva | 🟢 111 predios |
+| 2 | SIG I · Zonas potenciales | Equipo SIG | Predio aprobado | Polígonos candidatos, medidos en PostGIS | Intranet `/sig` | **≥1 zona en `geo.zonas`, si no la API devuelve 422** | 🟢 25 zonas |
+| 3 | Campo · Evaluación | Evaluador (equipo RAS) | Zonas potenciales descargadas al celular | Evaluación biofísica (AE-CAMPO-001) + encuesta socioeconómica | PWA `app_campo` (offline) | Datos completos y validados en terreno | 🟢 2 predios |
+| 4 | SIG II · Corrección en terreno | El mismo evaluador | Las zonas que propuso la oficina | Zonas confirmadas, modificadas o descartadas + área real | `app_campo` · módulo SIG | Área en firme; lo corregido vuelve a la oficina | 🟢 27 revisiones |
+| 5 | Plan de siembra | Restauración | Área en firme + `catalogo.especies` | Modelo florístico + demanda de plántulas | Intranet (módulo nuevo) | Plan aprobado técnicamente | 🔴 por construir |
+| 6 | Vivero | Vivero | Solicitud generada por el plan | Plántulas con costo real por lote | App aparte | Plántulas listas para campo | 🔴 hoy solo Excel |
+| — | Jurídica II · Aval | Abogada + CorpoAmazonia | Zonas definitivas | Aval "áreas de vida" / Ley del árbol | Intranet `/juridica` | Aval otorgado | 🟡 sin formalizar |
+| 7 | Ejecución + Monitoreo | RAS + Vivero | Aval + plántulas | Siembra ejecutada, supervivencia, MRV | Intranet + PWA | (ciclo de monitoreo continuo) | 🔴 por construir |
 
 **Salidas del proceso (líneas de producto sobre el mismo predio):** Ley del árbol · Bonos de carbono · Conservación (RAS).
 
-> **Nota:** las etapas 2 y 5 son **el mismo dominio geoespacial en dos momentos** (zonas *potenciales* antes de campo; zonas *definitivas/avaladas* después del plan). Por eso las zonas deben ser **versionadas** (§5).
+> **Nota:** las etapas 2 y 4 son **el mismo dominio geoespacial en dos momentos** (zonas *potenciales*
+> dibujadas en la oficina; zonas *validadas* corregidas parado en el predio). Por eso las zonas están
+> **versionadas por lotes** (§5) y ninguna de las dos versiones se destruye.
 
 ---
 
