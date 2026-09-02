@@ -108,7 +108,18 @@ function hasIssues(insp: InspectionStat): boolean {
   )
 }
 
-const DEPARTMENTS = ['Financiero', 'Ejecutivo', 'RAS', 'Siembra', 'Tecnología', 'Juridica', 'SIG']
+const DEPARTMENTS = ['Financiero', 'Ejecutivo', 'RAS', 'Siembra', 'Tecnología', 'Juridica', 'SIG', 'Reporte']
+
+// Módulos con página propia: tanto el redirect de un no-admin como el tab de
+// admin navegan a su ruta en vez de renderizar algo inline. Tenerlos en una
+// sola tabla evita que agregar un módulo se olvide en uno de los dos sitios.
+const RUTA_MODULO: Record<string, string> = {
+  RAS:       '/intranet/ras',
+  SIG:       '/intranet/sig',
+  Juridica:  '/intranet/juridica',
+  Ejecutivo: '/intranet/ejecutivo',
+  Reporte:   '/intranet/reporte',
+}
 
 // ─── EditRow (tabla usuarios) ─────────────────────────────────────────────────
 
@@ -814,22 +825,6 @@ function ModuloRAS() {
           Abrir módulo <ArrowRight size={15} />
         </Link>
       </div>
-
-      <div className="bg-white rounded-2xl border border-stone-200 shadow-lg p-8 max-w-md w-full text-center">
-        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-          <Sprout size={32} className="text-primary" />
-        </div>
-        <h2 className="text-2xl font-black text-stone-900 mb-2">Reporte</h2>
-        <p className="text-stone-500 text-sm mb-6">
-          <strong>Expediente completo por predio</strong>: jurídica, cartografía, evaluación
-          biofísica y encuesta socioeconómica en un solo informe, listo para imprimir.
-        </p>
-        <Link href="/intranet/reporte"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white shadow-md hover:shadow-lg transition-all"
-          style={{ backgroundColor: PRIMARY }}>
-          Abrir módulo <ArrowRight size={15} />
-        </Link>
-      </div>
     </div>
   )
 }
@@ -1249,10 +1244,8 @@ export default function IntranetPage() {
 
       // No-admin: redirigir si tiene módulo propio con página dedicada
       if (!profile.is_admin) {
-        if (profile.department === 'RAS') { router.push('/intranet/ras'); return }
-        if (profile.department === 'Ejecutivo') { router.push('/intranet/ejecutivo'); return }
-        if (profile.department === 'Juridica') { router.push('/intranet/juridica'); return }
-        if (profile.department === 'SIG') { router.push('/intranet/sig'); return }
+        const ruta = profile.department ? RUTA_MODULO[profile.department] : undefined
+        if (ruta) { router.push(ruta); return }
         setActiveTab('modulo')
       }
 
@@ -1371,31 +1364,30 @@ export default function IntranetPage() {
           {myProfile?.is_admin && (
             <div className="flex items-center gap-1 mt-4 border-t border-stone-100 pt-4">
               {[
-                { key: 'usuarios' as const, label: 'Usuarios', icon: <Users size={14} /> },
-                ...(myProfile.department ? [{ key: 'modulo' as const, label: myProfile.department, icon: <BarChart2 size={14} /> }] : []),
-              ].map((tab) => (
-                <button key={tab.key} onClick={() => {
-                  // Módulos con página dedicada: navegar directamente en vez de renderizar inline
-                  if (tab.key === 'modulo' && myProfile?.department === 'Ejecutivo') {
-                    router.push('/intranet/ejecutivo'); return
-                  }
-                  if (tab.key === 'modulo' && myProfile?.department === 'RAS') {
-                    router.push('/intranet/ras'); return
-                  }
-                  if (tab.key === 'modulo' && myProfile?.department === 'Juridica') {
-                    router.push('/intranet/juridica'); return
-                  }
-                  if (tab.key === 'modulo' && myProfile?.department === 'SIG') {
-                    router.push('/intranet/sig'); return
-                  }
-                  setActiveTab(tab.key)
+                { id: 'usuarios', label: 'Usuarios', icon: <Users size={14} />, tab: 'usuarios' as const, href: null },
+                ...(myProfile.department
+                  ? [{ id: 'modulo', label: myProfile.department, icon: <BarChart2 size={14} />,
+                       tab: 'modulo' as const, href: RUTA_MODULO[myProfile.department] ?? null }]
+                  : []),
+                // Reporte es transversal — cruza jurídica, SIG y campo —, así que
+                // se ofrece a cualquier admin y no solo a quien tenga ese
+                // departamento asignado (ahí ya entra por su propio tab).
+                ...(myProfile.department !== 'Reporte'
+                  ? [{ id: 'reporte', label: 'Reporte', icon: <Sprout size={14} />,
+                       tab: null, href: RUTA_MODULO.Reporte }]
+                  : []),
+              ].map((t) => (
+                <button key={t.id} onClick={() => {
+                  // Módulos con página dedicada: navegar en vez de renderizar inline
+                  if (t.href) { router.push(t.href); return }
+                  if (t.tab) setActiveTab(t.tab)
                 }}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                    activeTab === tab.key
+                    t.tab && activeTab === t.tab
                       ? 'bg-primary text-white shadow-sm'
                       : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
                   }`}>
-                  {tab.icon} {tab.label}
+                  {t.icon} {t.label}
                 </button>
               ))}
             </div>
