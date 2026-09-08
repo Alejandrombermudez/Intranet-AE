@@ -82,6 +82,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       departamento:           data.departamento || null,
       vereda:                 data.vereda || null,
       zona_ae:                data.zona_ae || null,
+      // Se envían siempre (null si el desplegable quedó en «Sin definir»), para
+      // que también se pueda QUITAR la clasificación de un predio, no solo ponerla.
+      tipo_proyecto:          data.tipo_proyecto || null,
+      fuente_informacion:     data.fuente_informacion || null,
       matricula_inmobiliaria: matriculas[0] || null,
       matriculas:             matriculas.length ? matriculas : null,
       codigo_catastral:       data.codigo_catastral || null,

@@ -11,6 +11,7 @@ import {
   Plus, Search, Filter, ChevronRight, Loader2,
   FileText, Shield, BarChart3, CheckCircle2, Circle, LayoutGrid, ArrowLeft,
 } from 'lucide-react'
+import { fetchParametros, nombreParametro, type Parametro } from '@/lib/parametros'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -68,7 +69,12 @@ function MiniStepper({ estado }: { estado: EstadoAliado }) {
 // `prediosDelPropietario` = cuántos casos tiene esa misma persona en el listado.
 // Un aliado con varios predios genera una tarjeta por predio; sin el nombre del
 // predio a la vista las tarjetas se leen como propietarios duplicados.
-function AliadoCard({ aliado, prediosDelPropietario }: { aliado: Aliado; prediosDelPropietario: number }) {
+function AliadoCard({ aliado, prediosDelPropietario, proyecto }: {
+  aliado: Aliado
+  prediosDelPropietario: number
+  /** Nombre legible del proyecto, o null si el predio todavía no está clasificado. */
+  proyecto: string | null
+}) {
   const estadoCfg  = ESTADO_CONFIG[aliado.estado]
   const semaforo   = aliado.analisis_juridico?.semaforo as Semaforo | null
   const semCfg     = semaforo ? SEMAFORO_CONFIG[semaforo] : null
@@ -86,7 +92,14 @@ function AliadoCard({ aliado, prediosDelPropietario }: { aliado: Aliado; predios
           <p className="font-bold text-stone-900 text-sm truncate">
             {aliado.nombre_predio || 'Predio sin nombre'}
           </p>
-          <p className="text-xs text-stone-500 mt-0.5 truncate">{aliado.nombre_completo}</p>
+          {/* Bajo qué programa entra. Sin clasificar se marca en ámbar: es lo
+              que hay que completar para poder separar los predios por proyecto. */}
+          <span className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+            proyecto ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+          }`}>
+            {proyecto ?? 'Sin proyecto'}
+          </span>
+          <p className="text-xs text-stone-500 mt-1 truncate">{aliado.nombre_completo}</p>
           <p className="text-xs text-stone-400 mt-0.5 truncate">
             {documento} · {aliado.municipio}
             {aliado.matricula_inmobiliaria && ` · MI ${aliado.matricula_inmobiliaria}`}
@@ -149,6 +162,11 @@ export default function JuridicaPage() {
   const [loading, setLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState<FiltroEstado>('todos')
+  // 'todos' | 'sin_proyecto' | código de catalogo.proyectos
+  const [filtroProyecto, setFiltroProyecto] = useState<string>('todos')
+  const [proyectos, setProyectos] = useState<Parametro[]>([])
+
+  useEffect(() => { fetchParametros('proyectos').then(setProyectos) }, [])
 
   // Auth
   useEffect(() => {
@@ -202,6 +220,11 @@ export default function JuridicaPage() {
           (a.matricula_inmobiliaria ?? '').toLowerCase().includes(q)
       )
     }
+    if (filtroProyecto === 'sin_proyecto') {
+      list = list.filter((a) => !a.tipo_proyecto)
+    } else if (filtroProyecto !== 'todos') {
+      list = list.filter((a) => a.tipo_proyecto === filtroProyecto)
+    }
     if (filtro === 'pendiente_h1') {
       list = list.filter((a) => h1Completitud(a).hechos < H1_CAMPOS_CLAVE.length)
     } else if (filtro === 'pendiente_h2') {
@@ -214,7 +237,7 @@ export default function JuridicaPage() {
       list = list.filter((a) => a.estado === filtro)
     }
     return list
-  }, [aliados, busqueda, filtro])
+  }, [aliados, busqueda, filtro, filtroProyecto])
 
   // Estadísticas rápidas
   const stats = useMemo(() => ({
@@ -294,8 +317,22 @@ export default function JuridicaPage() {
               className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-stone-200 rounded-xl focus:outline-none focus:border-teal-400 transition-colors"
             />
           </div>
-          <div className="flex items-center gap-2">
+          {/* flex-wrap: son dos desplegables; en celular no caben en una línea. */}
+          <div className="flex items-center flex-wrap gap-2">
             <Filter size={14} className="text-stone-400 shrink-0" />
+            {/* Filtro por programa. «Sin proyecto asignado» es la lista de trabajo
+                para clasificar los predios que venían de antes de este campo. */}
+            <select
+              value={filtroProyecto}
+              onChange={(e) => setFiltroProyecto(e.target.value)}
+              className="text-sm bg-white border border-stone-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-teal-400 transition-colors"
+            >
+              <option value="todos">Todos los proyectos</option>
+              <option value="sin_proyecto">Sin proyecto asignado</option>
+              {proyectos.filter((p) => p.activo).map((p) => (
+                <option key={p.codigo} value={p.codigo}>{p.nombre}</option>
+              ))}
+            </select>
             <select
               value={filtro}
               onChange={(e) => setFiltro(e.target.value as FiltroEstado)}
@@ -340,7 +377,8 @@ export default function JuridicaPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {visibles.map((a) => (
               <AliadoCard key={a.id} aliado={a}
-                prediosDelPropietario={prediosPorPropietario.get(a.aliado_id ?? a.numero_documento) ?? 1} />
+                prediosDelPropietario={prediosPorPropietario.get(a.aliado_id ?? a.numero_documento) ?? 1}
+                proyecto={nombreParametro(proyectos, a.tipo_proyecto)} />
             ))}
           </div>
         )}

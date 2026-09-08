@@ -99,6 +99,8 @@ erDiagram
 | id | uuid | PK | |
 | aliado_id | uuid | FK→ core.aliados | dueño principal (ON DELETE RESTRICT) |
 | nombre_predio / departamento / municipio / vereda / zona_ae | text | | `zona_ae` ≈ núcleo |
+| tipo_proyecto | text | FK→ catalogo.proyectos(codigo) | bajo qué programa entra (Conexión Biodiversa · Ley del Árbol). NULL = sin clasificar 🟢 |
+| fuente_informacion | text | FK→ catalogo.fuentes_informacion(codigo) | cómo llegó el predio (socialización veredal/comunitaria, Lácteos del Hogar) 🟢 |
 | matricula_inmobiliaria | text | UQ parcial | la principal del englobe |
 | matriculas | text[] | | varias matrículas (englobe) |
 | codigo_catastral | text | | |
@@ -198,6 +200,19 @@ erDiagram
 | precio_referencia_kg | numeric | | comparar contra costo real |
 | rol_sucesional / habito | text | | para el Plan |
 | aplica_ley_arbol | boolean | | |
+
+**`catalogo.proyectos`** y **`catalogo.fuentes_informacion`** — listas parametrizables que clasifican el predio. 🟢 en producción (`migration_proyecto_fuente.sql`, 2026-09-08).
+| Parámetro | Tipo | Llave | Notas |
+|---|---|---|---|
+| id | uuid | PK | |
+| codigo | text | UQ | slug estable — es lo que se guarda en `core.predios` |
+| nombre | text | | lo que se ve en el desplegable |
+| activo | boolean | | `false` = retirado del desplegable; los predios que ya lo tienen lo conservan |
+| orden | integer | | posición en el desplegable |
+
+> Se amplían **desde la UI** (botón «+ Agregar» en HOJA 1 de jurídica → `POST /api/catalogo/parametros`), no con SQL: estas listas crecen en campo — aparece un convenio nuevo o un aliado que trae su base de predios — y esperar una migración para registrarlo no es viable. El código lo genera el servidor a partir del nombre (`Lácteos del Hogar` → `lacteos_del_hogar`), así que reescribir la misma opción con otras tildes reutiliza la existente en vez de partir los filtros en dos.
+>
+> Semillas: proyectos = `conexion_biodiversa`, `ley_arbol`. Fuentes = `socializacion_veredal`, `socializacion_comunitaria`, `lacteos_del_hogar`.
 
 ---
 

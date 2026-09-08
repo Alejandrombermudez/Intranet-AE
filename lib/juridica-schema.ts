@@ -61,6 +61,11 @@ export const aliadoSchema = z.object({
   manifestacion_interes:       z.boolean().optional(),
   manifestacion_observaciones: z.string().optional(),
   zona_ae:                     z.string().optional(),
+  // Clasificación del predio. Guardan el CÓDIGO del catálogo
+  // (catalogo.proyectos / catalogo.fuentes_informacion), no el nombre visible.
+  // Opcionales: un predio se puede abrir sin saber todavía a qué proyecto entra.
+  tipo_proyecto:               z.string().optional(),
+  fuente_informacion:          z.string().optional(),
 })
 
 // ─── HOJA 2: Antecedentes ─────────────────────────────────────────────────────
@@ -144,6 +149,10 @@ export interface Aliado {
   vereda:                      string | null
   zona_ae:                     string | null
   nombre_predio:               string | null
+  /** Código de catalogo.proyectos — bajo qué programa entra el predio. */
+  tipo_proyecto:               string | null
+  /** Código de catalogo.fuentes_informacion — cómo llegó el predio. */
+  fuente_informacion:          string | null
   matricula_inmobiliaria:      string | null
   matriculas?:                 string[] | null
   certificado_tradicion_url:   string | null
@@ -239,6 +248,8 @@ export const ETIQUETAS_ALIADO: Record<string, string> = {
   vereda:                      'Vereda',
   zona_ae:                     'Zona AE',
   nombre_predio:               'Nombre del predio',
+  tipo_proyecto:               'Tipo de proyecto',
+  fuente_informacion:          'Fuente de información',
   matricula_inmobiliaria:      'Matrícula inmobiliaria',
   area_registral:              'Área registral (ha)',
   codigo_catastral:            'Código catastral',
@@ -247,8 +258,13 @@ export const ETIQUETAS_ALIADO: Record<string, string> = {
   manifestacion_observaciones: 'Observaciones de la manifestación',
 }
 
-// Campos de HOJA 1 que se consideran "completos" para calcular completitud
+// Campos de HOJA 1 que se consideran "completos" para calcular completitud.
+// `tipo_proyecto` cuenta: sin él, el predio no se puede asignar a un programa ni
+// aparecer en los reportes por proyecto, así que es un dato faltante de verdad,
+// no un adorno. La `fuente_informacion` queda fuera — es trazabilidad de cómo
+// llegó, no un requisito para avanzar el expediente.
 export const H1_CAMPOS_CLAVE = [
+  'tipo_proyecto',
   'matricula_inmobiliaria',
   'area_registral',
   'codigo_catastral',

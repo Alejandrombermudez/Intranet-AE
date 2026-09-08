@@ -27,6 +27,17 @@
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
+-- ── 2026-09-08  migration_proyecto_fuente.sql ────────────────────────────────
+--             Clasificación del predio por proyecto y por fuente de información:
+--             catalogo.proyectos (2 filas: conexion_biodiversa, ley_arbol),
+--             catalogo.fuentes_informacion (3: socializacion_veredal,
+--             socializacion_comunitaria, lacteos_del_hogar) y las columnas
+--             core.predios.tipo_proyecto + .fuente_informacion (FK por código).
+--             Verificado por REST el 2026-09-08: los 5 registros de catálogo con
+--             su orden, las dos columnas presentes, lectura anon OK (es la que
+--             usa el navegador) y los 111 predios existentes en NULL — se
+--             clasifican desde la intranet con el filtro «Sin proyecto asignado».
+
 -- ── 2026-03  Schemas siembra + ras + tablas base ─────────────────────────────
 -- ── 2026-03  GRANTs siembra + ras ────────────────────────────────────────────
 -- ── 2026-04  siembra.familias ampliada (datos CSV) ───────────────────────────

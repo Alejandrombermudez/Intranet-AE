@@ -11,6 +11,7 @@ import {
   Shield, ArrowLeft, Pencil, ChevronRight, Loader2,
   CheckCircle2, Lock, ExternalLink, AlertCircle, Plus,
 } from 'lucide-react'
+import { fetchParametrosHoja1, nombreParametro, type Parametro } from '@/lib/parametros'
 
 function label(v: unknown) {
   if (v === null || v === undefined || v === '') return <span className="text-stone-300">—</span>
@@ -113,6 +114,15 @@ export default function AliadoDetailPage() {
   const [authReady, setAuthReady] = useState(false)
   const [aliado, setAliado]       = useState<Aliado | null>(null)
   const [loading, setLoading]     = useState(true)
+  const [proyectos, setProyectos] = useState<Parametro[]>([])
+  const [fuentes, setFuentes]     = useState<Parametro[]>([])
+
+  // En el predio se guarda el código; los catálogos traen el nombre que se lee.
+  useEffect(() => {
+    fetchParametrosHoja1().then(({ proyectos, fuentes }) => {
+      setProyectos(proyectos); setFuentes(fuentes)
+    })
+  }, [])
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -224,6 +234,15 @@ export default function AliadoDetailPage() {
               </Link>
             </div>
           </div>
+          {/* Clasificación primero: es la que decide bajo qué programa se lee
+              el resto del expediente en SIG, campo y vivero. */}
+          <div className="flex gap-3 py-2 border-b border-stone-50">
+            <span className="text-xs text-stone-400 w-44 shrink-0 font-medium">Tipo de proyecto</span>
+            {aliado.tipo_proyecto
+              ? <span className="text-sm text-stone-700">{nombreParametro(proyectos, aliado.tipo_proyecto)}</span>
+              : <span className="text-sm text-amber-600 font-medium">Sin asignar</span>}
+          </div>
+          <DataRow k="Fuente de información" v={nombreParametro(fuentes, aliado.fuente_informacion)} />
           <DataRow k="Nombre completo"       v={aliado.nombre_completo} />
           <DataRow k="Tipo / Nº documento"   v={`${aliado.tipo_documento} ${aliado.numero_documento}`} />
           <DataRow k="Departamento"          v={aliado.departamento} />

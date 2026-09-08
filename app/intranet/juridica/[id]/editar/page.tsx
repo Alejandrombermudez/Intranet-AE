@@ -10,6 +10,8 @@ import Link from 'next/link'
 import { MUNICIPIOS_CAQUETA, VEREDAS_POR_MUNICIPIO, normalizarMunicipio, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
 import { parsearRespuestaGuardado, mensajeDocumentosFallidos } from '@/lib/fetch-guardar'
 import { comprimirAdjuntos, avisoPeso } from '@/lib/comprimir-imagen'
+import { fetchParametrosHoja1, type Parametro } from '@/lib/parametros'
+import SelectParametro from '@/app/components/SelectParametro'
 
 const ETIQUETAS_DOC: Record<string, string> = {
   cedula:                'Documento de identidad',
@@ -80,11 +82,22 @@ export default function EditarAliadoPage() {
   const [pdfManif, setPdfManif]   = useState<File | null>(null)
   const [selectedMunicipio, setSelectedMunicipio] = useState<MunicipioCaqueta | ''>('')
   const [matriculas, setMatriculas] = useState<string[]>([''])
+  const [proyectos, setProyectos] = useState<Parametro[]>([])
+  const [fuentes, setFuentes]     = useState<Parametro[]>([])
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } =
     useForm<AliadoForm>({ resolver: standardSchemaResolver(aliadoSchema) as any })
 
-  const manifestacion = watch('manifestacion_interes')
+  const manifestacion     = watch('manifestacion_interes')
+  const tipoProyecto      = watch('tipo_proyecto') ?? ''
+  const fuenteInformacion = watch('fuente_informacion') ?? ''
+
+  // Catálogos de clasificación (tipo de proyecto / fuente de información).
+  useEffect(() => {
+    fetchParametrosHoja1().then(({ proyectos, fuentes }) => {
+      setProyectos(proyectos); setFuentes(fuentes)
+    })
+  }, [])
 
   // Aviso heredado de la creación: documentos que no se pudieron subir al crear
   // el caso (?docs=cedula,recibo_predial). Se leen de window para no depender de
@@ -125,6 +138,8 @@ export default function EditarAliadoPage() {
           vereda:                      data.vereda ?? '',
           zona_ae:                     data.zona_ae ?? '',
           nombre_predio:               data.nombre_predio ?? '',
+          tipo_proyecto:               data.tipo_proyecto ?? '',
+          fuente_informacion:          data.fuente_informacion ?? '',
           matricula_inmobiliaria:      data.matricula_inmobiliaria ?? '',
           area_registral:              data.area_registral ?? undefined,
           codigo_catastral:            data.codigo_catastral ?? '',
@@ -212,6 +227,30 @@ export default function EditarAliadoPage() {
       {/* noValidate: valida solo zod. La validación nativa del navegador bloqueaba
           el envío con un globo propio al escribir "25,5" o "2.024". */}
       <form noValidate onSubmit={handleSubmit(onSubmit, onInvalid)} className="max-w-2xl mx-auto px-6 py-8 space-y-8">
+        <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
+          <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Proyecto y origen</h2>
+          <SelectParametro
+            label="Tipo de proyecto"
+            hint="Programa bajo el que entra el predio"
+            lista="proyectos"
+            opciones={proyectos}
+            value={tipoProyecto}
+            onChange={(v) => setValue('tipo_proyecto', v)}
+            onNueva={(p) => setProyectos((arr) => [...arr, p])}
+            email={userEmail}
+          />
+          <SelectParametro
+            label="Fuente de información"
+            hint="Cómo llegó el predio a Amazonia Emprende"
+            lista="fuentes_informacion"
+            opciones={fuentes}
+            value={fuenteInformacion}
+            onChange={(v) => setValue('fuente_informacion', v)}
+            onNueva={(p) => setFuentes((arr) => [...arr, p])}
+            email={userEmail}
+          />
+        </section>
+
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Identificación</h2>
           <Field label="Nombre completo" error={errors.nombre_completo?.message}>

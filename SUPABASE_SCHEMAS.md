@@ -3,7 +3,7 @@
 > **Última actualización:** 2026-07-06 | Proyecto Supabase: `lbxysovesmbgesxooghw`
 > Para seguimiento de migraciones SQL ver `docs/sql/` (historial de lo ejecutado en `docs/sql/pending.sql`)
 >
-> **Últimas migraciones ejecutadas:** `migration_ras_arboles.sql` + `seed_ras_arboles.sql` (2026-07-01) — tabla `ras.arboles_semilleros` normalizada (523 árboles, FK a `catalogo.especies`). Antes, `migration_catalogo.sql` + `seed_catalogo_especies.sql` (2026-06-30) — maestro único `catalogo.especies` (148 especies). Ver secciones **`catalogo`** y **`ras`** abajo.
+> **Últimas migraciones ejecutadas:** `migration_proyecto_fuente.sql` (2026-09-08) — `catalogo.proyectos` + `catalogo.fuentes_informacion` y las columnas `core.predios.tipo_proyecto` / `.fuente_informacion`. Antes, `migration_ras_arboles.sql` + `seed_ras_arboles.sql` (2026-07-01) — tabla `ras.arboles_semilleros` normalizada (523 árboles, FK a `catalogo.especies`). Antes, `migration_catalogo.sql` + `seed_catalogo_especies.sql` (2026-06-30) — maestro único `catalogo.especies` (148 especies). Ver secciones **`catalogo`** y **`ras`** abajo.
 >
 > **Modelo actual:** Jurídica es la puerta de entrada y escribe sobre `core` (persona/predio/expediente). `catalogo.especies` es el dato maestro que comparten Conservación (RAS), Vivero y Plan — no se duplica taxonomía en ninguna otra tabla.
 
@@ -706,6 +706,24 @@ arboles_semilleros (523 filas) — Red de Árboles Semilleros (RAS)
 
 > Muchas especies solo-vivero (`en_catalogo = false`) tienen apenas `nombre_cientifico` + `genero` + `epiteto` + a veces `tipo_semilla`; su ficha completa (descripción/usos/foto) llega cuando la botánica las levanta.
 
+### `catalogo.proyectos` (2 filas) y `catalogo.fuentes_informacion` (3 filas) — Clasificación del predio (2026-09-08)
+
+> `migration_proyecto_fuente.sql`. Dos listas con la misma forma:
+> `proyectos` = bajo qué programa entra el predio; `fuentes_informacion` = cómo llegó.
+
+| Columna | Tipo | Notas |
+|---------|------|-------|
+| `id` | uuid PK | |
+| `codigo` | text **UNIQUE** | slug estable; es lo que guarda `core.predios.tipo_proyecto` / `.fuente_informacion` |
+| `nombre` | text | etiqueta visible |
+| `descripcion` | text | opcional |
+| `activo` | boolean | `false` = fuera del desplegable, sin tocar los predios que ya lo usan |
+| `orden` | integer | posición en el desplegable (semillas 10/20/30, lo agregado se acumula debajo) |
+| `created_by` / `created_at` / `updated_at` | — | auditoría |
+
+Semillas: `conexion_biodiversa` · `ley_arbol` — `socializacion_veredal` · `socializacion_comunitaria` · `lacteos_del_hogar`.
+Se amplían desde la UI (HOJA 1 → botón «+ Agregar» → `POST /api/catalogo/parametros`, que genera el `codigo`), no con SQL.
+
 ---
 
 ## Schema `core` — Núcleo canónico (2026-06-19)
@@ -739,6 +757,8 @@ aliados ── juridica.antecedentes (1:1, por persona)
 | `id` | uuid PK | |
 | `aliado_id` | uuid FK → core.aliados | dueño principal (ON DELETE RESTRICT) |
 | `nombre_predio` / `departamento` / `municipio` / `vereda` / `zona_ae` | text | |
+| `tipo_proyecto` | text FK → `catalogo.proyectos(codigo)` | programa del predio (`conexion_biodiversa`, `ley_arbol`). NULL = sin clasificar |
+| `fuente_informacion` | text FK → `catalogo.fuentes_informacion(codigo)` | cómo llegó (`socializacion_veredal`, `socializacion_comunitaria`, `lacteos_del_hogar`) |
 | `matricula_inmobiliaria` | text | índice único parcial (cuando no es null) |
 | `codigo_catastral` | text | |
 | `area_registral` | numeric(12,4) | hectáreas del folio |
@@ -828,6 +848,7 @@ FK `predio_id` → **core.predios**. Banderas (falsa_tradicion, procesos_judicia
 | `/intranet/ras` | `ras.arboles_semilleros` (vía `lib/ras-arboles.ts`) |
 | `/api/ras/arboles/[id]/foto` | `ras.arboles_semilleros` (bucket `species-photos`) |
 | `/api/catalogo/[id]/foto` | `catalogo.especies` (vía `lib/catalogo.ts`, bucket `species-photos`) |
+| `/api/catalogo/parametros` | alta de opciones en `catalogo.proyectos` / `catalogo.fuentes_informacion` (la lectura va directa por `lib/parametros.ts`) |
 | `/api/sig/ingesta` | ingesta de shapefile → `geo.zonas` |
 | `/api/sig/zonas` | `geo.zonas` |
 | `/intranet/ejecutivo` | `ejecutivo.sesiones`, `ejecutivo.indicaciones`, `people.user_profiles` |

@@ -10,6 +10,8 @@ import Link from 'next/link'
 import { MUNICIPIOS_CAQUETA, VEREDAS_POR_MUNICIPIO, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
 import { parsearRespuestaGuardado } from '@/lib/fetch-guardar'
 import { comprimirAdjuntos, avisoPeso } from '@/lib/comprimir-imagen'
+import { fetchParametrosHoja1, type Parametro } from '@/lib/parametros'
+import SelectParametro from '@/app/components/SelectParametro'
 
 const ETIQUETAS_DOC: Record<string, string> = {
   cedula:                'Documento de identidad',
@@ -85,11 +87,22 @@ export default function NuevoAliadoPage() {
   const [matriculas, setMatriculas] = useState<string[]>([''])
   const [aliadoLock, setAliadoLock] = useState(false)
   const [prefillNombre, setPrefillNombre] = useState('')
+  const [proyectos, setProyectos] = useState<Parametro[]>([])
+  const [fuentes, setFuentes]     = useState<Parametro[]>([])
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } =
     useForm<AliadoForm>({ resolver: standardSchemaResolver(aliadoSchema) as any })
 
-  const manifestacion = watch('manifestacion_interes')
+  const manifestacion     = watch('manifestacion_interes')
+  const tipoProyecto      = watch('tipo_proyecto') ?? ''
+  const fuenteInformacion = watch('fuente_informacion') ?? ''
+
+  // Catálogos de clasificación (tipo de proyecto / fuente de información).
+  useEffect(() => {
+    fetchParametrosHoja1().then(({ proyectos, fuentes }) => {
+      setProyectos(proyectos); setFuentes(fuentes)
+    })
+  }, [])
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -240,6 +253,33 @@ export default function NuevoAliadoPage() {
           completar propietario, documento, municipio, <strong>impuesto predial</strong> y archivos después — todo
           en paralelo. Los campos vacíos se guardan como &laquo;sin dato&raquo;, no bloquean.
         </div>
+
+        {/* Sección 0: Clasificación del predio.
+            Va primero porque decide bajo qué programa se lee todo lo demás:
+            SIG, campo y vivero filtran por aquí. */}
+        <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
+          <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Proyecto y origen</h2>
+          <SelectParametro
+            label="Tipo de proyecto"
+            hint="Programa bajo el que entra el predio"
+            lista="proyectos"
+            opciones={proyectos}
+            value={tipoProyecto}
+            onChange={(v) => setValue('tipo_proyecto', v)}
+            onNueva={(p) => setProyectos((arr) => [...arr, p])}
+            email={userEmail}
+          />
+          <SelectParametro
+            label="Fuente de información"
+            hint="Cómo llegó el predio a Amazonia Emprende"
+            lista="fuentes_informacion"
+            opciones={fuentes}
+            value={fuenteInformacion}
+            onChange={(v) => setValue('fuente_informacion', v)}
+            onNueva={(p) => setFuentes((arr) => [...arr, p])}
+            email={userEmail}
+          />
+        </section>
 
         {/* Sección 1: Identificación */}
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">

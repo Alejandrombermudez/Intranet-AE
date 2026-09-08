@@ -84,6 +84,10 @@ export async function POST(req: NextRequest) {
         municipio:              municipio,
         vereda:                 data.vereda || null,
         zona_ae:                data.zona_ae || null,
+        // Clasificación del predio (códigos de catalogo.proyectos /
+        // catalogo.fuentes_informacion). Vacío = todavía sin clasificar.
+        tipo_proyecto:          data.tipo_proyecto || null,
+        fuente_informacion:     data.fuente_informacion || null,
         matricula_inmobiliaria: matriculas[0] || null,
         matriculas:             matriculas.length ? matriculas : null,
         codigo_catastral:       data.codigo_catastral || null,
