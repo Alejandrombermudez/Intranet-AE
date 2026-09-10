@@ -12,6 +12,7 @@ import {
   Users, Loader2, AlertCircle, AlertTriangle, BarChart2, ImageOff, Construction,
   Leaf, ArrowRight, Filter, CalendarDays, ChevronDown,
   Link2, Copy, CheckCheck, FileSpreadsheet, FileDown, BarChart3, Trash2, Sprout,
+  Map as MapIcon,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -119,6 +120,8 @@ const RUTA_MODULO: Record<string, string> = {
   Juridica:  '/intranet/juridica',
   Ejecutivo: '/intranet/ejecutivo',
   Reporte:   '/intranet/reporte',
+  // Tecnología es el mapa del sistema: el proceso, las aplicaciones y la bitácora.
+  Tecnología: '/intranet/sistema',
 }
 
 // ─── EditRow (tabla usuarios) ─────────────────────────────────────────────────
@@ -1375,6 +1378,13 @@ export default function IntranetPage() {
                 ...(myProfile.department !== 'Reporte'
                   ? [{ id: 'reporte', label: 'Reporte', icon: <Sprout size={14} />,
                        tab: null, href: RUTA_MODULO.Reporte }]
+                  : []),
+                // Tecnología también es transversal: el mapa explica el proceso
+                // completo y sirve a todo el equipo, no a un área. Hoy nadie tiene
+                // ese departamento asignado; sin este tab, nadie lo vería.
+                ...(myProfile.department !== 'Tecnología'
+                  ? [{ id: 'tecnologia', label: 'Tecnología', icon: <MapIcon size={14} />,
+                       tab: null, href: RUTA_MODULO['Tecnología'] }]
                   : []),
               ].map((t) => (
                 <button key={t.id} onClick={() => {

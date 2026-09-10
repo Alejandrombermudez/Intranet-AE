@@ -31,6 +31,7 @@ documentos maestros de arquitectura de todo el ecosistema (no solo de esta app).
 | `/intranet/ras/siembra`, `/intranet/ras/conservacion` | Encuesta/evaluación de campo (legado `siembra.*`) y conservación (`ras.*`) | `siembra`, `ras` |
 | `/intranet/catalogo` | Catálogo de especies | `catalogo` |
 | `/intranet/reporte`, `/intranet/reporte/[predioId]` | **Módulo Reporte**: expediente completo del predio en un solo documento (predial, jurídica, cartografía, correcciones de terreno, evaluación biofísica, encuesta). Se arma solo desde `/api/reporte/expediente`; diseñado sobre el Manual de Identidad de Marca 2024 (Josefin Sans + Poppins, paleta hueso/verde bosque) y pensado para imprimir | `core`, `juridica`, `geo`, `siembra` |
+| `/intranet/sistema`, `/intranet/sistema/documentacion` | **Mapa del sistema**: el ecosistema completo (Siembra + Conservación + núcleo + soporte) como diagrama de cajas navegables, y la **bitácora** (decisiones, cambios, frentes abiertos) con lector de los `docs/*.md`. El grafo vive en `lib/sistema/mapa.ts`; las cifras **no se escriben a mano** — salen de `/api/sistema/pulso`, que las cuenta en Supabase al abrir la página. Reemplaza a `docs/flujo-trabajo.html`/`.pdf`, que se desactualizó en tres semanas por llevar los números dentro del SVG. Se entra por el tab **Tecnología** del hub: lo ve todo admin (transversal, como Reporte) y quien tenga ese departamento llega directo | lee `core`, `geo`, `catalogo`, `siembra`, `ras`, `people` — solo conteos |
 | `/intranet/ejecutivo` | Sesiones/indicaciones ejecutivas | `ejecutivo` |
 | `app/api/juridica/aliados/[id]/crear-en-siembra` | Paso SIG→Campo: valida SIG I obligatorio, crea `siembra.familias`, avanza expediente | `core`, `geo`, `siembra` |
 
@@ -44,6 +45,12 @@ no retira zonas que campo ya trabajó — las marca en `geo.v_zonas_conflicto` p
 dos. Detalle en `docs/ARQUITECTURA_DATOS.md` §2.2 y `docs/CONTEXTO_MODULO_SIG.md`.
 
 ## Estado vivo — no lo memorices, verifícalo
+
+**Antes de escribir una cifra en cualquier documento, míralo en `/intranet/sistema`.** Esa página cuenta
+contra Supabase en el momento. Los documentos de `docs/` se han contradicho entre sí por llevar conteos a
+mano: en septiembre de 2026, `ARQUITECTURA_DATOS.md` §4.2 daba `ras.arboles_semilleros` por construir,
+`SUPABASE_SCHEMAS.md` decía 523 filas y la base tenía **2.115**. Si vas a dejar un número escrito, ponle
+fecha o no lo pongas.
 
 `docs/sql/pending.sql` lleva la lista de migraciones que **aún no se han corrido** en producción.
 Verificado por REST el **2026-08-12: no queda ninguna pendiente** — todas las escritas están aplicadas.
