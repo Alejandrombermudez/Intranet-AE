@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import type { SesionConPersona, Indicacion, EstadoIndicacion } from '@/lib/types'
 
-const PRIMARY = '#0d7377'
+const PRIMARY = '#2f3f32'
 
 const BORDE_EJECUTIVO: Record<string, string> = {
   pendiente: 'border-l-amber-300',
@@ -292,7 +292,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 function inputCls() {
-  return 'w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#0d7377]/40 focus:border-[#0d7377] transition-colors'
+  return 'w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#2f3f32]/40 focus:border-[#2f3f32] transition-colors'
 }
 
 function labelCls() {

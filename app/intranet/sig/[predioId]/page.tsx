@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '@/lib/supabase'
@@ -10,10 +9,10 @@ import { area as turfArea } from '@turf/area'
 import { booleanIntersects } from '@turf/boolean-intersects'
 import type { Feature, Geometry } from 'geojson'
 import {
-  Map as MapIcon, ArrowLeft, Loader2, FileUp, Save, AlertCircle, AlertTriangle,
-  CheckCircle2, Ruler, Layers, Hexagon as Sq, ExternalLink, MousePointerClick, Check, Send, Undo2, Download,
-  ClipboardList,
+  Loader2, FileUp, Save, AlertCircle, AlertTriangle, CheckCircle2, Ruler, Layers, Hexagon as Sq,
+  ExternalLink, MousePointerClick, Check, Send, Undo2, Download, ClipboardList,
 } from 'lucide-react'
+import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 
 const MapaZonas = dynamic(() => import('@/app/components/MapaZonas'), {
   ssr: false,
@@ -282,7 +281,7 @@ export default function SigPredioPage() {
   }
 
   if (!authReady || loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-stone-50"><Loader2 className="animate-spin text-stone-400" size={32} /></div>
+    return <Cargando texto="Cargando la cartografía del predio…" />
   }
 
   const polyFeats = parsePoly ? [...selPoly].map((i) => parsePoly.features[i]) : []
@@ -292,21 +291,22 @@ export default function SigPredioPage() {
   const siteArea = siteFeats.reduce((s, f) => s + turfArea(f) / 1e4, 0)
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      {/* Header */}
-      <div className="bg-white border-b border-stone-100 px-6 py-5">
-        <div className="max-w-5xl mx-auto flex items-center gap-3">
-          <Link href="/intranet/sig" className="text-stone-400 hover:text-stone-700 transition-colors"><ArrowLeft size={20} /></Link>
-          <MapIcon size={18} className="text-teal-600" />
-          <div className="min-w-0">
-            <h1 className="text-lg font-black text-stone-900 truncate">SIG I · {caso?.nombre_predio ?? 'Predio'}</h1>
-            <p className="text-xs text-stone-400 truncate">{caso?.nombre_completo} · {caso?.municipio}{caso?.vereda ? ` / ${caso.vereda}` : ''}</p>
-          </div>
-          {caso && <Link href={`/intranet/juridica/${predioId}`} className="ml-auto shrink-0 flex items-center gap-1 text-xs font-bold text-stone-400 hover:text-teal-600 transition-colors">Ver caso jurídico <ExternalLink size={12} /></Link>}
-        </div>
-      </div>
+    <div className="min-h-screen bg-papel">
+      <Cabecera
+        compacta
+        ancho="estrecho"
+        volver={{ href: '/intranet/sig', label: 'Cola cartográfica' }}
+        modulo="Módulo SIG · SIG I"
+        titulo={caso?.nombre_predio ?? 'Predio'}
+        descripcion={`${caso?.nombre_completo ?? ''} · ${caso?.municipio ?? ''}${caso?.vereda ? ` / ${caso.vereda}` : ''}`}
+        acciones={caso ? (
+          <Boton variante="claro" href={`/intranet/juridica/${predioId}`} icono={<ExternalLink size={13} />}>
+            Ver caso jurídico
+          </Boton>
+        ) : undefined}
+      />
 
-      <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
+      <div className="max-w-5xl mx-auto px-6 sm:px-10 py-10 space-y-5">
         {/* Enviar a Campo — obligatorio: exige sitios de siembra guardados.
             Disponible desde 'juridica' (SIG ve el predio desde su creación) o 'sig_i' (legado). */}
         {(caso?.etapa === 'juridica' || caso?.etapa === 'sig_i') && (

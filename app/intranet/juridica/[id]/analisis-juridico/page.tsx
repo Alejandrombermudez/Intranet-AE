@@ -5,7 +5,10 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { type AnalisisJuridico, type Semaforo, SEMAFORO_CONFIG } from '@/lib/juridica-schema'
 import { parsearRespuestaGuardado } from '@/lib/fetch-guardar'
-import { Shield, ArrowLeft, Loader2, AlertCircle } from 'lucide-react'
+import {
+  Loader2, AlertCircle,
+} from 'lucide-react'
+import { Cabecera, Cargando } from '@/app/components/marca'
 
 const TEXTAREA = 'w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:border-teal-400 transition-colors resize-none'
 const INPUT    = 'w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:border-teal-400 transition-colors bg-white'
@@ -251,26 +254,22 @@ export default function AnalisisJuridicoPage() {
   }
 
   if (!authReady || loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-stone-50"><Loader2 className="animate-spin text-stone-400" size={32} /></div>
+    return <Cargando texto="Cargando el análisis jurídico…" />
   }
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <div className="bg-white border-b border-stone-100 px-6 py-4">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
-          <Link href={`/intranet/juridica/${id}`} className="text-stone-400 hover:text-stone-700 transition-colors">
-            <ArrowLeft size={20} />
-          </Link>
-          <Shield size={18} className="text-teal-600" />
-          <div>
-            <h1 className="text-lg font-black text-stone-900">HOJA 3 — Análisis jurídico</h1>
-            <p className="text-xs text-stone-400">{aliadoNombre}</p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-papel">
+      <Cabecera
+        compacta
+        ancho="ficha"
+        volver={{ href: `/intranet/juridica/${id}`, label: 'Aliado' }}
+        modulo="Módulo jurídico · HOJA 3"
+        titulo="Análisis jurídico"
+        descripcion={aliadoNombre}
+      />
 
       {bloqueado ? (
-        <div className="max-w-3xl mx-auto px-6 py-10">
+        <div className="max-w-3xl mx-auto px-6 sm:px-10 py-10">
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-3">
             <AlertCircle size={20} className="text-amber-500 shrink-0 mt-0.5" />
             <div>
@@ -284,7 +283,7 @@ export default function AnalisisJuridicoPage() {
           </div>
         </div>
       ) : (
-        <div className="max-w-3xl mx-auto px-6 py-6 space-y-6">
+        <div className="max-w-3xl mx-auto px-6 sm:px-10 py-10 space-y-6">
 
           {/* Estado del folio */}
           <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">

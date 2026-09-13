@@ -4,8 +4,8 @@
   "description": "Gestion Operativa y Tecnica",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0d7377",
+  "background_color": "#f4f1ea",
+  "theme_color": "#2f3f32",
   "icons": [
     {
       "src": "/icon-192.png",

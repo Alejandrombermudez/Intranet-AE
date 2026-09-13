@@ -1,14 +1,12 @@
 'use client'
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  ArrowLeft, Loader2, Trees, MapPin, CalendarDays,
-  Trash2, AlertTriangle, RotateCcw, Archive,
+  Loader2, MapPin, CalendarDays, Trash2, AlertTriangle, RotateCcw, Archive,
 } from 'lucide-react'
+import { Cabecera, Cargando } from '@/app/components/marca'
 
-const PRIMARY = '#0d7377'
 
 interface Familia {
   id: string
@@ -105,41 +103,22 @@ export default function FamiliasEliminadasPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 size={36} className="animate-spin" style={{ color: PRIMARY }} />
-      </div>
+      <Cargando texto="Cargando las familias eliminadas…" />
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-red-50/30 to-stone-100">
+    <div className="min-h-screen bg-papel">
 
-      {/* Header */}
-      <header className="bg-white shadow-md border-b border-stone-200">
-        <div className="max-w-7xl mx-auto px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <Link href="/intranet/ras/siembra"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-stone-200 text-stone-600 font-bold text-sm hover:border-stone-400 transition-all shrink-0">
-              <ArrowLeft size={16} />
-              <span className="hidden sm:block">Siembra</span>
-            </Link>
+      <Cabecera
+        ancho="amplio"
+        volver={{ href: '/intranet/ras/siembra', label: 'Siembra' }}
+        modulo="Restauración · Siembra"
+        titulo="Familias eliminadas"
+        descripcion="Pendientes de eliminación definitiva"
+      />
 
-            <div className="text-center flex-1">
-              <div className="inline-flex items-center gap-2 mb-0.5">
-                <Archive size={20} className="text-red-400" />
-                <h1 className="text-2xl font-black text-stone-900 tracking-tight">Familias Eliminadas</h1>
-              </div>
-              <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">
-                Pendientes de eliminación definitiva
-              </p>
-            </div>
-
-            <div className="w-32 shrink-0" />
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto px-6 sm:px-10 py-10">
 
         {/* Banner */}
         <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-8 flex items-start gap-3">

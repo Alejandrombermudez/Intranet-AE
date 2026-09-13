@@ -1,16 +1,15 @@
 ﻿'use client'
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { supabase } from '@/lib/supabase'
 import { familiaConservacionSchema, type FamiliaConservacionForm } from '@/lib/ras-schema'
 import {
-  ArrowLeft, ArrowRight, Check, Plus, Trash2,
-  Upload, FileArchive, X, Loader2, Camera, Image as ImageIcon,
-  ShieldCheck, Users, Trees, MapPin, AlertCircle, ChevronDown,
+  ArrowLeft, ArrowRight, Check, Plus, Trash2, Upload, FileArchive, X, Loader2, Camera,
+  Image as ImageIcon, ShieldCheck, Users, Trees, AlertCircle, ChevronDown,
 } from 'lucide-react'
+import { Cabecera, Cargando } from '@/app/components/marca'
 
 // ─── Fotos por categoría ──────────────────────────────────────────────────────
 
@@ -23,7 +22,7 @@ const FOTO_CATS = [
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const PRIMARY = '#0d7377'
+const PRIMARY = '#2f3f32'
 
 const STEPS = [
   { label: 'Identificación',  icon: <Users       size={14} /> },
@@ -382,38 +381,26 @@ export default function NuevaConservacionPage() {
 
   if (!authReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 size={36} className="text-primary animate-spin" />
-      </div>
+      <Cargando texto="Preparando el formulario…" />
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-primary-50 to-stone-100">
+    <div className="min-h-screen bg-papel">
 
-      {/* ── Header ── */}
-      <header className="bg-white shadow-md border-b border-stone-200">
-        <div className="max-w-3xl mx-auto px-4 py-5 sm:px-6">
-          <div className="flex items-center justify-between gap-4 mb-5">
-            <Link href="/intranet/ras/conservacion"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-stone-200 text-stone-600 font-bold text-sm hover:border-primary hover:text-primary hover:bg-primary/5 transition-all shrink-0">
-              <ArrowLeft size={16} />
-              <span className="hidden sm:block">Volver</span>
-            </Link>
-            <div className="text-center flex-1">
-              <div className="inline-flex items-center gap-2">
-                <ShieldCheck size={18} className="text-primary" />
-                <h1 className="text-xl font-black text-stone-900">Nueva Familia en Conservación</h1>
-              </div>
-            </div>
-            <div className="w-[80px]" />
-          </div>
-          <ProgressBar step={step} total={STEPS.length} />
-        </div>
-      </header>
+      <Cabecera
+        compacta
+        ancho="ficha"
+        volver={{ href: '/intranet/ras/conservacion', label: 'Conservación' }}
+        modulo="Conservación"
+        titulo="Nueva familia en conservación"
+      />
 
       {/* ── Formulario ── */}
-      <main className="max-w-3xl mx-auto px-4 py-8 sm:px-6">
+      <main className="max-w-3xl mx-auto px-6 sm:px-10 py-10">
+        <div className="mb-8">
+          <ProgressBar step={step} total={STEPS.length} />
+        </div>
         <form onSubmit={handleSubmit(onSubmit)}>
 
           {/* ══ PASO 0: Identificación ══ */}

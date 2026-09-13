@@ -115,10 +115,14 @@ export type ClaseApp =
 export interface Aplicacion {
   id: string
   nombre: string
+  /** Para las frases del panel, cuando el nombre ya lleva una «y» que confunde. */
+  nombreCorto?: string
   clase: ClaseApp
   estado: Estado
   /** Dónde se abre, dicho como lo diría alguien del equipo. */
   donde: string
+  /** Lo mismo en tres palabras, para la tarjeta del mapa. */
+  dondeCorto: string
   /** Qué resuelve. Una o dos frases, sin tecnicismos. */
   para: string
   /** Funciona sin señal. Importante en Caquetá: en el predio casi nunca hay. */
@@ -136,6 +140,7 @@ export const APLICACIONES: Aplicacion[] = [
     clase: 'En la oficina',
     estado: 'produccion',
     donde: 'En el computador de la oficina, entrando con el correo de la organización.',
+    dondeCorto: 'Computador',
     para:
       'Es la mesa de trabajo de la oficina: jurídica, cartografía, expedientes, el catálogo de especies, ' +
       'conservación y los informes.',
@@ -149,6 +154,7 @@ export const APLICACIONES: Aplicacion[] = [
     estado: 'produccion',
     offline: true,
     donde: 'En el celular del evaluador, instalada como aplicación.',
+    dondeCorto: 'Celular, sin señal',
     para:
       'Todo lo que se hace parado en el predio: la evaluación del terreno, la encuesta a la familia y ' +
       'la corrección de las zonas sobre el mapa satelital. Guarda en el celular y sube cuando hay señal.',
@@ -158,10 +164,12 @@ export const APLICACIONES: Aplicacion[] = [
   {
     id: 'app_actividades',
     nombre: 'App de actividades y bodega',
+    nombreCorto: 'App de actividades',
     clase: 'En el celular, en campo',
     estado: 'en_curso',
     offline: true,
     donde: 'En el celular, desde el navegador. Se entra por título de trabajo: BODEGA, SIEMBRA o MONITOREO.',
+    dondeCorto: 'Celular, sin señal',
     para:
       'Registrar lo que se hizo y con qué: actividades y rendimientos por lote y núcleo, insumos ' +
       'consumidos, movimientos entre bodegas y el monitoreo de lo ya sembrado.',
@@ -177,6 +185,7 @@ export const APLICACIONES: Aplicacion[] = [
     estado: 'en_curso',
     offline: true,
     donde: 'En el celular, desde el navegador.',
+    dondeCorto: 'Celular, sin señal',
     para: 'Monitoreo fenológico de los árboles semilleros: quién está floreciendo, quién está en fruto.',
     carpeta: 'insumos_aves/semilleros/',
     tecnica: 'HTML estático en Vercel, junto con la app de aves. Pendiente de conectar a ras.',
@@ -188,6 +197,7 @@ export const APLICACIONES: Aplicacion[] = [
     estado: 'en_curso',
     offline: true,
     donde: 'En el celular, desde el navegador.',
+    dondeCorto: 'Celular, sin señal',
     para: 'Avistamiento de aves con GPS y curva de acumulación de especies, como indicador de biodiversidad.',
     carpeta: 'insumos_aves/aves/',
     tecnica: 'HTML estático en Vercel. Pendiente de conectar a la base.',
@@ -198,6 +208,7 @@ export const APLICACIONES: Aplicacion[] = [
     clase: 'Abierto al público',
     estado: 'produccion',
     donde: 'Abierto en internet, sin contraseña.',
+    dondeCorto: 'Internet, sin clave',
     para: 'Mostrar hacia afuera dónde están las fincas, los árboles y las proyecciones de siembra.',
     carpeta: 'GeoAE/',
     tecnica: 'Next.js · lee core/geo/ras. Al ser público, define qué información es publicable.',
@@ -208,6 +219,7 @@ export const APLICACIONES: Aplicacion[] = [
     clase: 'Todavía fuera del sistema',
     estado: 'por_construir',
     donde: 'Todavía no existe. Hoy el vivero se lleva en Excel.',
+    dondeCorto: 'Hoy, en Excel',
     para:
       'Producir plántulas contra el pedido del plan de siembra y saber cuánto cuesta realmente cada una.',
     carpeta: 'app_vivero/',
@@ -224,6 +236,16 @@ export interface Dato {
   nombre: string
   que: string
   estado?: Estado
+  /** Cómo se llama sin código, para las filas de la tarjeta: «Personas», no «core.aliados». */
+  etiqueta?: string
+  /** La cifra viva que cuenta esta tabla (id de /api/sistema/pulso), si la hay. */
+  pulso?: string
+}
+
+/** El esquema de una tabla: `geo.zonas` → `geo`. Lo que no tiene punto no es una tabla. */
+export function esquemaDe(d: Dato): string | null {
+  const i = d.nombre.indexOf('.')
+  return i > 0 ? d.nombre.slice(0, i) : null
 }
 
 /** Lo que hay que cumplir para pasar a la etapa siguiente. */
@@ -241,6 +263,11 @@ export interface Etapa {
   nombre: string
   responsable: string
   estado: Estado
+  /**
+   * Lo que cabe en la tarjeta del mapa: nombre, quién y qué entrega, en dos o
+   * tres palabras cada uno. El texto completo va en el panel al elegirla.
+   */
+  enBreve: { nombre: string; quien: string; entrega: string }
   /** Qué le llega a esta etapa y de dónde. */
   recibe: string
   /** Los pasos que ocurren dentro. Tres o cuatro, no la lista completa. */
@@ -267,6 +294,7 @@ export const ETAPAS: Etapa[] = [
     nombre: 'Jurídica',
     responsable: 'Abogada',
     estado: 'produccion',
+    enBreve: { nombre: 'Jurídica', quien: 'Abogada', entrega: 'Predio y semáforo' },
     recibe:
       'Un predio que aparece por socialización en la vereda, porque lo trae un aliado o porque el ' +
       'propietario se acerca.',
@@ -304,6 +332,7 @@ export const ETAPAS: Etapa[] = [
     nombre: 'SIG · oficina',
     responsable: 'Equipo SIG',
     estado: 'produccion',
+    enBreve: { nombre: 'SIG', quien: 'Equipo SIG', entrega: 'Zonas con área' },
     recibe: 'Un predio con semáforo, que jurídica envió a cartografía.',
     hace: [
       'Recibe el archivo de polígonos del SIG y elige cuál es la finca.',
@@ -312,7 +341,13 @@ export const ETAPAS: Etapa[] = [
       'Si ya había cartografía, la nueva subida entra como versión nueva y la anterior queda consultable.',
     ],
     entrega: 'Zonas potenciales dibujadas sobre el predio, con área medida, listas para ir a verificar.',
-    apps: [{ app: 'intranet', rol: 'Cargue del archivo, vista previa en mapa y guardado de las zonas' }],
+    apps: [
+      { app: 'intranet', rol: 'Cargue del archivo, vista previa en mapa y guardado de las zonas' },
+      {
+        app: 'app_campo',
+        rol: 'Su extensión en el terreno: lleva las zonas al predio y trae de vuelta la verificación (SIG II)',
+      },
+    ],
     compuerta: {
       titulo: 'Al menos una zona cargada',
       explicacion:
@@ -337,6 +372,7 @@ export const ETAPAS: Etapa[] = [
     nombre: 'Campo y verificación',
     responsable: 'Evaluador, en una sola visita',
     estado: 'produccion',
+    enBreve: { nombre: 'Campo', quien: 'Evaluador', entrega: 'Zonas verificadas' },
     recibe: 'Un predio con zonas propuestas por la oficina, descargado al celular antes de salir.',
     hace: [
       'Levanta la evaluación del terreno: suelos, cobertura, agua, conflictos de uso.',
@@ -374,6 +410,7 @@ export const ETAPAS: Etapa[] = [
     nombre: 'Plan de siembra',
     responsable: 'Equipo de restauración',
     estado: 'por_construir',
+    enBreve: { nombre: 'Plan', quien: 'Restauración', entrega: 'Pedido al vivero' },
     recibe: 'El área en firme de cada zona, ya verificada en terreno.',
     hace: [
       'Aplica una receta florística a cada zona según lo que se encontró allí.',
@@ -405,6 +442,7 @@ export const ETAPAS: Etapa[] = [
     nombre: 'Vivero',
     responsable: 'Equipo de vivero',
     estado: 'por_construir',
+    enBreve: { nombre: 'Vivero', quien: 'Equipo de vivero', entrega: 'Plántulas y costo' },
     recibe: 'El pedido del plan: especies, cantidades y fecha en que se necesitan sembradas.',
     hace: [
       'Programa la producción hacia atrás desde la fecha de siembra.',
@@ -421,6 +459,7 @@ export const ETAPAS: Etapa[] = [
     },
     datos: [
       { nombre: 'vivero.*', que: 'Ocho tablas ya diseñadas: lotes, siembras, movimientos, costos.', estado: 'por_construir' },
+      { nombre: 'catalogo.especies', que: 'Las especies que produce, del mismo maestro que usa el plan.' },
     ],
     pulso: [],
     pendiente:
@@ -433,6 +472,7 @@ export const ETAPAS: Etapa[] = [
     nombre: 'Ejecución y monitoreo',
     responsable: 'Cuadrillas de campo y bodega',
     estado: 'en_curso',
+    enBreve: { nombre: 'Ejecución', quien: 'Cuadrillas', entrega: 'Lo que sobrevive' },
     recibe: 'Las plántulas, los insumos y la programación de siembra por lote.',
     hace: [
       'Registra actividades y rendimientos por lote y por núcleo.',
@@ -460,6 +500,7 @@ export const ETAPAS: Etapa[] = [
     nombre: 'Familias en conservación',
     responsable: 'Equipo RAS',
     estado: 'produccion',
+    enBreve: { nombre: 'Familias', quien: 'Equipo RAS', entrega: 'Predio anfitrión' },
     recibe: 'Una familia que conserva bosque en pie y acepta alojar árboles semilleros.',
     hace: [
       'Registra a la familia, la finca y su composición del hogar.',
@@ -483,6 +524,7 @@ export const ETAPAS: Etapa[] = [
     nombre: 'Red de árboles semilleros',
     responsable: 'Botánica y equipo de campo',
     estado: 'produccion',
+    enBreve: { nombre: 'Red de semilleros', quien: 'Botánica y campo', entrega: 'Red inventariada' },
     recibe: 'El levantamiento de campo por predio, tomado en formulario digital.',
     hace: [
       'Registra cada árbol con su código, su punto GPS y su medición: diámetro, alturas, copa.',
@@ -511,6 +553,7 @@ export const ETAPAS: Etapa[] = [
     nombre: 'Monitoreo de biodiversidad',
     responsable: 'Equipo RAS',
     estado: 'en_curso',
+    enBreve: { nombre: 'Monitoreo', quien: 'Equipo RAS', entrega: 'Evidencia de vida' },
     recibe: 'Predios en conservación con la red ya inventariada.',
     hace: [
       'Avistamiento de aves con GPS, para construir la curva de especies acumuladas.',
@@ -549,6 +592,8 @@ export interface Enlace {
   tipo: TipoEnlace
   /** Qué viaja por aquí, dicho en pocas palabras. */
   que: string
+  /** Si `que` no cabe como rótulo sobre la línea, la versión corta. */
+  corto?: string
 }
 
 export const ENLACES: Enlace[] = [
@@ -559,6 +604,7 @@ export const ENLACES: Enlace[] = [
     a: 'sig_i',
     tipo: 'devolucion',
     que: 'Las zonas como son en el terreno: confirmadas, modificadas, nuevas o descartadas',
+    corto: 'Zonas corregidas',
   },
   { de: 'campo', a: 'plan', tipo: 'avance', que: 'Área en firme' },
   { de: 'plan', a: 'vivero', tipo: 'avance', que: 'Pedido de plántulas' },
@@ -601,9 +647,9 @@ export const PIEZAS: Pieza[] = [
       'Quién es cada persona, cuál es cada predio y en qué etapa va. Es lo que permite decir «¿dónde ' +
       'está este predio hoy?» sin recorrer cuatro módulos.',
     datos: [
-      { nombre: 'core.aliados', que: 'La persona, sin duplicar.' },
-      { nombre: 'core.predios', que: 'El predio, con matrículas, proyecto y fuente.' },
-      { nombre: 'core.expedientes', que: 'La etapa en la que va. Mueve toda la cadena de siembra.' },
+      { nombre: 'core.aliados', que: 'La persona, sin duplicar.', etiqueta: 'Personas', pulso: 'aliados_total' },
+      { nombre: 'core.predios', que: 'El predio, con matrículas, proyecto y fuente.', etiqueta: 'Predios', pulso: 'predios_total' },
+      { nombre: 'core.expedientes', que: 'La etapa en la que va. Mueve toda la cadena de siembra.', etiqueta: 'Expedientes' },
     ],
     pulso: ['aliados_total', 'predios_total'],
   },
@@ -615,9 +661,9 @@ export const PIEZAS: Pieza[] = [
       'Los polígonos con área medida de verdad, y la memoria de cómo se corrigieron. Lo usan siembra ' +
       'y el geoportal.',
     datos: [
-      { nombre: 'geo.zonas', que: 'Fincas y sitios de siembra.' },
-      { nombre: 'geo.zonas_lote', que: 'Cada subida, versionada.' },
-      { nombre: 'geo.zona_revision', que: 'Lo que el terreno decidió sobre cada zona.' },
+      { nombre: 'geo.zonas', que: 'Fincas y sitios de siembra.', etiqueta: 'Zonas', pulso: 'zonas_vigentes' },
+      { nombre: 'geo.zonas_lote', que: 'Cada subida, versionada.', etiqueta: 'Subidas del SIG', pulso: 'zonas_lote' },
+      { nombre: 'geo.zona_revision', que: 'Lo que el terreno decidió sobre cada zona.', etiqueta: 'Revisiones de campo', pulso: 'revisiones_zona' },
     ],
     pulso: ['zonas_vigentes', 'revisiones_zona'],
   },
@@ -629,9 +675,9 @@ export const PIEZAS: Pieza[] = [
       'Cada especie se nombra una sola vez en todo el sistema. Lo comparten la red de semilleros, el ' +
       'plan de siembra y el vivero, para que un mismo árbol no se llame de tres formas distintas.',
     datos: [
-      { nombre: 'catalogo.especies', que: 'Nombre común, científico y familia botánica.' },
-      { nombre: 'catalogo.proyectos', que: 'Conexión Biodiversa, Ley del Árbol.' },
-      { nombre: 'catalogo.fuentes_informacion', que: 'Cómo llegó cada predio al sistema.' },
+      { nombre: 'catalogo.especies', que: 'Nombre común, científico y familia botánica.', etiqueta: 'Especies', pulso: 'especies' },
+      { nombre: 'catalogo.proyectos', que: 'Conexión Biodiversa, Ley del Árbol.', etiqueta: 'Proyectos', pulso: 'proyectos' },
+      { nombre: 'catalogo.fuentes_informacion', que: 'Cómo llegó cada predio al sistema.', etiqueta: 'Fuentes de predios' },
     ],
     pulso: ['especies', 'proyectos'],
   },
@@ -643,10 +689,10 @@ export const PIEZAS: Pieza[] = [
       'Quién puede entrar y a qué; los vehículos con sus inspecciones y documentos; las sesiones del ' +
       'equipo ejecutivo; los consentimientos de tratamiento de datos.',
     datos: [
-      { nombre: 'people.user_profiles', que: 'Usuarios, área y permisos de acceso.' },
-      { nombre: 'fleet.*', que: 'Reservas, inspecciones y documentos de los vehículos.' },
-      { nombre: 'ejecutivo.*', que: 'Sesiones e indicaciones del equipo directivo.' },
-      { nombre: 'public.consentimientos', que: 'Autorización de tratamiento de datos.' },
+      { nombre: 'people.user_profiles', que: 'Usuarios, área y permisos de acceso.', etiqueta: 'Usuarios', pulso: 'usuarios' },
+      { nombre: 'fleet.*', que: 'Reservas, inspecciones y documentos de los vehículos.', etiqueta: 'Vehículos' },
+      { nombre: 'ejecutivo.*', que: 'Sesiones e indicaciones del equipo directivo.', etiqueta: 'Sesiones ejecutivas' },
+      { nombre: 'public.consentimientos', que: 'Autorización de tratamiento de datos.', etiqueta: 'Consentimientos' },
     ],
     pulso: ['usuarios'],
   },

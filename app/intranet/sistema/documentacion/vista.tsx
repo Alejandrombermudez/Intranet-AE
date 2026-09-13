@@ -275,7 +275,7 @@ export function Documentos() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        <nav className="space-y-1.5 self-start lg:sticky lg:top-20">
+        <nav className="space-y-1.5 self-start lg:sticky lg:top-6">
           {DOCUMENTOS.map((d) => {
             const activo = abierto === d.archivo
             return (

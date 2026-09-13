@@ -1,14 +1,14 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  ArrowLeft, Loader2, Save, Users, MapPin, ShieldCheck,
-  FileArchive, ExternalLink, UploadCloud, FileText, Image as ImageIcon,
+  Loader2, Save, Users, MapPin, ShieldCheck, FileArchive, ExternalLink, UploadCloud, FileText,
+  Image as ImageIcon,
 } from 'lucide-react'
+import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 
-const PRIMARY = '#0d7377'
+const PRIMARY = '#2f3f32'
 
 const FOTO_CATS = [
   { key: 'predio',  label: 'Predio',  min: 3 },
@@ -289,48 +289,29 @@ export default function ConservacionEditPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 size={36} className="animate-spin" style={{ color: PRIMARY }} />
-      </div>
+      <Cargando texto="Cargando el formulario…" />
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-primary-50 to-stone-100">
+    <div className="min-h-screen bg-papel">
 
-      {/* Header */}
-      <header className="bg-white shadow-md border-b border-stone-200">
-        <div className="max-w-4xl mx-auto px-4 py-5 sm:px-6">
-          <div className="flex items-center justify-between gap-4">
-            <Link href={`/intranet/ras/conservacion/${id}`}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-stone-200 text-stone-600 font-bold text-sm hover:border-primary hover:text-primary hover:bg-primary/5 transition-all shrink-0">
-              <ArrowLeft size={16} />
-              <span className="hidden sm:block">Volver</span>
-            </Link>
-            <div className="text-center flex-1">
-              <div className="inline-flex items-center gap-2">
-                <ShieldCheck size={18} style={{ color: PRIMARY }} />
-                <h1 className="text-xl font-black text-stone-900 truncate max-w-xs">
-                  Editar — {form.nombre_propietario_display}
-                </h1>
-              </div>
-              <p className="text-xs text-stone-500 mt-0.5 uppercase tracking-widest font-semibold">
-                Conservación
-              </p>
-            </div>
-            <button
-              type="submit" form="edit-form-conserv" disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shrink-0 shadow-sm hover:shadow-md transition-all disabled:opacity-60"
-              style={{ backgroundColor: PRIMARY }}>
-              {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-              <span className="hidden sm:block">Guardar</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <Cabecera
+        compacta
+        ancho="medio"
+        volver={{ href: `/intranet/ras/conservacion/${id}`, label: 'Familia' }}
+        modulo="Conservación"
+        titulo={<>Editar — {form.nombre_propietario_display}</>}
+        acciones={
+          <Boton variante="luz" type="submit" form="edit-form-conserv" disabled={saving}
+            icono={saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}>
+            Guardar
+          </Boton>
+        }
+      />
 
       <form id="edit-form-conserv" onSubmit={handleSubmit}>
-        <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 space-y-6">
+        <main className="max-w-4xl mx-auto px-6 sm:px-10 py-10 space-y-6">
 
           {/* ── Identificación y Contacto ── */}
           <SectionCard icon={<Users size={16} />} title="Identificación y Contacto">

@@ -1,26 +1,332 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   SISTEMA VISUAL DE LA INTRANET
+   Manual de Identidad de Marca — Amazonía Emprende 2024
+
+   El lenguaje nació en el módulo Reporte y aquí se vuelve de toda la app:
+   papel y tinta, verde bosque como color firma, Josefin Sans para títulos,
+   Poppins para el cuerpo, filetes finos en vez de cajas de color.
+
+   CÓMO FUNCIONA: además de la paleta con nombre propio (bg-bosque,
+   text-tenue, border-fina…), las familias estándar de Tailwind que ya usaba
+   el código están REMAPEADAS a tonos de la marca. Así una clase escrita hace
+   meses —bg-emerald-50, text-red-700— sale en la paleta del manual sin tocar
+   la pantalla. La equivalencia:
+
+     stone, gray ................ neutros cálidos: papel → tinta
+     primary, emerald, teal,
+     green ...................... verde bosque (y salvia en los claros)
+     amber, yellow .............. ámbar / ocre
+     orange ..................... marrón
+     red, rose .................. arcilla — el rojo terroso para errores
+     sky, blue, cyan, indigo .... azul pizarra (y cielo en los claros)
+     violet, purple ............. musgo / oliva
+
+   OJO: los mapas NO pasan por aquí. Sus colores son hexadecimales en JS
+   (lib/colores-campo.ts) y el SIG los mantiene vivos a propósito, para que
+   se lean sobre el satelital.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #1c1917;
+  --background: #f4f1ea;
+  --foreground: #1e1a18;
 }
 
+/* Tipografías: las variables las pone next/font en <body> (app/layout.tsx),
+   por eso van en un bloque inline. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-
-  /* Amazonia Profesional - Primary Teal */
-  --color-primary: #0d7377;
-  --color-primary-light: #14b8a6;
-  --color-primary-dark: #0a5c5f;
-  --color-primary-50: #f0fdfa;
-  --color-primary-100: #ccfbf1;
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-josefin), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "Cascadia Mono", Menlo, monospace;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+@theme {
+  /* ── La paleta del manual, con nombre propio ───────────────────────────── */
+  /* Primarios */
+  --color-hueso:   #e4ded2;
+  --color-tinta:   #1e1a18;
+  --color-bosque:  #2f3f32;
+  --color-pizarra: #385161;
+  /* Secundarios */
+  --color-taupe:   #b8a28e;
+  --color-oliva:   #3a382d;
+  --color-musgo:   #7a7847;
+  --color-cielo:   #7ca9cd;
+  /* Terciarios */
+  --color-marron:  #7e5f3b;
+  --color-ambar:   #e1a644;
+  --color-salvia:  #afbdb2;
+  --color-celeste: #b7cdde;
+  /* Superficies y texto (los del informe de Reporte) */
+  --color-papel:   #f4f1ea;
+  --color-suave:   #4a453f;
+  --color-tenue:   #7d7669;
+  --color-linea:   #d8d1c4;
+  --color-fina:    #e6e0d5;
+
+  /* ── primary: antes verde azulado, ahora el verde bosque ───────────────── */
+  --color-primary:       #2f3f32;
+  --color-primary-light: #58705c;
+  --color-primary-dark:  #222e25;
+  --color-primary-50:    #eef2ed;
+  --color-primary-100:   #dde5db;
+
+  /* ── Neutros cálidos ───────────────────────────────────────────────────── */
+  --color-stone-50:  #faf8f3;
+  --color-stone-100: #f4f1ea;
+  --color-stone-200: #e6e0d5;
+  --color-stone-300: #d8d1c4;
+  --color-stone-400: #a89f8f;
+  --color-stone-500: #7d7669;
+  --color-stone-600: #5c554b;
+  --color-stone-700: #4a453f;
+  --color-stone-800: #332e29;
+  --color-stone-900: #1e1a18;
+  --color-stone-950: #141210;
+
+  --color-gray-50:  #faf8f3;
+  --color-gray-100: #f4f1ea;
+  --color-gray-200: #e6e0d5;
+  --color-gray-300: #d8d1c4;
+  --color-gray-400: #a89f8f;
+  --color-gray-500: #7d7669;
+  --color-gray-600: #5c554b;
+  --color-gray-700: #4a453f;
+  --color-gray-800: #332e29;
+  --color-gray-900: #1e1a18;
+  --color-gray-950: #141210;
+
+  --color-white: #fffdf9;
+  --color-black: #1e1a18;
+
+  /* ── Verde bosque / salvia ─────────────────────────────────────────────── */
+  --color-emerald-50:  #eef2ed;
+  --color-emerald-100: #dde5db;
+  --color-emerald-200: #c3d0c3;
+  --color-emerald-300: #a3b5a5;
+  --color-emerald-400: #7c937f;
+  --color-emerald-500: #58705c;
+  --color-emerald-600: #405644;
+  --color-emerald-700: #2f3f32;
+  --color-emerald-800: #263428;
+  --color-emerald-900: #1e2920;
+  --color-emerald-950: #141b16;
+
+  --color-teal-50:  #eef2ed;
+  --color-teal-100: #dde5db;
+  --color-teal-200: #c3d0c3;
+  --color-teal-300: #a3b5a5;
+  --color-teal-400: #7c937f;
+  --color-teal-500: #58705c;
+  --color-teal-600: #405644;
+  --color-teal-700: #2f3f32;
+  --color-teal-800: #263428;
+  --color-teal-900: #1e2920;
+  --color-teal-950: #141b16;
+
+  --color-green-50:  #eef2ed;
+  --color-green-100: #dde5db;
+  --color-green-200: #c3d0c3;
+  --color-green-300: #a3b5a5;
+  --color-green-400: #7c937f;
+  --color-green-500: #58705c;
+  --color-green-600: #405644;
+  --color-green-700: #2f3f32;
+  --color-green-800: #263428;
+  --color-green-900: #1e2920;
+  --color-green-950: #141b16;
+
+  /* ── Ámbar / ocre ──────────────────────────────────────────────────────── */
+  --color-amber-50:  #fcf6ea;
+  --color-amber-100: #f8eacd;
+  --color-amber-200: #f1d7a0;
+  --color-amber-300: #eac074;
+  --color-amber-400: #e1a644;
+  --color-amber-500: #cc8f2c;
+  --color-amber-600: #ab7420;
+  --color-amber-700: #8a5f14;
+  --color-amber-800: #6d4b13;
+  --color-amber-900: #533a12;
+  --color-amber-950: #33230a;
+
+  --color-yellow-50:  #fcf6ea;
+  --color-yellow-100: #f8eacd;
+  --color-yellow-200: #f1d7a0;
+  --color-yellow-300: #eac074;
+  --color-yellow-400: #e1a644;
+  --color-yellow-500: #cc8f2c;
+  --color-yellow-600: #ab7420;
+  --color-yellow-700: #8a5f14;
+  --color-yellow-800: #6d4b13;
+  --color-yellow-900: #533a12;
+  --color-yellow-950: #33230a;
+
+  /* ── Marrón ────────────────────────────────────────────────────────────── */
+  --color-orange-50:  #f7f1ea;
+  --color-orange-100: #eddfcd;
+  --color-orange-200: #dcc3a3;
+  --color-orange-300: #c6a37a;
+  --color-orange-400: #ab8458;
+  --color-orange-500: #946f47;
+  --color-orange-600: #7e5f3b;
+  --color-orange-700: #664c30;
+  --color-orange-800: #4f3b26;
+  --color-orange-900: #3a2c1d;
+  --color-orange-950: #231a11;
+
+  /* ── Arcilla: el rojo terroso de los errores ───────────────────────────── */
+  /* La marca no tiene rojo. Un error igual tiene que distinguirse de un aviso,
+     así que se usa una arcilla que conversa con el marrón en vez de un rojo
+     de semáforo. */
+  --color-red-50:  #f9efec;
+  --color-red-100: #f1dcd5;
+  --color-red-200: #e3b9ab;
+  --color-red-300: #cf9480;
+  --color-red-400: #b86f58;
+  --color-red-500: #a1553f;
+  --color-red-600: #8b4431;
+  --color-red-700: #713628;
+  --color-red-800: #582b21;
+  --color-red-900: #41201a;
+  --color-red-950: #28130f;
+
+  --color-rose-50:  #f9efec;
+  --color-rose-100: #f1dcd5;
+  --color-rose-200: #e3b9ab;
+  --color-rose-300: #cf9480;
+  --color-rose-400: #b86f58;
+  --color-rose-500: #a1553f;
+  --color-rose-600: #8b4431;
+  --color-rose-700: #713628;
+  --color-rose-800: #582b21;
+  --color-rose-900: #41201a;
+  --color-rose-950: #28130f;
+
+  /* ── Azul pizarra / cielo ──────────────────────────────────────────────── */
+  --color-sky-50:  #eff4f8;
+  --color-sky-100: #dde8f0;
+  --color-sky-200: #bfd3e3;
+  --color-sky-300: #9ebcd6;
+  --color-sky-400: #7ca9cd;
+  --color-sky-500: #5b8aad;
+  --color-sky-600: #47708f;
+  --color-sky-700: #385161;
+  --color-sky-800: #2e4250;
+  --color-sky-900: #23323d;
+  --color-sky-950: #172129;
+
+  --color-blue-50:  #eff4f8;
+  --color-blue-100: #dde8f0;
+  --color-blue-200: #bfd3e3;
+  --color-blue-300: #9ebcd6;
+  --color-blue-400: #7ca9cd;
+  --color-blue-500: #5b8aad;
+  --color-blue-600: #47708f;
+  --color-blue-700: #385161;
+  --color-blue-800: #2e4250;
+  --color-blue-900: #23323d;
+  --color-blue-950: #172129;
+
+  --color-cyan-50:  #eff4f8;
+  --color-cyan-100: #dde8f0;
+  --color-cyan-200: #bfd3e3;
+  --color-cyan-300: #9ebcd6;
+  --color-cyan-400: #7ca9cd;
+  --color-cyan-500: #5b8aad;
+  --color-cyan-600: #47708f;
+  --color-cyan-700: #385161;
+  --color-cyan-800: #2e4250;
+  --color-cyan-900: #23323d;
+  --color-cyan-950: #172129;
+
+  --color-indigo-50:  #eff4f8;
+  --color-indigo-100: #dde8f0;
+  --color-indigo-200: #bfd3e3;
+  --color-indigo-300: #9ebcd6;
+  --color-indigo-400: #7ca9cd;
+  --color-indigo-500: #5b8aad;
+  --color-indigo-600: #47708f;
+  --color-indigo-700: #385161;
+  --color-indigo-800: #2e4250;
+  --color-indigo-900: #23323d;
+  --color-indigo-950: #172129;
+
+  /* ── Musgo / oliva ─────────────────────────────────────────────────────── */
+  --color-violet-50:  #f3f2ea;
+  --color-violet-100: #e6e4d1;
+  --color-violet-200: #d1ceac;
+  --color-violet-300: #b6b283;
+  --color-violet-400: #999561;
+  --color-violet-500: #7a7847;
+  --color-violet-600: #66643b;
+  --color-violet-700: #545331;
+  --color-violet-800: #3a382d;
+  --color-violet-900: #2c2a21;
+  --color-violet-950: #1c1b15;
+
+  --color-purple-50:  #f3f2ea;
+  --color-purple-100: #e6e4d1;
+  --color-purple-200: #d1ceac;
+  --color-purple-300: #b6b283;
+  --color-purple-400: #999561;
+  --color-purple-500: #7a7847;
+  --color-purple-600: #66643b;
+  --color-purple-700: #545331;
+  --color-purple-800: #3a382d;
+  --color-purple-900: #2c2a21;
+  --color-purple-950: #1c1b15;
+
+  /* ── Esquinas casi rectas, como en Reporte ─────────────────────────────── */
+  /* rounded-full no cambia: los avatares y los interruptores siguen redondos. */
+  --radius:     2px;
+  --radius-xs:  1px;
+  --radius-sm:  2px;
+  --radius-md:  2px;
+  --radius-lg:  3px;
+  --radius-xl:  3px;
+  --radius-2xl: 4px;
+  --radius-3xl: 5px;
+  --radius-4xl: 6px;
+
+  /* ── Sombras cálidas y tenues: el relieve lo dan los filetes ───────────── */
+  --shadow-2xs: 0 1px rgb(30 26 24 / 0.04);
+  --shadow-xs:  0 1px 2px 0 rgb(30 26 24 / 0.05);
+  --shadow-sm:  0 1px 2px 0 rgb(30 26 24 / 0.06);
+  --shadow:     0 1px 2px 0 rgb(30 26 24 / 0.06);
+  --shadow-md:  0 2px 6px -1px rgb(30 26 24 / 0.07);
+  --shadow-lg:  0 6px 16px -4px rgb(30 26 24 / 0.10);
+  --shadow-xl:  0 12px 28px -8px rgb(30 26 24 / 0.14);
+  --shadow-2xl: 0 20px 44px -12px rgb(30 26 24 / 0.22);
+
+  /* ── Pesos: las fuentes se cargan hasta 700 ────────────────────────────── */
+  /* font-black (900) obligaba al navegador a inventarse una negrita. */
+  --font-weight-extrabold: 700;
+  --font-weight-black:     700;
+}
+
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Títulos en Josefin Sans, como pide el manual para títulos y subtítulos. */
+  h1, h2, h3, h4 {
+    font-family: var(--font-josefin), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: 0.01em;
+  }
+
+  ::selection { background: #2f3f32; color: #f4f1ea; }
+
+  /* Casillas, radios y rangos en verde bosque. */
+  input, select, textarea { accent-color: #2f3f32; }
+
+  :focus-visible { outline: 2px solid #2f3f32; outline-offset: 2px; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
 }

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import type { CapaCampo } from '@/app/components/MapaCampo'
 import { exportarRevisiones } from '@/lib/exportar-zonas'
+import { COLOR_CAMPO } from '@/lib/colores-campo'
 
 const MapaCampo = dynamic(() => import('@/app/components/MapaCampo'), {
   ssr: false,
@@ -36,11 +37,14 @@ interface CampoResumen {
   encuesta: Json | null
 }
 
-const ACCION: Record<Revision['accion'], { label: string; cls: string; Icon: typeof Check }> = {
-  confirmada: { label: 'Confirmada',    cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', Icon: Check },
-  modificada: { label: 'Límite corregido', cls: 'bg-blue-50 text-blue-700 border-blue-200',       Icon: Pencil },
-  nueva:      { label: 'Zona nueva',    cls: 'bg-teal-50 text-teal-700 border-teal-200',          Icon: Plus },
-  descartada: { label: 'Descartada',    cls: 'bg-rose-50 text-rose-700 border-rose-200',          Icon: Trash2 },
+// El color de cada acción es el mismo del mapa (lib/colores-campo.ts): la
+// etiqueta y la línea sobre el satelital tienen que decir lo mismo. Por eso no
+// usa clases de Tailwind, que siguen la paleta de marca.
+const ACCION: Record<Revision['accion'], { label: string; color: string; Icon: typeof Check }> = {
+  confirmada: { label: 'Confirmada',       color: COLOR_CAMPO.confirmada, Icon: Check },
+  modificada: { label: 'Límite corregido', color: COLOR_CAMPO.modificada, Icon: Pencil },
+  nueva:      { label: 'Zona nueva',       color: COLOR_CAMPO.nueva,      Icon: Plus },
+  descartada: { label: 'Descartada',       color: COLOR_CAMPO.descartada, Icon: Trash2 },
 }
 
 const fmtHa = (n: number | null | undefined) =>
@@ -236,10 +240,10 @@ export default function ResultadosCampo({
         <div className="flex flex-wrap gap-2">
           {(Object.keys(ACCION) as Revision['accion'][]).map(a => {
             const n = conteo[a] ?? 0
-            const { label, cls, Icon } = ACCION[a]
+            const { label, color, Icon } = ACCION[a]
             return (
-              <span key={a} className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border ${n ? cls : 'bg-stone-50 text-stone-300 border-stone-100'}`}>
-                <Icon size={12} /> {n} {label.toLowerCase()}
+              <span key={a} className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 border ${n ? 'border-stone-200 text-stone-800' : 'border-stone-100 text-stone-300'}`}>
+                <Icon size={12} style={n ? { color } : undefined} /> {n} {label.toLowerCase()}
               </span>
             )
           })}
@@ -278,12 +282,20 @@ export default function ResultadosCampo({
           <MapaCampo capas={capas} />
 
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-stone-500">
-            <span className="inline-flex items-center gap-1.5"><i className="w-3 h-2 rounded-sm border-2 border-stone-500 border-dashed" /> Límite del predio</span>
-            <span className="inline-flex items-center gap-1.5"><i className="w-3 h-2 rounded-sm bg-gray-400/40 border border-gray-500 border-dashed" /> Antes (lo que dibujó el SIG)</span>
-            <span className="inline-flex items-center gap-1.5"><i className="w-3 h-2 rounded-sm bg-emerald-400/40 border border-emerald-500" /> Confirmada</span>
-            <span className="inline-flex items-center gap-1.5"><i className="w-3 h-2 rounded-sm bg-blue-400/40 border border-blue-500" /> Corregida en campo</span>
-            <span className="inline-flex items-center gap-1.5"><i className="w-3 h-2 rounded-sm bg-teal-400/40 border border-teal-500" /> Nueva (dibujada en campo)</span>
-            <span className="inline-flex items-center gap-1.5"><i className="w-3 h-2 rounded-sm bg-rose-400/30 border border-rose-500 border-dashed" /> Descartada</span>
+            {([
+              ['finca',      'Límite del predio',            true],
+              ['antes',      'Antes (lo que dibujó el SIG)', true],
+              ['confirmada', 'Confirmada',                   false],
+              ['modificada', 'Corregida en campo',           false],
+              ['nueva',      'Nueva (dibujada en campo)',    false],
+              ['descartada', 'Descartada',                   true],
+            ] as const).map(([tipo, texto, punteada]) => (
+              <span key={tipo} className="inline-flex items-center gap-1.5">
+                <i className={`w-3 h-2 ${tipo === 'finca' ? 'border-2' : 'border'} ${punteada ? 'border-dashed' : ''}`}
+                  style={{ borderColor: COLOR_CAMPO[tipo], background: tipo === 'finca' ? undefined : `${COLOR_CAMPO[tipo]}55` }} />
+                {texto}
+              </span>
+            ))}
           </div>
           <p className="text-[11px] text-stone-400">
             El mapa muestra cómo quedó cada zona. Toca una fila de la bitácora para ver ese cambio en particular,
@@ -305,7 +317,7 @@ export default function ResultadosCampo({
           </div>
           <div className="divide-y divide-stone-50">
             {[...revisiones].reverse().map((r, i) => {
-              const { label, cls, Icon } = ACCION[r.accion]
+              const { label, color, Icon } = ACCION[r.accion]
               const activo = sel === r.local_id
               const tieneGeom = !!(r.geom_original || r.geom_corregida)
               return (
@@ -313,7 +325,7 @@ export default function ResultadosCampo({
                   className={`px-5 py-3 flex items-start gap-3 transition-colors ${activo ? 'bg-teal-50/60' : 'hover:bg-stone-50/70'}`}>
                   <button onClick={() => setSel(activo ? null : r.local_id)}
                     className="flex-1 min-w-0 flex items-start gap-3 text-left">
-                  <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border shrink-0 ${cls}`}>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 border border-stone-200 text-stone-800 shrink-0" style={{ borderLeft: `3px solid ${color}` }}>
                     <Icon size={11} /> {label}
                   </span>
                   <div className="flex-1 min-w-0">

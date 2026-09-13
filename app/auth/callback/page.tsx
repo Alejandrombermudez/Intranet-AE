@@ -3,8 +3,8 @@ import { useEffect, useState, Suspense, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { AUTH_TIMEOUT_MS } from '@/lib/types'
-import Link from 'next/link'
 import { XCircle, Home, RefreshCw, Loader2 } from 'lucide-react'
+import { Boton, Firma, Rotulo } from '@/app/components/marca'
 
 function parseUrlError(searchParams: URLSearchParams): string | null {
   const errorParam = searchParams.get('error')
@@ -76,37 +76,32 @@ function AuthCallbackContent() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-stone-50 to-stone-100 p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border-t-4 border-red-500">
-          <div className="text-center mb-6">
-            <XCircle size={56} className="text-red-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-black text-stone-900 mb-3">
-              Error de Autenticacion
-            </h1>
-            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6">
-              <p className="text-red-700 font-semibold text-sm">
-                {error}
-              </p>
-            </div>
-          </div>
+      <div className="grid min-h-screen place-items-center bg-papel px-6">
+        <div className="w-full max-w-md">
+          <XCircle size={34} strokeWidth={1.5} className="mb-5 text-red-600" />
+          <Rotulo className="mb-3">Inicio de sesión</Rotulo>
+          <h1 className="mb-5 font-display text-3xl font-bold leading-tight text-stone-900">
+            Error de autenticación
+          </h1>
+          <p className="mb-8 border-l-2 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </p>
 
-          <div className="space-y-3">
-            <Link
-              href="/"
-              className="flex items-center justify-center gap-2 w-full text-center px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all shadow-lg"
-            >
-              <Home size={18} />
-              Volver al Inicio
-            </Link>
-
-            <button
+          <div className="flex flex-col gap-2.5 sm:flex-row">
+            <Boton href="/" icono={<Home size={15} />} className="flex-1">
+              Volver al inicio
+            </Boton>
+            <Boton
+              variante="secundario"
               onClick={() => window.location.reload()}
-              className="flex items-center justify-center gap-2 w-full px-6 py-3 border-2 border-stone-300 text-stone-700 rounded-xl font-bold hover:bg-stone-50 transition-all"
+              icono={<RefreshCw size={15} />}
+              className="flex-1"
             >
-              <RefreshCw size={18} />
-              Intentar de Nuevo
-            </button>
+              Intentar de nuevo
+            </Boton>
           </div>
+
+          <Firma className="mt-14 text-stone-500" />
         </div>
       </div>
     )
@@ -117,25 +112,25 @@ function AuthCallbackContent() {
 
 function LoadingUI() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-stone-900 via-[#0a3d3f] to-stone-900">
-      <div className="text-center max-w-md px-4">
-        <div className="relative mb-8">
-          <div className="w-20 h-20 mx-auto flex items-center justify-center">
-            <Loader2 size={48} className="text-primary-light animate-spin" />
+    <div className="flex min-h-screen flex-col bg-tinta text-hueso">
+      <div className="px-8 pt-8 sm:px-12">
+        <Firma />
+      </div>
+      <div className="flex flex-1 items-center justify-center px-6">
+        <div className="w-full max-w-sm text-center">
+          <Loader2 size={30} className="mx-auto mb-7 animate-spin text-ambar" />
+          <Rotulo tono="taupe" className="mb-3">Microsoft 365</Rotulo>
+          <h2 className="mb-3 font-display text-3xl font-bold text-white">Validando credenciales</h2>
+          <p className="mb-8 text-sm font-light text-hueso/75">
+            Estamos confirmando tu acceso con Microsoft 365
+          </p>
+          <div className="h-[2px] w-full bg-hueso/15">
+            <div className="h-full w-full animate-pulse bg-ambar" />
           </div>
+          <p className="mt-6 text-[10px] uppercase tracking-[.16em] text-hueso/40">
+            Este proceso puede tardar unos segundos
+          </p>
         </div>
-        <h2 className="text-2xl font-black text-white mb-3">
-          Validando Credenciales
-        </h2>
-        <p className="text-stone-300 mb-6">
-          Estamos confirmando tu acceso con Microsoft 365
-        </p>
-        <div className="bg-stone-800/50 rounded-full p-1 backdrop-blur-sm">
-          <div className="bg-gradient-to-r from-primary-light to-emerald-500 rounded-full h-2 animate-pulse"></div>
-        </div>
-        <p className="text-stone-500 text-xs mt-6">
-          Este proceso puede tardar unos segundos...
-        </p>
       </div>
     </div>
   )

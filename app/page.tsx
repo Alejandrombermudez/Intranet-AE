@@ -4,7 +4,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
-import { CalendarRange, ScanLine, ArrowRight, LogOut, AlertCircle, Users, Sparkles, ChevronDown } from 'lucide-react'
+import { ArrowRight, LogOut, ChevronDown, Loader2 } from 'lucide-react'
+import { Firma } from '@/app/components/marca'
 
 // ─── Fotos de portada (slideshow automático) ──────────────────────────────────
 
@@ -44,6 +45,12 @@ const CHANGELOG = [
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
+/**
+ * Portada de la intranet. Sigue la composición de las páginas del Manual de
+ * Marca: un panel en tinta con la identidad y el acceso, y la fotografía del
+ * terreno a toda altura. Nada de tarjetas de vidrio ni cajas redondeadas: los
+ * servicios son filas separadas por filetes, como el listado de Reporte.
+ */
 export default function LandingPage() {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
@@ -119,334 +126,256 @@ export default function LandingPage() {
   const initials = getInitials(displayName)
 
   return (
-    <div className="relative min-h-screen flex flex-col lg:flex-row overflow-hidden">
+    <div className="flex min-h-screen flex-col bg-tinta text-hueso lg:flex-row">
 
-      {/* ── Fondo fotográfico con crossfade ── */}
-      {BG_IMAGES.map((src, i) => (
-        <div
-          key={src}
-          className="absolute inset-0"
-          style={{
-            opacity: i === bgIndex ? 1 : 0,
-            transition: 'opacity 2s ease-in-out',
-            zIndex: 0,
-          }}
-        >
-          <Image
-            src={src}
-            alt=""
-            fill
-            className="object-cover object-center"
-            priority={i === 0}
-          />
-        </div>
-      ))}
-
-      {/* ── Overlay oscuro direccional ── */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/30" style={{ zIndex: 1 }} />
-
-      {/* ── ZONA IZQUIERDA: Identidad ── */}
-      <div className="relative flex-1 flex flex-col justify-center items-center px-8 py-14 sm:px-12 lg:px-12 xl:px-20 lg:py-12 min-h-[55vh] lg:min-h-screen" style={{ zIndex: 2 }}>
-
-        {/* Línea de acento */}
-        <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-70" />
-
-        {/* Borde inferior mobile */}
-        <div className="absolute bottom-0 left-0 w-full h-px bg-white/10 lg:hidden" />
-
-        <div className="relative w-full max-w-md xl:max-w-lg">
-
-          {/* Label + Título */}
-          <div className="mb-5">
-            <p className="text-primary uppercase tracking-[0.25em] text-xs font-bold mb-4">
-              Amazonia Emprende
-            </p>
-            <h1 className="text-5xl sm:text-6xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-black text-white leading-[1.02] tracking-tight">
-              Intranet<br />
-              <span className="text-white/45">Corporativa</span>
-            </h1>
-          </div>
-
-          {/* Divisor */}
-          <div className="w-12 h-1 bg-primary rounded-full mb-6" />
-
-          {/* Descripción ampliada */}
-          <p className="text-white/60 text-base lg:text-base xl:text-lg leading-relaxed mb-10">
-            Sistema de gestión interna para el equipo de Amazonia Emprende.
-            Reserva vehículos corporativos, registra inspecciones de recepción
-            y devolución, monitorea el avance de familias en procesos de
-            restauración y conservación ambiental, y coordina el seguimiento
-            ejecutivo del trabajo de campo — todo con acceso Microsoft 365.
-          </p>
-
-          {/* Logo centrado */}
-          <div className="w-full flex justify-center">
+      {/* ── Fotografía del terreno ── */}
+      <section className="relative h-56 shrink-0 overflow-hidden sm:h-72 lg:order-2 lg:h-auto lg:min-h-screen lg:flex-1">
+        {BG_IMAGES.map((src, i) => (
+          <div
+            key={src}
+            className="absolute inset-0"
+            style={{ opacity: i === bgIndex ? 1 : 0, transition: 'opacity 2s ease-in-out' }}
+          >
             <Image
-              src="/icon-512.png"
-              alt="Amazonia Emprende"
-              width={84}
-              height={84}
-              className="rounded-2xl shadow-xl opacity-85"
+              src={src}
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 60vw, 100vw"
+              className="object-cover object-center"
+              priority={i === 0}
             />
           </div>
-        </div>
+        ))}
 
-        {/* Copyright */}
-        <div className="relative w-full max-w-md xl:max-w-lg mt-auto pt-10">
-          <p className="text-white/30 text-sm">
-            © {new Date().getFullYear()} Amazonia Emprende
+        {/* Velo en tinta: funde la foto con el panel y deja leer el pie. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-tinta/85 via-tinta/15 to-tinta/10" />
+        <div className="absolute inset-y-0 left-0 hidden w-40 bg-gradient-to-r from-tinta/70 to-transparent lg:block" />
+
+        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 px-8 pb-7 sm:px-12 lg:pb-10">
+          <p className="hidden max-w-md font-display text-xl font-semibold leading-snug text-white sm:block lg:text-2xl">
+            Restauramos la biodiversidad de los ecosistemas con especies forestales nativas
           </p>
-        </div>
-      </div>
-
-      {/* ── ZONA DERECHA: Card Glassmorphism ── */}
-      <div
-        className="relative flex-1 flex items-center justify-center px-8 py-10 sm:px-12 lg:px-12 xl:px-20 lg:py-12 min-h-[50vh] lg:min-h-screen"
-        style={{ zIndex: 2 }}
-      >
-        <div className="w-full max-w-md xl:max-w-lg backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-8 xl:p-10">
-
-          {/* Cargando sesión */}
-          {authLoading && (
-            <div className="flex items-center justify-center py-10">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-
-          {/* SIN SESIÓN */}
-          {!authLoading && !user && (
-            <>
-              <div className="mb-7">
-                <h2 className="text-2xl font-black text-white mb-1.5">
-                  Bienvenido de vuelta
-                </h2>
-                <p className="text-white/55 text-sm">
-                  Accede con tu cuenta corporativa de Microsoft 365
-                </p>
-              </div>
-
+          <div className="flex shrink-0 gap-1.5">
+            {BG_IMAGES.map((src, i) => (
               <button
-                onClick={handleMicrosoftLogin}
-                disabled={loading}
-                className="w-full flex items-center gap-3 px-5 py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-stone-800 to-stone-900 hover:from-black hover:to-stone-800 transition-all shadow-lg hover:shadow-xl border border-stone-700 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 23 23" fill="none">
-                  <path fill="#F25022" d="M1 1H10V10H1V1Z"/>
-                  <path fill="#00A4EF" d="M1 12H10V21H1V12Z"/>
-                  <path fill="#7FBA00" d="M12 1H21V10H12V1Z"/>
-                  <path fill="#FFB900" d="M12 12H21V21H12V12Z"/>
-                </svg>
-                <span className="flex-1 text-left">
-                  {loading ? 'Redirigiendo...' : 'Iniciar con Microsoft 365'}
-                </span>
-                {!loading && <ArrowRight size={16} className="shrink-0 opacity-60" />}
-              </button>
+                key={src}
+                type="button"
+                onClick={() => setBgIndex(i)}
+                aria-label={`Ver foto ${i + 1}`}
+                className={`h-[2px] w-7 transition-colors ${i === bgIndex ? 'bg-ambar' : 'bg-hueso/35 hover:bg-hueso/60'}`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
 
-              {msg && (
-                <div className="mt-4 p-3 rounded-lg text-xs text-center bg-red-500/20 text-red-200 border border-red-400/30">
-                  {msg}
+      {/* ── Panel de identidad y acceso ── */}
+      <section className="flex flex-col px-8 py-10 sm:px-12 lg:order-1 lg:min-h-screen lg:w-[44%] lg:py-12 xl:w-[40%] xl:px-16">
+        <Firma />
+
+        <div className="flex flex-1 flex-col justify-center py-12 lg:py-16">
+          <div className="w-full max-w-md">
+            <p className="mb-4 text-[10.5px] uppercase tracking-[.28em] text-taupe">Uso interno del equipo</p>
+            <h1 className="font-display text-5xl leading-[1.02] text-white sm:text-6xl">
+              <span className="font-bold">Intranet</span>
+              <br />
+              <span className="font-thin">corporativa</span>
+            </h1>
+            <p className="mt-6 text-sm font-light leading-relaxed text-hueso/75">
+              Sistema de gestión interna para el equipo de Amazonia Emprende. Reserva vehículos
+              corporativos, registra inspecciones de recepción y devolución, monitorea el avance de
+              familias en procesos de restauración y conservación ambiental, y coordina el seguimiento
+              ejecutivo del trabajo de campo — todo con acceso Microsoft 365.
+            </p>
+
+            {/* ── Acceso ── */}
+            <div className="mt-10 border-t border-hueso/15 pt-8">
+              {authLoading && (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="animate-spin text-taupe" size={22} />
                 </div>
               )}
 
-              <p className="text-xs text-white/30 text-center mt-5">
-                Solo para personal autorizado
-              </p>
-            </>
-          )}
-
-          {/* CON SESIÓN: bienvenida */}
-          {!authLoading && user && (
-            <>
-              <div className="flex items-center gap-4 mb-5">
-                <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shrink-0 shadow-md">
-                  <span className="text-xl font-black text-white tracking-tight">{initials}</span>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-0.5">
-                    Sesión activa
+              {!authLoading && !user && (
+                <>
+                  <p className="mb-4 text-sm font-light text-hueso/70">
+                    Entra con tu cuenta de Microsoft 365 de la organización.
                   </p>
-                  <p className="font-black text-white text-base leading-tight truncate">
-                    {displayName}
-                  </p>
-                  <p className="text-xs text-white/40 truncate mt-0.5">
-                    {user.email}
-                  </p>
-                </div>
-              </div>
-
-              <div className="w-full h-px bg-white/15 mb-4" />
-
-              <p className="text-sm text-white/50 mb-4 leading-relaxed">
-                Selecciona un servicio para continuar.
-              </p>
-
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-white/20 text-white/55 text-sm font-bold hover:border-red-400/40 hover:text-red-300 hover:bg-red-500/10 transition-all"
-              >
-                <LogOut size={15} />
-                Cerrar sesión
-              </button>
-            </>
-          )}
-
-          {/* ── Divisor Servicios ── */}
-          {!authLoading && (
-            <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 h-px bg-white/15" />
-              <span className="text-[10px] font-bold text-white/35 uppercase tracking-widest whitespace-nowrap">
-                Nuestros Servicios
-              </span>
-              <div className="flex-1 h-px bg-white/15" />
-            </div>
-          )}
-
-          {/* ── Servicios ── */}
-          {!authLoading && (
-            <div className="space-y-3">
-
-              {/* Calendario — siempre visible */}
-              <Link
-                href="/calendar"
-                className="group flex items-center gap-4 w-full p-4 rounded-xl border border-white/15 bg-white/10 hover:bg-white/15 hover:border-primary/50 transition-all duration-200"
-              >
-                <div className="w-10 h-10 rounded-xl bg-white/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors shrink-0">
-                  <CalendarRange size={20} className="text-white/55 group-hover:text-primary transition-colors" />
-                </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="font-bold text-white text-sm leading-tight">
-                    Calendario de Vehículos
-                  </p>
-                  <p className="text-xs text-white/40 mt-0.5">
-                    Disponibilidad en tiempo real
-                  </p>
-                </div>
-                <ArrowRight size={15} className="text-white/25 group-hover:text-primary transition-colors shrink-0" />
-              </Link>
-
-              {/* Validar Reserva */}
-              {user ? (
-                <Link
-                  href="/validar-reserva"
-                  className="group flex items-center gap-4 w-full p-4 rounded-xl border border-white/15 bg-white/10 hover:bg-white/15 hover:border-primary/50 transition-all duration-200"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-white/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors shrink-0">
-                    <ScanLine size={20} className="text-white/55 group-hover:text-primary transition-colors" />
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="font-bold text-white text-sm leading-tight">
-                      Validar mi Reserva
-                    </p>
-                    <p className="text-xs text-white/40 mt-0.5">
-                      Inspección de recepción y devolución
-                    </p>
-                  </div>
-                  <ArrowRight size={15} className="text-white/25 group-hover:text-primary transition-colors shrink-0" />
-                </Link>
-              ) : (
-                <div>
                   <button
-                    onClick={() => setValidarMsg(v => !v)}
-                    className="group flex items-center gap-4 w-full p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-amber-500/10 hover:border-amber-400/30 transition-all duration-200"
+                    onClick={handleMicrosoftLogin}
+                    disabled={loading}
+                    className="flex w-full items-center gap-3 bg-hueso px-5 py-3.5 text-tinta transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-white/8 flex items-center justify-center shrink-0">
-                      <ScanLine size={20} className="text-white/30" />
-                    </div>
-                    <div className="flex-1 min-w-0 text-left">
-                      <p className="font-bold text-white/45 text-sm leading-tight">
-                        Validar mi Reserva
-                      </p>
-                      <p className="text-xs text-white/30 mt-0.5">
-                        Requiere inicio de sesión
-                      </p>
-                    </div>
-                    <ArrowRight size={15} className="text-white/15 shrink-0" />
+                    <svg className="h-5 w-5 shrink-0" viewBox="0 0 23 23" fill="none" aria-hidden="true">
+                      <path fill="#F25022" d="M1 1H10V10H1V1Z" />
+                      <path fill="#00A4EF" d="M1 12H10V21H1V12Z" />
+                      <path fill="#7FBA00" d="M12 1H21V10H12V1Z" />
+                      <path fill="#FFB900" d="M12 12H21V21H12V12Z" />
+                    </svg>
+                    <span className="flex-1 text-left text-[11px] font-medium uppercase tracking-[.16em]">
+                      {loading ? 'Redirigiendo…' : 'Iniciar con Microsoft 365'}
+                    </span>
+                    {!loading && <ArrowRight size={16} className="shrink-0 opacity-50" />}
                   </button>
-                  {validarMsg && (
-                    <div className="mt-2 flex items-start gap-2 px-4 py-2.5 rounded-xl bg-amber-500/15 border border-amber-400/25">
-                      <AlertCircle size={14} className="text-amber-300 shrink-0 mt-0.5" />
-                      <p className="text-xs font-medium text-amber-200">
-                        Debes iniciar sesión primero para acceder a este servicio.
-                      </p>
-                    </div>
+
+                  {msg && <p className="mt-4 border-l-2 border-red-400 pl-3 text-xs text-red-200">{msg}</p>}
+
+                  <p className="mt-4 text-[10px] uppercase tracking-[.16em] text-hueso/40">
+                    Solo personal autorizado
+                  </p>
+                </>
+              )}
+
+              {!authLoading && user && (
+                <div className="flex items-center gap-4">
+                  <div className="grid h-12 w-12 shrink-0 place-items-center bg-bosque font-display text-lg font-bold text-white">
+                    {initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[9.5px] uppercase tracking-[.2em] text-taupe">Sesión activa</p>
+                    <p className="truncate font-display text-[17px] font-semibold leading-tight text-white">
+                      {displayName}
+                    </p>
+                    <p className="truncate text-xs font-light text-hueso/55">{user.email}</p>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    title="Cerrar sesión"
+                    className="flex shrink-0 items-center gap-1.5 text-[10px] uppercase tracking-[.16em] text-hueso/50 transition-colors hover:text-red-300"
+                  >
+                    <LogOut size={14} /> Salir
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ── Servicios ── */}
+            {!authLoading && (
+              <nav className="mt-9" aria-label="Servicios">
+                <p className="mb-1 text-[10px] uppercase tracking-[.2em] text-taupe">Servicios</p>
+                <div className="border-t border-hueso/15">
+                  {/* Intranet — admins y usuarios con departamento */}
+                  {user && (isAdmin || !!department) && (
+                    <Fila
+                      href="/intranet"
+                      titulo="Intranet"
+                      sub={isAdmin ? 'Panel de administración' : `Módulo ${department}`}
+                      destacada
+                    />
+                  )}
+
+                  {/* Calendario — siempre visible */}
+                  <Fila href="/calendar" titulo="Calendario de vehículos" sub="Disponibilidad en tiempo real" />
+
+                  {/* Validar Reserva */}
+                  {user ? (
+                    <Fila
+                      href="/validar-reserva"
+                      titulo="Validar mi reserva"
+                      sub="Inspección de recepción y devolución"
+                    />
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setValidarMsg(v => !v)}
+                        className="flex w-full items-center gap-4 border-b border-hueso/15 py-3.5 text-left"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-display text-[15px] font-semibold text-hueso/45">Validar mi reserva</p>
+                          <p className="text-[11.5px] font-light text-hueso/35">Requiere inicio de sesión</p>
+                        </div>
+                        <ArrowRight size={15} className="shrink-0 text-hueso/20" />
+                      </button>
+                      {validarMsg && (
+                        <p className="mt-3 border-l-2 border-ambar pl-3 text-xs font-light text-hueso/75">
+                          Debes iniciar sesión primero para acceder a este servicio.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
-              )}
+              </nav>
+            )}
 
-              {/* Intranet — admins y usuarios con departamento */}
-              {user && (isAdmin || !!department) && (
-                <Link
-                  href="/intranet"
-                  className="group flex items-center gap-4 w-full p-4 rounded-xl border border-primary/40 bg-primary/15 hover:bg-primary/25 hover:border-primary/60 transition-all duration-200"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-primary/25 group-hover:bg-primary/35 flex items-center justify-center transition-colors shrink-0">
-                    <Users size={20} className="text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="font-bold text-white text-sm leading-tight">
-                      Intranet
-                    </p>
-                    <p className="text-xs text-white/40 mt-0.5">
-                      {isAdmin ? 'Panel de administración' : `Módulo ${department}`}
-                    </p>
-                  </div>
-                  <ArrowRight size={15} className="text-primary/50 group-hover:text-primary transition-colors shrink-0" />
-                </Link>
-              )}
-            </div>
-          )}
+            {/* ── Novedades del sistema ── */}
+            <div className="mt-8">
+              <button
+                onClick={() => setShowChangelog(v => !v)}
+                className="flex w-full items-center justify-between text-[10px] uppercase tracking-[.2em] text-hueso/50 transition-colors hover:text-hueso/80"
+              >
+                <span>Novedades del sistema</span>
+                <span className="flex items-center gap-2">
+                  <span className="font-mono normal-case tracking-normal text-hueso/70">v1.1</span>
+                  <ChevronDown
+                    size={13}
+                    className={`transition-transform duration-200 ${showChangelog ? 'rotate-180' : ''}`}
+                  />
+                </span>
+              </button>
 
-          {/* ── Novedades del sistema ── */}
-          <button
-            onClick={() => setShowChangelog(v => !v)}
-            className="w-full flex items-center justify-between px-3 py-2.5 mt-5 rounded-xl bg-white/[0.07] hover:bg-white/10 border border-white/10 transition-all"
-          >
-            <span className="flex items-center gap-2 text-xs font-bold text-white/65">
-              <Sparkles size={12} className="text-white/70" />
-              Novedades del sistema
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-white/85 bg-white/15 px-2 py-0.5 rounded-full border border-white/20">
-                v1.1
-              </span>
-              <ChevronDown
-                size={13}
-                className={`text-white/50 transition-transform duration-200 ${showChangelog ? 'rotate-180' : ''}`}
-              />
-            </div>
-          </button>
-
-          {showChangelog && (
-            <div className="mt-3 space-y-4 max-h-56 overflow-y-auto pr-1">
-              {CHANGELOG.map((entry, ei) => (
-                <div key={entry.version} className={ei > 0 ? 'pt-3 border-t border-white/10' : ''}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-mono text-xs font-black text-white/85">{entry.version}</span>
-                    <span className="text-[10px] text-white/40">{entry.date}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                      entry.tipo === 'launch'
-                        ? 'bg-amber-500/20 text-amber-300'
-                        : 'bg-emerald-500/20 text-emerald-300'
-                    }`}>
-                      {entry.tipo === 'launch' ? 'Lanzamiento' : 'Mejoras'}
-                    </span>
-                  </div>
-                  <ul className="space-y-1.5">
-                    {entry.cambios.map((c, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-[11px] text-white/55">
-                        <span className="text-white/50 mt-px shrink-0">›</span>
-                        {c}
-                      </li>
-                    ))}
-                  </ul>
+              {showChangelog && (
+                <div className="mt-4 max-h-56 space-y-4 overflow-y-auto pr-1">
+                  {CHANGELOG.map((entry, ei) => (
+                    <div key={entry.version} className={ei > 0 ? 'border-t border-hueso/10 pt-3' : ''}>
+                      <div className="mb-2 flex items-center gap-3">
+                        <span className="font-mono text-xs text-hueso/85">{entry.version}</span>
+                        <span className="text-[10px] text-hueso/40">{entry.date}</span>
+                        <span className="inline-flex items-center gap-1.5 text-[10px] text-hueso/60">
+                          <i
+                            className={`inline-block h-[6px] w-[6px] ${entry.tipo === 'launch' ? 'bg-ambar' : 'bg-salvia'}`}
+                          />
+                          {entry.tipo === 'launch' ? 'Lanzamiento' : 'Mejoras'}
+                        </span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {entry.cambios.map((c, i) => (
+                          <li key={i} className="flex items-start gap-2 text-[11.5px] font-light text-hueso/60">
+                            <span className="shrink-0 text-hueso/35">—</span>
+                            {c}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-
+          </div>
         </div>
-      </div>
 
+        <footer className="flex items-center justify-between gap-4 border-t border-hueso/10 pt-6 text-[10px] uppercase tracking-[.2em] text-hueso/40">
+          <span className="font-display">Inspirar · Nutrir · Actuar</span>
+          <span>© {new Date().getFullYear()}</span>
+        </footer>
+      </section>
     </div>
+  )
+}
+
+/** Un servicio: nombre, para qué sirve y una flecha. Separado por filete. */
+function Fila({
+  href,
+  titulo,
+  sub,
+  destacada = false,
+}: {
+  href: string
+  titulo: string
+  sub: string
+  destacada?: boolean
+}) {
+  return (
+    <Link href={href} className="group flex items-center gap-4 border-b border-hueso/15 py-3.5">
+      {destacada && <i className="h-8 w-[2px] shrink-0 bg-ambar" />}
+      <div className="min-w-0 flex-1">
+        <p className="font-display text-[15px] font-semibold text-white">{titulo}</p>
+        <p className="text-[11.5px] font-light text-hueso/55">{sub}</p>
+      </div>
+      <ArrowRight
+        size={15}
+        className="shrink-0 text-hueso/30 transition-all group-hover:translate-x-0.5 group-hover:text-ambar"
+      />
+    </Link>
   )
 }

@@ -29,7 +29,7 @@ export function EspecieInfoBlock({ especie: sel }: { especie: Especie }) {
   return (
     <div className="p-6">
       <div className="flex flex-wrap gap-1.5 mb-2">
-        {sel.en_catalogo && <Badge color="#0d7377">Catálogo botánico</Badge>}
+        {sel.en_catalogo && <Badge color="#2f3f32">Catálogo botánico</Badge>}
         {sel.en_ras && <Badge color="#15803d">RAS · {sel.n_arboles_ras} árb.</Badge>}
         {sel.en_vivero && <Badge color="#b45309">Vivero</Badge>}
         {sel.iucn && ['NT', 'VU', 'EN', 'CR', 'DD'].includes(sel.iucn) && <Badge color="#dc2626">IUCN {sel.iucn}</Badge>}

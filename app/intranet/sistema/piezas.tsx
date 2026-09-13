@@ -1,17 +1,18 @@
 'use client'
 
 /**
- * Las piezas visuales del mapa del sistema.
- *
- * La caja de etapa está dibujada como una entidad de un diagrama entidad-relación:
- * una cabecera con el nombre, y debajo filas con etiqueta a la izquierda. La
- * diferencia es que aquí las filas no son columnas de una tabla sino lo que la
- * etapa recibe y lo que entrega — que es lo que le importa a quien trabaja en ella.
+ * Las piezas visuales pequeñas del mapa del sistema: el punto de estado, la
+ * cifra viva, los bloques plegables y lo que se repite en el panel de detalle.
+ * Las tarjetas y las líneas del diagrama están en lienzo.tsx.
  */
 
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useState } from 'react'
+import Link from 'next/link'
 import { MARCA } from '@/lib/expediente-formato'
 import { ESTADO_LABEL, type Estado } from '@/lib/sistema/mapa'
+import { fechaLarga, TIPO_LABEL, type Entrada, type Frente } from '@/lib/sistema/bitacora'
+import { NODO_POR_ID } from '@/lib/sistema/relaciones'
+import { colorDe } from './disposicion'
 
 /** Un color por estado. El ámbar dice «se está usando pero todavía no está firme». */
 export const COLOR_ESTADO: Record<Estado, string> = {
@@ -81,178 +82,6 @@ export function Rotulo({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-    </div>
-  )
-}
-
-// ─── Conector entre dos etapas ────────────────────────────────────────────────
-
-/**
- * Entre dos etapas van dos cosas: lo que viaja (`que`) y, si la hay, la condición
- * que hay que cumplir para pasar (`compuerta`). La compuerta se dibuja sobre la
- * flecha porque vive en el paso, no dentro de ninguna de las dos etapas.
- */
-export function Conector({
-  que,
-  firme,
-  compuerta,
-}: {
-  que: string
-  firme: boolean
-  compuerta?: { titulo: string; bloquea: boolean }
-}) {
-  const color = firme ? MARCA.bosque : MARCA.ambar
-  return (
-    <div className="flex shrink-0 flex-col items-center justify-center self-stretch px-1" style={{ width: 104 }}>
-      {compuerta && (
-        <div
-          className="mb-2 rounded-full px-2 py-1 text-center text-[8.5px] uppercase leading-tight"
-          style={{
-            letterSpacing: '.1em',
-            fontFamily: TIPOGRAFIA.titulo,
-            fontWeight: 600,
-            color: compuerta.bloquea ? '#8a5f14' : '#6f675c',
-            background: compuerta.bloquea ? '#f4e7cd' : '#eae4da',
-            border: `1px solid ${compuerta.bloquea ? MARCA.ambar : '#d6cec0'}`,
-          }}
-          title={
-            compuerta.bloquea
-              ? 'El sistema impide avanzar si no se cumple'
-              : 'Acuerdo del equipo: el sistema todavía no lo verifica'
-          }
-        >
-          {compuerta.titulo}
-        </div>
-      )}
-      <div
-        className="text-center text-[9px] leading-tight mb-1.5"
-        style={{ color: '#8b8375', fontFamily: TIPOGRAFIA.cuerpo }}
-      >
-        {que}
-      </div>
-      <svg width="72" height="10" viewBox="0 0 72 10" aria-hidden="true">
-        <line
-          x1="0" y1="5" x2="62" y2="5"
-          stroke={color} strokeWidth="2"
-          strokeDasharray={firme ? undefined : '6 4'}
-        />
-        <path d="M62,1 L70,5 L62,9 z" fill={color} />
-      </svg>
-    </div>
-  )
-}
-
-// ─── La flecha de devolución ──────────────────────────────────────────────────
-
-/**
- * El arco que va de campo de vuelta a la oficina. Se dibuja midiendo dónde
- * quedaron las dos cajas, porque su posición depende de cuánto mida la pantalla
- * y de cuánto texto tenga cada tarjeta.
- *
- * Es la única flecha que va hacia atrás en todo el mapa, y no es un adorno:
- * es la regla de que el terreno corrige a la oficina y no al revés.
- */
-export function FlechaDevolucion({
-  desde,
-  hasta,
-  texto,
-}: {
-  /** Identificadores de las dos etapas que une la flecha. */
-  desde: string
-  hasta: string
-  texto: string
-}) {
-  const propio = useRef<HTMLDivElement>(null)
-  const [caja, setCaja] = useState<{ x1: number; x2: number; ancho: number } | null>(null)
-  const alto = 78
-
-  useLayoutEffect(() => {
-    const medir = () => {
-      // La flecha se ubica desde su PROPIO nodo, no desde una referencia al
-      // carril: React adjunta la referencia de un elemento padre despues de
-      // correr los efectos de sus hijos, asi que pedirsela al padre daba null
-      // en el primer pintado y no se volvia a medir nunca.
-      const c = propio.current?.parentElement
-      if (!c) return
-      // Los extremos se buscan por su atributo `data-etapa`.
-      const a = c.querySelector<HTMLElement>(`[data-etapa="${desde}"]`)
-      const b = c.querySelector<HTMLElement>(`[data-etapa="${hasta}"]`)
-      if (!a || !b) return
-
-      const base = c.getBoundingClientRect()
-      const ra = a.getBoundingClientRect()
-      const rb = b.getBoundingClientRect()
-      // Se mide en coordenadas del CONTENIDO, no de lo que se ve: el carril se
-      // desplaza en horizontal y el arco viaja dentro de ese contenido. Sin
-      // sumar el desplazamiento, la flecha solo quedaba bien con el carril al
-      // principio y se despegaba de las cajas al correrlo.
-      setCaja({
-        x1: ra.left + ra.width / 2 - base.left + c.scrollLeft,
-        x2: rb.left + rb.width / 2 - base.left + c.scrollLeft,
-        ancho: Math.max(c.scrollWidth, base.width),
-      })
-    }
-
-    medir()
-    const padre = propio.current?.parentElement
-    const ro = new ResizeObserver(medir)
-    if (padre) ro.observe(padre)
-    window.addEventListener('resize', medir)
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('resize', medir)
-    }
-  }, [desde, hasta])
-
-  const anchoRotulo = caja ? Math.max(Math.abs(caja.x2 - caja.x1), 300) : 0
-  // Sale del borde inferior de la etapa de campo, baja, cruza y sube al SIG.
-  const trazo = caja
-    ? `M ${caja.x1} 0 C ${caja.x1} ${alto * 0.62}, ${caja.x2} ${alto * 0.62}, ${caja.x2} 6`
-    : ''
-
-  return (
-    <div ref={propio} style={{ position: 'relative', height: alto }}>
-      {caja && (
-        <>
-          <svg
-            width={caja.ancho}
-            height={alto}
-            viewBox={`0 0 ${caja.ancho} ${alto}`}
-            style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
-            aria-hidden="true"
-          >
-            <defs>
-              <marker
-                id="punta-devolucion"
-                viewBox="0 0 9 7" refX="8" refY="3.5"
-                markerWidth="9" markerHeight="7" orient="auto"
-              >
-                <path d="M0,0 L9,3.5 L0,7 z" fill={MARCA.pizarra} />
-              </marker>
-            </defs>
-            <path
-              d={trazo}
-              fill="none"
-              stroke={MARCA.pizarra}
-              strokeWidth="1.7"
-              strokeDasharray="7 5"
-              markerEnd="url(#punta-devolucion)"
-            />
-          </svg>
-          <div
-            className="absolute text-center text-[11px] leading-snug"
-            style={{
-              left: (caja.x1 + caja.x2) / 2 - anchoRotulo / 2,
-              width: anchoRotulo,
-              top: alto - 26,
-              color: MARCA.pizarra,
-              fontFamily: TIPOGRAFIA.cuerpo,
-            }}
-          >
-            {texto}
-          </div>
-        </>
-      )}
     </div>
   )
 }
@@ -350,6 +179,104 @@ export function Plegable({
         {titulo}
       </button>
       {abierto && <div className="pb-1">{children}</div>}
+    </div>
+  )
+}
+
+// ─── Piezas del panel ─────────────────────────────────────────────────────────
+
+/** Un apartado del panel: rótulo en versalitas y lo que va debajo. */
+export function Bloque({
+  titulo,
+  children,
+  className = 'mt-7',
+}: {
+  titulo: React.ReactNode
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <section className={className}>
+      <h3 className="mb-2.5 font-display text-[9.5px] font-semibold uppercase tracking-[.2em] text-tenue">
+        {titulo}
+      </h3>
+      {children}
+    </section>
+  )
+}
+
+/**
+ * El nombre de una tarjeta, con el cuadrito de su color. Si recibe `onClick`,
+ * es un botón: en el panel sirve para sumar esa tarjeta a lo elegido.
+ */
+export function Chip({
+  id,
+  onClick,
+  titulo,
+}: {
+  id: string
+  onClick?: (id: string) => void
+  titulo?: string
+}) {
+  const n = NODO_POR_ID.get(id)
+  const contenido = (
+    <>
+      <i className="inline-block h-[7px] w-[7px] shrink-0" style={{ background: colorDe(id) }} />
+      <span className="truncate">{n?.corto ?? id}</span>
+    </>
+  )
+  const cls = 'inline-flex max-w-full items-center gap-1.5 border border-linea bg-papel px-1.5 py-[3px] text-[11px] text-tinta'
+  return onClick ? (
+    <button
+      type="button"
+      onClick={() => onClick(id)}
+      title={titulo ?? `Elegir también ${n?.nombre ?? id}`}
+      className={`${cls} transition-colors hover:border-bosque hover:bg-white`}
+    >
+      {contenido}
+    </button>
+  ) : (
+    <span className={cls}>{contenido}</span>
+  )
+}
+
+/** Entradas de la bitácora, en corto: fecha, clase, título y qué quedó. */
+export function ListaBitacora({ entradas }: { entradas: Entrada[] }) {
+  return (
+    <div className="space-y-3.5">
+      {entradas.map((e) => (
+        <div key={e.id} className="border-l-2 border-linea pl-3">
+          <p className="text-[10px] uppercase tracking-[.12em] text-tenue">
+            {TIPO_LABEL[e.tipo]} · {fechaLarga(e.fecha)}
+            {e.abierto && <span className="ml-1.5 normal-case tracking-normal text-marron">sigue abierto</span>}
+          </p>
+          <p className="mt-0.5 font-display text-[13px] font-semibold leading-snug text-tinta">{e.titulo}</p>
+          <p className="mt-1 text-[12px] font-light leading-relaxed text-suave">{e.quedo}</p>
+        </div>
+      ))}
+      <Link
+        href="/intranet/sistema/documentacion"
+        className="inline-block text-[11px] text-pizarra underline underline-offset-2 hover:opacity-70"
+      >
+        Ver la bitácora completa
+      </Link>
+    </div>
+  )
+}
+
+/** Lo que hoy no funciona: qué pasa y qué cuesta mientras siga así. */
+export function ListaFrentes({ frentes, pendiente }: { frentes: Frente[]; pendiente?: string }) {
+  return (
+    <div className="space-y-3 border-l-2 border-ambar pl-3">
+      {pendiente && <p className="text-[12.5px] leading-relaxed text-tinta">{pendiente}</p>}
+      {frentes.map((f) => (
+        <div key={f.id}>
+          <p className="text-[12.5px] leading-relaxed text-tinta">
+            <b className="font-medium">{f.titulo}.</b> {f.cuerpo}
+          </p>
+          <p className="mt-1 text-[11.5px] leading-relaxed text-marron">Mientras siga así: {f.costo}</p>
+        </div>
+      ))}
     </div>
   )
 }

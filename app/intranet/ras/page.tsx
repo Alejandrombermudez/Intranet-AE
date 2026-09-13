@@ -4,12 +4,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  ArrowLeft, Leaf, ShieldCheck, ChevronRight,
-  Loader2, Pencil, ClipboardCheck, CheckCircle2, CalendarDays,
+  Leaf, ShieldCheck, ChevronRight, Loader2, Pencil, ClipboardCheck, CheckCircle2, CalendarDays,
 } from 'lucide-react'
+import { Cabecera, Cargando } from '@/app/components/marca'
 import { MisSesiones } from '@/app/components/MisSesiones'
 
-const PRIMARY = '#0d7377'
+const PRIMARY = '#2f3f32'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -161,40 +161,22 @@ export default function RASHubPage() {
 
   if (!authReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 size={36} className="text-primary animate-spin" />
-      </div>
+      <Cargando texto="Cargando el módulo RAS…" />
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-primary-50 to-stone-100">
+    <div className="min-h-screen bg-papel">
 
-      {/* ── Header ── */}
-      <header className="bg-white shadow-md border-b border-stone-200">
-        <div className="max-w-4xl mx-auto px-4 py-5 sm:px-6">
-          <div className="flex items-center justify-between gap-4">
-            <Link href="/intranet"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-stone-200 text-stone-600 font-bold text-sm hover:border-primary hover:text-primary hover:bg-primary/5 transition-all shrink-0">
-              <ArrowLeft size={16} />
-              <span className="hidden sm:block">Intranet</span>
-            </Link>
-            <div className="text-center flex-1">
-              <div className="inline-flex items-center gap-2 mb-0.5">
-                <Leaf size={20} className="text-primary" />
-                <h1 className="text-2xl font-black text-stone-900 tracking-tight">Módulo RAS</h1>
-              </div>
-              <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">
-                Restauración Ambiental y Social
-              </p>
-            </div>
-            <div className="w-[92px]" />
-          </div>
-        </div>
-      </header>
+      <Cabecera
+        ancho="medio"
+        volver={{ href: '/intranet', label: 'Intranet' }}
+        modulo="Módulo RAS"
+        titulo="Restauración Ambiental y Social"
+      />
 
       {/* ── Main ── */}
-      <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6">
+      <main className="max-w-4xl mx-auto px-6 sm:px-10 py-10">
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-stone-200 mb-8">
@@ -234,7 +216,7 @@ export default function RASHubPage() {
             <Link href="/intranet/ras/conservacion"
               className="group bg-white rounded-2xl border-2 border-stone-200 shadow-md hover:border-primary hover:shadow-xl transition-all p-8 flex flex-col gap-5">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{ backgroundColor: '#0d737715' }}>
+                style={{ backgroundColor: '#2f3f3215' }}>
                 <ShieldCheck size={28} style={{ color: PRIMARY }} />
               </div>
               <div className="flex-1">
@@ -251,7 +233,7 @@ export default function RASHubPage() {
             <Link href="/intranet/catalogo"
               className="group bg-white rounded-2xl border-2 border-stone-200 shadow-md hover:border-primary hover:shadow-xl transition-all p-8 flex flex-col gap-5">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{ backgroundColor: '#0d737715' }}>
+                style={{ backgroundColor: '#2f3f3215' }}>
                 <Leaf size={28} style={{ color: PRIMARY }} />
               </div>
               <div className="flex-1">

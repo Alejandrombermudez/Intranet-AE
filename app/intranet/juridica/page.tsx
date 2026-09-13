@@ -3,13 +3,13 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 import {
   type Aliado, type EstadoAliado, type Semaforo,
   ESTADO_CONFIG, SEMAFORO_CONFIG, H1_CAMPOS_CLAVE,
 } from '@/lib/juridica-schema'
 import {
-  Plus, Search, Filter, ChevronRight, Loader2,
-  FileText, Shield, BarChart3, CheckCircle2, Circle, LayoutGrid, ArrowLeft,
+  Plus, Search, Filter, ChevronRight, Loader2, Shield, LayoutGrid,
 } from 'lucide-react'
 import { fetchParametros, nombreParametro, type Parametro } from '@/lib/parametros'
 
@@ -247,65 +247,28 @@ export default function JuridicaPage() {
     rechazados: aliados.filter((a) => a.estado === 'rechazado').length,
   }), [aliados])
 
-  if (!authReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 className="animate-spin text-stone-400" size={32} />
-      </div>
-    )
-  }
+  if (!authReady) return <Cargando texto="Cargando el módulo jurídico…" />
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      {/* Header */}
-      <div className="bg-white border-b border-stone-100 px-6 py-5">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/intranet" title="Volver a la intranet"
-              className="text-stone-400 hover:text-stone-700 transition-colors">
-              <ArrowLeft size={20} />
-            </Link>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Shield size={18} className="text-teal-600" />
-                <h1 className="text-xl font-black text-stone-900">Módulo Jurídico</h1>
-              </div>
-              <p className="text-sm text-stone-400">Debida diligencia jurídica de aliados</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/intranet/expedientes"
-              className="flex items-center gap-2 px-4 py-2 border border-stone-200 text-stone-600 rounded-xl font-bold text-sm hover:border-teal-400 hover:text-teal-700 transition-colors"
-            >
-              <LayoutGrid size={16} /> Tablero
-            </Link>
-            <Link
-              href="/intranet/juridica/nuevo"
-              className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-xl font-bold text-sm hover:bg-teal-700 transition-colors"
-            >
-              <Plus size={16} /> Nuevo aliado
-            </Link>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-papel">
+      <Cabecera
+        ancho="estrecho"
+        volver={{ href: '/intranet', label: 'Intranet' }}
+        modulo="Módulo jurídico"
+        titulo="Debida diligencia de aliados"
+        cifras={[
+          { n: stats.total, l: 'Total' },
+          { n: stats.pendientes, l: 'Pendientes' },
+          { n: aliados.filter(a => a.estado === 'aprobado').length, l: 'Aprobados' },
+          { n: stats.rechazados, l: 'Rechazados' },
+        ]}
+        acciones={<>
+          <Boton variante="claro" href="/intranet/expedientes" icono={<LayoutGrid size={14} />}>Tablero</Boton>
+          <Boton variante="luz" href="/intranet/juridica/nuevo" icono={<Plus size={14} />}>Nuevo aliado</Boton>
+        </>}
+      />
 
-      <div className="max-w-5xl mx-auto px-6 py-6 space-y-6">
-        {/* Stats rápidas */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Total', value: stats.total, icon: <FileText size={16} />, color: 'text-stone-600' },
-            { label: 'Pendientes', value: stats.pendientes, icon: <Circle size={16} />, color: 'text-amber-600' },
-            { label: 'Aprobados', value: aliados.filter(a => a.estado === 'aprobado').length, icon: <CheckCircle2 size={16} />, color: 'text-teal-600' },
-            { label: 'Rechazados', value: stats.rechazados, icon: <BarChart3 size={16} />, color: 'text-red-500' },
-          ].map((s) => (
-            <div key={s.label} className="bg-white rounded-xl border border-stone-100 p-4">
-              <div className={`flex items-center gap-1.5 mb-1 ${s.color}`}>{s.icon}<span className="text-xs font-bold">{s.label}</span></div>
-              <p className="text-2xl font-black text-stone-900">{s.value}</p>
-            </div>
-          ))}
-        </div>
-
+      <div className="max-w-5xl mx-auto px-6 sm:px-10 py-10 space-y-6">
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">

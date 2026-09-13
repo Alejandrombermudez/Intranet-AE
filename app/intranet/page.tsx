@@ -6,9 +6,10 @@ import { supabase } from '@/lib/supabase'
 import type { UserProfile } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 import { MisSesiones } from '@/app/components/MisSesiones'
+import { Cabecera, Cargando, Pestanas, Seccion, type Pestana } from '@/app/components/marca'
 import { VEHICLES } from '@/lib/vehicles'
 import {
-  ArrowLeft, ShieldCheck, Shield, Pencil, Check, X,
+  ShieldCheck, Shield, Pencil, Check, X,
   Users, Loader2, AlertCircle, AlertTriangle, BarChart2, ImageOff, Construction,
   Leaf, ArrowRight, Filter, CalendarDays, ChevronDown,
   Link2, Copy, CheckCheck, FileSpreadsheet, FileDown, BarChart3, Trash2, Sprout,
@@ -73,8 +74,8 @@ const PHOTO_KEYS: (keyof InspectionStat)[] = [
 ]
 const PHOTO_LABELS = ['Frontal', 'Posterior', 'Lat. Izq.', 'Lat. Der.', 'Tablero']
 
-const PRIMARY = '#0d7377'
-const PRIMARY_DARK = '#0f766e'
+const PRIMARY = '#2f3f32'
+const PRIMARY_DARK = '#222e25'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -995,9 +996,9 @@ function ConsentimientosTab() {
 
       {/* Banner con el link del formulario */}
       <div className="rounded-2xl border-2 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4"
-        style={{ backgroundColor: '#0d737710', borderColor: '#0d737730' }}>
+        style={{ backgroundColor: '#2f3f3210', borderColor: '#2f3f3230' }}>
         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-          style={{ backgroundColor: '#0d737720' }}>
+          style={{ backgroundColor: '#2f3f3220' }}>
           <Link2 size={20} style={{ color: PRIMARY }} />
         </div>
         <div className="flex-1 min-w-0">
@@ -1314,145 +1315,81 @@ export default function IntranetPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <div className="text-center">
-          <Loader2 size={40} className="text-primary animate-spin mx-auto mb-4" />
-          <p className="text-stone-500 font-semibold">Verificando acceso…</p>
-        </div>
-      </div>
-    )
-  }
+  if (loading) return <Cargando texto="Verificando acceso…" />
+
+  // Pestañas de la cabecera. Las que tienen `href` llevan a un módulo con
+  // página propia; las demás cambian la vista aquí mismo.
+  const dept = myProfile?.department ?? null
+  const pestanas: Pestana[] = myProfile?.is_admin
+    ? [
+        { id: 'usuarios', label: 'Usuarios', icono: <Users size={13} />,
+          activa: activeTab === 'usuarios', onClick: () => setActiveTab('usuarios') },
+        ...(dept
+          ? [RUTA_MODULO[dept]
+              ? { id: 'modulo', label: dept, icono: <BarChart2 size={13} />, href: RUTA_MODULO[dept] }
+              : { id: 'modulo', label: dept, icono: <BarChart2 size={13} />,
+                  activa: activeTab === 'modulo', onClick: () => setActiveTab('modulo') }]
+          : []),
+        // Reporte y Tecnología son transversales: cruzan varias áreas, así que
+        // se ofrecen a cualquier admin. Quien tiene ese departamento asignado
+        // ya entra por su propia pestaña. Tecnología: hoy nadie tiene ese
+        // departamento, y sin esta pestaña nadie llegaría al mapa del sistema.
+        ...(dept !== 'Reporte'
+          ? [{ id: 'reporte', label: 'Reporte', icono: <Sprout size={13} />, href: RUTA_MODULO.Reporte }]
+          : []),
+        ...(dept !== 'Tecnología'
+          ? [{ id: 'tecnologia', label: 'Tecnología', icono: <MapIcon size={13} />, href: RUTA_MODULO['Tecnología'] }]
+          : []),
+      ]
+    : dept
+      ? [
+          { id: 'modulo', label: dept, icono: <BarChart2 size={13} />,
+            activa: activeTab === 'modulo', onClick: () => setActiveTab('modulo') },
+          { id: 'mis-sesiones', label: 'Mis sesiones', icono: <CalendarDays size={13} />,
+            activa: activeTab === 'mis-sesiones', onClick: () => setActiveTab('mis-sesiones') },
+        ]
+      : []
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-primary-50 to-stone-100">
+    <div className="min-h-screen bg-papel">
 
       {/* ── Toast ── */}
       {toast && (
-        <div className={`fixed top-5 right-5 z-50 flex items-center gap-2 px-5 py-3.5 rounded-xl shadow-xl text-sm font-bold border ${
-          toast.type === 'ok'
-            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-            : 'bg-red-50 text-red-700 border-red-200'
+        <div className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 border-l-2 bg-white px-5 py-3.5 text-sm shadow-lg ${
+          toast.type === 'ok' ? 'border-bosque text-stone-800' : 'border-red-600 text-red-700'
         }`}>
           {toast.type === 'ok' ? <Check size={16} /> : <AlertCircle size={16} />}
           {toast.msg}
         </div>
       )}
 
-      {/* ── Header ── */}
-      <header className="bg-white shadow-md border-b border-stone-200">
-        <div className="max-w-7xl mx-auto px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <Link href="/"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-stone-200 text-stone-600 font-bold text-sm hover:border-primary hover:text-primary hover:bg-primary/5 transition-all shrink-0">
-              <ArrowLeft size={16} />
-              <span className="hidden sm:block">Inicio</span>
-            </Link>
-
-            <div className="text-center flex-1">
-              <div className="inline-flex items-center gap-2 mb-0.5">
-                <ShieldCheck size={20} className="text-primary" />
-                <h1 className="text-2xl font-black text-stone-900 tracking-tight">Intranet</h1>
-              </div>
-              <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">
-                {myProfile?.is_admin ? 'Panel de Administración' : `Módulo ${myProfile?.department ?? ''}`}
-              </p>
-            </div>
-
-            <div className="shrink-0 w-[80px]" />
-          </div>
-
-          {/* Tabs — admins */}
-          {myProfile?.is_admin && (
-            <div className="flex items-center gap-1 mt-4 border-t border-stone-100 pt-4">
-              {[
-                { id: 'usuarios', label: 'Usuarios', icon: <Users size={14} />, tab: 'usuarios' as const, href: null },
-                ...(myProfile.department
-                  ? [{ id: 'modulo', label: myProfile.department, icon: <BarChart2 size={14} />,
-                       tab: 'modulo' as const, href: RUTA_MODULO[myProfile.department] ?? null }]
-                  : []),
-                // Reporte es transversal — cruza jurídica, SIG y campo —, así que
-                // se ofrece a cualquier admin y no solo a quien tenga ese
-                // departamento asignado (ahí ya entra por su propio tab).
-                ...(myProfile.department !== 'Reporte'
-                  ? [{ id: 'reporte', label: 'Reporte', icon: <Sprout size={14} />,
-                       tab: null, href: RUTA_MODULO.Reporte }]
-                  : []),
-                // Tecnología también es transversal: el mapa explica el proceso
-                // completo y sirve a todo el equipo, no a un área. Hoy nadie tiene
-                // ese departamento asignado; sin este tab, nadie lo vería.
-                ...(myProfile.department !== 'Tecnología'
-                  ? [{ id: 'tecnologia', label: 'Tecnología', icon: <MapIcon size={14} />,
-                       tab: null, href: RUTA_MODULO['Tecnología'] }]
-                  : []),
-              ].map((t) => (
-                <button key={t.id} onClick={() => {
-                  // Módulos con página dedicada: navegar en vez de renderizar inline
-                  if (t.href) { router.push(t.href); return }
-                  if (t.tab) setActiveTab(t.tab)
-                }}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                    t.tab && activeTab === t.tab
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
-                  }`}>
-                  {t.icon} {t.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Tabs — usuarios no-admin con módulo */}
-          {!myProfile?.is_admin && myProfile?.department && (
-            <div className="flex items-center gap-1 mt-4 border-t border-stone-100 pt-4">
-              <button onClick={() => setActiveTab('modulo')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === 'modulo'
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
-                }`}>
-                <BarChart2 size={14} /> {myProfile.department}
-              </button>
-              <button onClick={() => setActiveTab('mis-sesiones')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === 'mis-sesiones'
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
-                }`}>
-                <CalendarDays size={14} /> Mis Sesiones
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
+      {/* ── Cabecera ── */}
+      <Cabecera
+        ancho="amplio"
+        volver={{ href: '/', label: 'Inicio' }}
+        modulo={myProfile?.is_admin ? 'Panel de administración' : `Módulo ${dept ?? ''}`}
+        titulo="Intranet"
+        pie={pestanas.length > 0 ? <Pestanas tono="oscuro" items={pestanas} /> : undefined}
+      />
 
       {/* ── Main ── */}
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto px-6 sm:px-10 py-10">
 
         {/* ── Admin: Tab Usuarios ── */}
         {myProfile?.is_admin && activeTab === 'usuarios' && (
           <>
-            <div className="bg-primary text-white rounded-2xl p-6 mb-8 shadow-xl">
-              <div className="flex items-start gap-4">
-                <Users size={36} className="text-white/80 shrink-0 mt-1" />
-                <div>
-                  <h2 className="text-2xl font-black mb-1">Usuarios Registrados</h2>
-                  <p className="text-white/70 text-sm">
-                    <span className="font-black text-white text-lg">{users.length}</span>{' '}
-                    {users.length === 1 ? 'persona ha accedido' : 'personas han accedido'} a la intranet.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-lg border border-stone-200 overflow-hidden">
+            <Seccion
+              titulo="Usuarios registrados"
+              sub={<><span className="font-medium text-stone-900">{users.length}</span>{' '}
+                {users.length === 1 ? 'persona ha accedido' : 'personas han accedido'} a la intranet.</>}
+            >
+            <div className="bg-white border border-stone-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-stone-50 border-b border-stone-200">
                       {['', 'Nombre / Email', 'Departamento', 'Rol', 'Admin', 'Ve Intranet', 'Último acceso', ''].map((h, i) => (
-                        <th key={i} className="px-4 py-3 text-[11px] font-bold text-stone-400 uppercase tracking-wider">{h}</th>
+                        <th key={i} className="px-4 py-3 text-[10px] font-medium text-stone-500 uppercase tracking-[.14em]">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1471,6 +1408,7 @@ export default function IntranetPage() {
                 </table>
               </div>
             </div>
+            </Seccion>
           </>
         )}
 
@@ -1493,12 +1431,11 @@ export default function IntranetPage() {
 
       </main>
 
-      {/* ── Footer ── */}
-      <footer className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="text-center text-stone-500 text-sm">
-          <p className="font-semibold">
-            &copy; {new Date().getFullYear()} Amazonia Emprende — Todos los derechos reservados
-          </p>
+      {/* ── Pie ── */}
+      <footer className="max-w-7xl mx-auto px-6 sm:px-10 pb-10">
+        <div className="flex items-center justify-between gap-4 border-t border-stone-200 pt-6 text-[10px] uppercase tracking-[.2em] text-stone-500">
+          <span className="font-display">Inspirar · Nutrir · Actuar</span>
+          <span>&copy; {new Date().getFullYear()} Amazonia Emprende</span>
         </div>
       </footer>
 

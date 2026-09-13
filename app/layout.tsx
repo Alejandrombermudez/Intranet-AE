@@ -1,12 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Josefin_Sans, Poppins } from "next/font/google";
+import { Geist_Mono, Josefin_Sans, Poppins } from "next/font/google";
 import "./globals.css";
 import InstallPrompt from "./components/InstallPrompt";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -14,7 +9,7 @@ const geistMono = Geist_Mono({
 });
 
 // Tipografías del manual de marca 2024: Josefin Sans para títulos,
-// Poppins para el cuerpo. Las usa el módulo Reporte.
+// Poppins para el cuerpo. Las usa toda la app (ver app/globals.css).
 const josefin = Josefin_Sans({
   variable: "--font-josefin",
   subsets: ["latin"],
@@ -39,7 +34,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0d7377",
+  themeColor: "#2f3f32",
   width: "device-width",
   initialScale: 1,
 };
@@ -52,7 +47,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${josefin.variable} ${poppins.variable} antialiased`}
+        className={`${geistMono.variable} ${josefin.variable} ${poppins.variable} antialiased`}
       >
         {children}
         <InstallPrompt />

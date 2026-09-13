@@ -20,6 +20,25 @@ documentos maestros de arquitectura de todo el ecosistema (no solo de esta app).
 - **Siempre especificar schema** en las queries: `supabase.schema('siembra').from('familias')...` (excepto `public`).
 - **Nunca hardcodear la service_role key ni ninguna key.** Se lee de `.env` (gitignored). Confirma que exista antes de escribir un script que la use — no la pidas ni la imprimas.
 
+## Sistema visual — Manual de Identidad de Marca 2024
+
+Toda la intranet habla el lenguaje del módulo Reporte: Josefin Sans para títulos, Poppins para el cuerpo,
+papel y tinta, verde bosque como color firma, filetes finos en vez de cajas de color. Dónde vive:
+
+- **`app/globals.css`** — la paleta del manual con nombre propio (`bg-bosque`, `text-tenue`, `border-linea`…)
+  y, ojo, **las familias estándar de Tailwind remapeadas a la marca**: `stone`/`gray` → neutros cálidos,
+  `primary`/`emerald`/`teal`/`green` → verde bosque, `amber`/`yellow` → ámbar, `orange` → marrón,
+  `red`/`rose` → arcilla, `sky`/`blue`/`cyan`/`indigo` → pizarra, `violet`/`purple` → musgo.
+  **`bg-red-500` no es rojo.** Los radios (2–4 px) y las sombras tenues también salen de ahí.
+- **`app/components/marca/`** — las piezas: `Cabecera` (la banda en tinta de cada módulo), `Contenido`,
+  `Pestanas`, `Seccion`, `Boton`, `MarcaEstado`, `Aviso`, `Cargando`, `Vacio`, `Firma`. Una pantalla nueva
+  empieza por `Cabecera` + `Contenido`. No escribas colores en hexadecimal: usa la paleta con nombre.
+- **Los mapas no pasan por la paleta, a propósito.** Los colores de campo (confirmada, modificada, nueva,
+  descartada) viven en `lib/colores-campo.ts` —sin Leaflet, para poder importarlos en el render del
+  servidor— y los leen tanto `MapaCampo` como las leyendas. Tienen que leerse sobre el satelital.
+- **Si cambias `globals.css` y no se ve el cambio:** Turbopack puede quedarse sirviendo el CSS de caché
+  (pasó el 2026-09-11). Detén el servidor, borra `.next` y vuelve a arrancar.
+
 ## Rutas / módulos (`app/`)
 
 | Ruta | Módulo | Schema |
@@ -31,7 +50,7 @@ documentos maestros de arquitectura de todo el ecosistema (no solo de esta app).
 | `/intranet/ras/siembra`, `/intranet/ras/conservacion` | Encuesta/evaluación de campo (legado `siembra.*`) y conservación (`ras.*`) | `siembra`, `ras` |
 | `/intranet/catalogo` | Catálogo de especies | `catalogo` |
 | `/intranet/reporte`, `/intranet/reporte/[predioId]` | **Módulo Reporte**: expediente completo del predio en un solo documento (predial, jurídica, cartografía, correcciones de terreno, evaluación biofísica, encuesta). Se arma solo desde `/api/reporte/expediente`; diseñado sobre el Manual de Identidad de Marca 2024 (Josefin Sans + Poppins, paleta hueso/verde bosque) y pensado para imprimir | `core`, `juridica`, `geo`, `siembra` |
-| `/intranet/sistema`, `/intranet/sistema/documentacion` | **Mapa del sistema**: el ecosistema completo (Siembra + Conservación + núcleo + soporte) como diagrama de cajas navegables, y la **bitácora** (decisiones, cambios, frentes abiertos) con lector de los `docs/*.md`. El grafo vive en `lib/sistema/mapa.ts`; las cifras **no se escriben a mano** — salen de `/api/sistema/pulso`, que las cuenta en Supabase al abrir la página. Reemplaza a `docs/flujo-trabajo.html`/`.pdf`, que se desactualizó en tres semanas por llevar los números dentro del SVG. Se entra por el tab **Tecnología** del hub: lo ve todo admin (transversal, como Reporte) y quien tenga ese departamento llega directo | lee `core`, `geo`, `catalogo`, `siembra`, `ras`, `people` — solo conteos |
+| `/intranet/sistema`, `/intranet/sistema/documentacion` | **Mapa del sistema**: el ecosistema completo (Siembra + Conservación + núcleo + soporte) como diagrama de tarjetas al estilo entidad-relación, con dos vistas: **Explorar** (una tarjeta pasa al centro con lo que la toca alrededor, animado con transiciones de CSS, y se recorre de una en una — `escena.tsx`) y **Comparar** (se eligen varias y el panel dice cómo se comunican y qué comparten — `lienzo.tsx` + `panel.tsx`), y la **bitácora** (decisiones, cambios, frentes abiertos) con lector de los `docs/*.md`. El grafo vive en `lib/sistema/mapa.ts`; las líneas y el análisis de varias tarjetas se deducen de él en `lib/sistema/relaciones.ts` (no se escriben a mano); la posición de cada tarjeta está en `app/intranet/sistema/disposicion.ts` — **una etapa, app o pieza nueva necesita ahí su lugar o no se dibuja**; las cifras **no se escriben a mano** — salen de `/api/sistema/pulso`, que las cuenta en Supabase al abrir la página. Reemplaza a `docs/flujo-trabajo.html`/`.pdf`, que se desactualizó en tres semanas por llevar los números dentro del SVG. Se entra por el tab **Tecnología** del hub: lo ve todo admin (transversal, como Reporte) y quien tenga ese departamento llega directo | lee `core`, `geo`, `catalogo`, `siembra`, `ras`, `people` — solo conteos |
 | `/intranet/ejecutivo` | Sesiones/indicaciones ejecutivas | `ejecutivo` |
 | `app/api/juridica/aliados/[id]/crear-en-siembra` | Paso SIG→Campo: valida SIG I obligatorio, crea `siembra.familias`, avanza expediente | `core`, `geo`, `siembra` |
 

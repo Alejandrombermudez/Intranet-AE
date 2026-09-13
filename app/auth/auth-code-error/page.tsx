@@ -1,23 +1,29 @@
 'use client'
-import Link from 'next/link'
 import { ShieldX } from 'lucide-react'
+import { Boton, Firma, Rotulo } from '@/app/components/marca'
 
+/** Cuenta de Microsoft que no pertenece a la organización. Sobre tinta, como la portada. */
 export default function ErrorPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-stone-50 p-4 text-center">
-      <div className="bg-white p-8 rounded-xl shadow-lg border border-red-100 max-w-md">
-        <ShieldX size={48} className="text-red-500 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold text-stone-800 mb-2">Acceso Restringido</h1>
-        <p className="text-stone-600 mb-6">
-          Tu cuenta de Microsoft no pertenece a la organizacion <strong>Amazonia Emprende</strong> o no tiene los permisos necesarios para acceder a esta Intranet.
-        </p>
+    <div className="flex min-h-screen flex-col bg-tinta text-hueso">
+      <div className="px-8 pt-8 sm:px-12">
+        <Firma />
+      </div>
 
-        <Link
-          href="/"
-          className="inline-block bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-dark transition-all"
-        >
-          Volver al Inicio
-        </Link>
+      <div className="flex flex-1 items-center px-8 sm:px-12">
+        <div className="max-w-lg py-16">
+          <ShieldX size={34} strokeWidth={1.5} className="mb-6 text-ambar" />
+          <Rotulo tono="taupe" className="mb-3">Intranet</Rotulo>
+          <h1 className="mb-4 font-display text-4xl font-bold leading-tight text-white sm:text-5xl">
+            Acceso restringido
+          </h1>
+          <p className="mb-9 text-sm font-light leading-relaxed text-hueso/80">
+            Tu cuenta de Microsoft no pertenece a la organización{' '}
+            <strong className="font-medium text-white">Amazonia Emprende</strong> o no tiene los permisos
+            necesarios para acceder a esta Intranet.
+          </p>
+          <Boton href="/" variante="claro">Volver al inicio</Boton>
+        </div>
       </div>
     </div>
   )

@@ -1,18 +1,18 @@
 'use client'
 import { useState, useEffect, useMemo, useRef } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  ArrowLeft, Loader2, Search, ImageOff, Upload, X, Trees, Sprout, BookOpen,
+  Loader2, Search, ImageOff, Upload, X, Trees, Sprout, BookOpen,
 } from 'lucide-react'
+import { Cabecera, Cargando } from '@/app/components/marca'
 import {
   fetchEspecies, filtrarEspecies, cambiarFoto,
   type Especie, type OrigenFiltro,
 } from '@/lib/catalogo'
 import { Badge, EspecieInfoBlock } from '@/app/components/EspecieInfo'
 
-const PRIMARY = '#0d7377'
+const PRIMARY = '#2f3f32'
 
 // Compresión cliente (Canvas) — calidad alta para fichas de catálogo
 async function compressImage(file: File, maxW = 1400, q = 0.85): Promise<File> {
@@ -83,30 +83,22 @@ export default function CatalogoPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 size={36} className="animate-spin" style={{ color: PRIMARY }} />
-      </div>
+      <Cargando texto="Cargando el catálogo…" />
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-primary-50 to-stone-100">
-      {/* Header */}
-      <header className="bg-white shadow-md border-b border-stone-200 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6 flex items-center gap-4">
-          <Link href="/intranet/ras"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-stone-200 text-stone-600 font-bold text-sm hover:border-primary hover:text-primary transition-all shrink-0">
-            <ArrowLeft size={16} /><span className="hidden sm:block">RAS</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <BookOpen size={20} style={{ color: PRIMARY }} />
-            <h1 className="text-xl font-black text-stone-900">Catálogo de especies</h1>
-          </div>
-          <span className="ml-auto text-sm text-stone-400 font-semibold">{filtradas.length} de {especies.length}</span>
-        </div>
+    <div className="min-h-screen bg-papel">
+      <Cabecera
+        volver={{ href: '/intranet/ras', label: 'RAS' }}
+        modulo="Maestro de especies"
+        titulo="Catálogo de especies"
+        descripcion={`${filtradas.length} de ${especies.length} especies`}
+      />
 
-        {/* Filtros */}
-        <div className="max-w-6xl mx-auto px-4 pb-4 sm:px-6 flex flex-col sm:flex-row gap-3">
+      {/* Filtros: quedan fijos arriba al desplazarse, como antes en la cabecera. */}
+      <div className="sticky top-0 z-20 border-b border-stone-200 bg-papel/95 backdrop-blur">
+        <div className="max-w-6xl mx-auto px-6 sm:px-10 py-4 flex flex-col sm:flex-row gap-3">
           <div className="flex rounded-xl border-2 border-stone-200 overflow-hidden text-sm font-bold">
             {([['todas', 'Todas', BookOpen], ['ras', 'RAS', Trees], ['vivero', 'Vivero', Sprout]] as const).map(([val, label, Icon]) => (
               <button key={val} onClick={() => setOrigen(val)}
@@ -127,10 +119,10 @@ export default function CatalogoPage() {
               className="w-full pl-9 pr-3 py-2 rounded-xl border-2 border-stone-200 text-sm focus:border-primary focus:outline-none" />
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Grid */}
-      <main className="max-w-6xl mx-auto px-4 py-6 sm:px-6">
+      <main className="max-w-6xl mx-auto px-6 py-6 sm:px-10">
         {filtradas.length === 0 ? (
           <p className="text-center text-stone-400 py-16">Sin especies para este filtro.</p>
         ) : (
@@ -156,7 +148,7 @@ export default function CatalogoPage() {
                   <p className="italic text-xs text-stone-500 truncate">{e.nombre_cientifico}</p>
                   <p className="text-[11px] text-stone-400 mt-0.5 truncate">{e.familia || '—'}</p>
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {e.en_catalogo && <Badge color="#0d7377">Catálogo</Badge>}
+                    {e.en_catalogo && <Badge color="#2f3f32">Catálogo</Badge>}
                     {e.en_ras && <Badge color="#15803d">RAS</Badge>}
                     {e.en_vivero && <Badge color="#b45309">Vivero</Badge>}
                   </div>

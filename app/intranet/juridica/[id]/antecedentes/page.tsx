@@ -6,7 +6,10 @@ import { supabase } from '@/lib/supabase'
 import { type Antecedente } from '@/lib/juridica-schema'
 import { parsearRespuestaGuardado, mensajeDocumentosFallidos } from '@/lib/fetch-guardar'
 import { comprimirAdjuntos, avisoPeso, formatearBytes } from '@/lib/comprimir-imagen'
-import { Shield, ArrowLeft, Loader2, Upload, X, ExternalLink, CheckCircle2, XCircle, HelpCircle } from 'lucide-react'
+import {
+  Loader2, Upload, X, ExternalLink, CheckCircle2, XCircle, HelpCircle,
+} from 'lucide-react'
+import { Cabecera, Cargando } from '@/app/components/marca'
 
 // Los soportes de antecedentes son casi siempre pantallazos de la consulta, pero
 // varias entidades (Rama Judicial, RNMC) entregan el resultado como descarga de
@@ -255,30 +258,26 @@ export default function AntecedentesPage() {
   ).length + (pep === true ? 1 : 0) + (prensa === true ? 1 : 0)
 
   if (!authReady || loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-stone-50"><Loader2 className="animate-spin text-stone-400" size={32} /></div>
+    return <Cargando texto="Cargando los antecedentes…" />
   }
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <div className="bg-white border-b border-stone-100 px-6 py-4">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
-          <Link href={`/intranet/juridica/${id}`} className="text-stone-400 hover:text-stone-700 transition-colors">
-            <ArrowLeft size={20} />
-          </Link>
-          <Shield size={18} className="text-teal-600" />
-          <div>
-            <h1 className="text-lg font-black text-stone-900">HOJA 2 — Antecedentes</h1>
-            <p className="text-xs text-stone-400">{aliadoNombre}</p>
-          </div>
-          {banderas > 0 && (
-            <span className="ml-auto text-[11px] font-bold px-2.5 py-1 bg-red-50 text-red-600 rounded-full">
-              {banderas} {banderas === 1 ? 'bandera' : 'banderas'}
-            </span>
-          )}
-        </div>
-      </div>
+    <div className="min-h-screen bg-papel">
+      <Cabecera
+        compacta
+        ancho="ficha"
+        volver={{ href: `/intranet/juridica/${id}`, label: 'Aliado' }}
+        modulo="Módulo jurídico · HOJA 2"
+        titulo="Antecedentes"
+        descripcion={aliadoNombre}
+        acciones={banderas > 0 ? (
+          <span className="bg-red-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[.14em] text-red-700">
+            {banderas} {banderas === 1 ? 'bandera' : 'banderas'}
+          </span>
+        ) : undefined}
+      />
 
-      <div className="max-w-3xl mx-auto px-6 py-6 space-y-6">
+      <div className="max-w-3xl mx-auto px-6 sm:px-10 py-10 space-y-6">
         {/* Leyenda */}
         <div className="flex items-center gap-4 text-xs text-stone-500">
           <div className="flex items-center gap-1"><HelpCircle size={12} className="text-stone-400" /> Pendiente</div>

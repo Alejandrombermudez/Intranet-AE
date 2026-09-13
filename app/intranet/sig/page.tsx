@@ -3,10 +3,11 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 import type { SigWorklistRow } from '@/app/api/sig/worklist/route'
 import {
-  Map as MapIcon, ArrowLeft, Search, Loader2, ChevronRight, MapPin, Layers,
-  Hexagon, Sprout, ClipboardCheck, HelpCircle, X, Info,
+  Search, Loader2, ChevronRight, MapPin, Layers, Hexagon, Sprout, ClipboardCheck, HelpCircle, X,
+  Info,
 } from 'lucide-react'
 
 const fmt = (n: number) => n.toLocaleString('es-CO', { maximumFractionDigits: 1 })
@@ -102,33 +103,23 @@ export default function SigPage() {
   const limpiar = () => { setFase(null); setMunicipio(''); setZonaAe(''); setBusqueda(''); setTope(40) }
   const mostrados = visibles.slice(0, tope)
 
-  if (!authReady) {
-    return <div className="min-h-screen flex items-center justify-center bg-stone-50"><Loader2 className="animate-spin text-stone-400" size={32} /></div>
-  }
+  if (!authReady) return <Cargando texto="Cargando la cola cartográfica…" />
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      {/* Header */}
-      <div className="bg-white border-b border-stone-100 px-6 py-5">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Link href="/intranet" title="Volver a la intranet" className="text-stone-400 hover:text-stone-700 transition-colors">
-              <ArrowLeft size={20} />
-            </Link>
-            <MapIcon size={18} className="text-teal-600" />
-            <div>
-              <h1 className="text-xl font-black text-stone-900">Módulo SIG</h1>
-              <p className="text-sm text-stone-400">{rows.length} predios · cola de trabajo cartográfico</p>
-            </div>
-          </div>
-          <button onClick={() => setAyuda(a => !a)}
-            className="flex items-center gap-1.5 text-xs font-bold text-stone-400 hover:text-stone-700 transition-colors">
-            <HelpCircle size={15} /> ¿Qué significa cada cosa?
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-papel">
+      <Cabecera
+        volver={{ href: '/intranet', label: 'Intranet' }}
+        modulo="Módulo SIG"
+        titulo="Cola de trabajo cartográfico"
+        descripcion={`${rows.length} predios, ordenados por lo que les falta de cartografía.`}
+        acciones={
+          <Boton variante="claro" onClick={() => setAyuda(a => !a)} icono={<HelpCircle size={14} />}>
+            ¿Qué significa cada cosa?
+          </Boton>
+        }
+      />
 
-      <div className="max-w-6xl mx-auto px-6 py-6 space-y-5">
+      <div className="max-w-6xl mx-auto px-6 sm:px-10 py-10 space-y-5">
 
         {ayuda && (
           <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-3 text-sm text-stone-600">

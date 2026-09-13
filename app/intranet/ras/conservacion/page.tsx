@@ -4,13 +4,14 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  ArrowLeft, Plus, Loader2, ShieldCheck, MapPin, Eye,
-  CalendarDays, Trash2, AlertTriangle, Trees, Pencil, ImageOff, TreePine,
+  Plus, Loader2, ShieldCheck, MapPin, Eye, CalendarDays, Trash2, AlertTriangle, Trees, Pencil,
+  ImageOff, TreePine,
 } from 'lucide-react'
+import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 import { fetchEspecies, fotoAleatoriaCatalogo } from '@/lib/catalogo'
 import { fetchIndicadoresDeFamilias, type IndicadoresPredio } from '@/lib/ras-arboles'
 
-const PRIMARY = '#0d7377'
+const PRIMARY = '#2f3f32'
 
 interface FamiliaConservacion {
   id: string
@@ -142,9 +143,7 @@ export default function ConservacionListPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 size={36} className="text-primary animate-spin" />
-      </div>
+      <Cargando texto="Cargando las familias en conservación…" />
     )
   }
 
@@ -156,40 +155,20 @@ export default function ConservacionListPage() {
   const nConCesion = familias.filter((f) => conCesion.has(f.id)).length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-primary-50 to-stone-100">
+    <div className="min-h-screen bg-papel">
 
-      {/* ── Header ── */}
-      <header className="bg-white shadow-md border-b border-stone-200">
-        <div className="max-w-7xl mx-auto px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <Link href="/intranet/ras"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-stone-200 text-stone-600 font-bold text-sm hover:border-primary hover:text-primary hover:bg-primary/5 transition-all shrink-0">
-              <ArrowLeft size={16} />
-              <span className="hidden sm:block">Módulo RAS</span>
-            </Link>
-
-            <div className="text-center flex-1">
-              <div className="inline-flex items-center gap-2 mb-0.5">
-                <ShieldCheck size={20} className="text-primary" />
-                <h1 className="text-2xl font-black text-stone-900 tracking-tight">Conservación</h1>
-              </div>
-              <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">
-                Familias en Conservación
-              </p>
-            </div>
-
-            <Link href="/intranet/ras/conservacion/nueva"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all shrink-0 shadow-sm hover:shadow-md"
-              style={{ backgroundColor: PRIMARY }}>
-              <Plus size={16} />
-              <span className="hidden sm:block">Nueva Familia</span>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Cabecera
+        ancho="amplio"
+        volver={{ href: '/intranet/ras', label: 'Módulo RAS' }}
+        modulo="Conservación · Red de Árboles Semilleros"
+        titulo="Familias en conservación"
+        acciones={
+          <Boton variante="luz" href="/intranet/ras/conservacion/nueva" icono={<Plus size={14} />}>Nueva familia</Boton>
+        }
+      />
 
       {/* ── Main ── */}
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto px-6 sm:px-10 py-10">
 
         {/* Banner resumen */}
         <div className="bg-primary text-white rounded-2xl p-6 mb-8 shadow-xl">

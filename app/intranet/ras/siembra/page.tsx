@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  ArrowLeft, Plus, Loader2, Leaf, MapPin, Trees,
-  CalendarDays, ChevronRight, Trash2, AlertTriangle, Pencil, Archive,
+  Plus, Loader2, Leaf, MapPin, Trees, CalendarDays, ChevronRight, Trash2, AlertTriangle, Pencil,
+  Archive,
 } from 'lucide-react'
+import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 
-const PRIMARY = '#0d7377'
+const PRIMARY = '#2f3f32'
 
 interface Familia {
   id: string
@@ -86,54 +87,26 @@ export default function SiembraListPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 size={36} className="text-primary animate-spin" />
-      </div>
+      <Cargando texto="Cargando las familias en restauración…" />
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-primary-50 to-stone-100">
+    <div className="min-h-screen bg-papel">
 
-      {/* ── Header ── */}
-      <header className="bg-white shadow-md border-b border-stone-200">
-        <div className="max-w-7xl mx-auto px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <Link href="/intranet/ras"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-stone-200 text-stone-600 font-bold text-sm hover:border-primary hover:text-primary hover:bg-primary/5 transition-all shrink-0">
-              <ArrowLeft size={16} />
-              <span className="hidden sm:block">Módulo RAS</span>
-            </Link>
-
-            <div className="text-center flex-1">
-              <div className="inline-flex items-center gap-2 mb-0.5">
-                <Trees size={20} className="text-primary" />
-                <h1 className="text-2xl font-black text-stone-900 tracking-tight">Restauración / Siembra</h1>
-              </div>
-              <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">
-                Familias en Restauración
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Link href="/intranet/ras/siembra/eliminadas"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border-2 border-stone-200 text-stone-500 hover:border-red-300 hover:text-red-500 transition-all">
-                <Archive size={16} />
-                <span className="hidden sm:block">Eliminadas</span>
-              </Link>
-              <Link href="/intranet/ras/siembra/nueva"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all shadow-sm hover:shadow-md"
-                style={{ backgroundColor: PRIMARY }}>
-                <Plus size={16} />
-                <span className="hidden sm:block">Nueva Familia</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Cabecera
+        ancho="amplio"
+        volver={{ href: '/intranet/ras', label: 'Módulo RAS' }}
+        modulo="Restauración · Siembra"
+        titulo="Familias en restauración"
+        acciones={<>
+          <Boton variante="claro" href="/intranet/ras/siembra/eliminadas" icono={<Archive size={14} />}>Eliminadas</Boton>
+          <Boton variante="luz" href="/intranet/ras/siembra/nueva" icono={<Plus size={14} />}>Nueva familia</Boton>
+        </>}
+      />
 
       {/* ── Main ── */}
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto px-6 sm:px-10 py-10">
 
         {/* Banner resumen */}
         <div className="bg-primary text-white rounded-2xl p-6 mb-8 shadow-xl">

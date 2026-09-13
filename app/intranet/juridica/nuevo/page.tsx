@@ -5,7 +5,10 @@ import { useForm, type FieldErrors } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { supabase } from '@/lib/supabase'
 import { aliadoSchema, ETIQUETAS_ALIADO, type AliadoForm } from '@/lib/juridica-schema'
-import { Shield, ArrowLeft, Loader2, Upload, X, Users } from 'lucide-react'
+import {
+  Loader2, Upload, X, Users,
+} from 'lucide-react'
+import { Cabecera, Cargando } from '@/app/components/marca'
 import Link from 'next/link'
 import { MUNICIPIOS_CAQUETA, VEREDAS_POR_MUNICIPIO, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
 import { parsearRespuestaGuardado } from '@/lib/fetch-guardar'
@@ -216,31 +219,24 @@ export default function NuevoAliadoPage() {
 
   if (!authReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 className="animate-spin text-stone-400" size={32} />
-      </div>
+      <Cargando texto="Preparando el formulario…" />
     )
   }
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      {/* Header */}
-      <div className="bg-white border-b border-stone-100 px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <Link href="/intranet/juridica" className="text-stone-400 hover:text-stone-700 transition-colors">
-            <ArrowLeft size={20} />
-          </Link>
-          <div className="flex items-center gap-2">
-            <Shield size={18} className="text-teal-600" />
-            <h1 className="text-lg font-black text-stone-900">Nuevo aliado — HOJA 1</h1>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-papel">
+      <Cabecera
+        compacta
+        ancho="formulario"
+        volver={{ href: '/intranet/juridica', label: 'Jurídica' }}
+        modulo="Módulo jurídico · HOJA 1"
+        titulo="Nuevo aliado"
+      />
 
       {/* noValidate: la validación es solo la de zod. Con la del navegador activa,
           un número mal escrito ("2.024", "25,5") bloquea el envío con un globo
           nativo y el formulario parece no responder. */}
-      <form noValidate onSubmit={handleSubmit(onSubmit, onInvalid)} className="max-w-2xl mx-auto px-6 py-8 space-y-8">
+      <form noValidate onSubmit={handleSubmit(onSubmit, onInvalid)} className="max-w-2xl mx-auto px-6 sm:px-10 py-10 space-y-8">
 
         {aliadoLock && (
           <div className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 text-sm text-sky-800">

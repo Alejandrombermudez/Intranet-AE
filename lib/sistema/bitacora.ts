@@ -43,6 +43,8 @@ export interface Entrada {
   etapas?: string[]
   /** Aplicaciones a las que toca (ids de `mapa.ts`). */
   apps?: string[]
+  /** Piezas del núcleo a las que toca (ids de `PIEZAS` en `mapa.ts`). */
+  piezas?: string[]
   /** Sigue abierto: no se ha resuelto. */
   abierto?: boolean
   /** Detalle técnico. Se muestra plegado, para quien vaya a tocarlo. */
@@ -54,6 +56,47 @@ export interface Entrada {
 /** De lo más reciente a lo más antiguo. */
 export const BITACORA: Entrada[] = [
   // ══ Septiembre 2026 ═══════════════════════════════════════════════════════
+  {
+    id: 'mapa-tarjetas',
+    fecha: '2026-09-11',
+    tipo: 'cambio',
+    titulo: 'El mapa del sistema se lee en tarjetas, como un diagrama de base de datos',
+    porque:
+      'La primera versión del mapa tenía demasiadas cajas, texto y flechas a la vista a la vez. ' +
+      'Costaba seguir el flujo, y para ver cómo se relacionaban dos partes había que abrirlas por separado.',
+    quedo:
+      'Cada etapa, aplicación y pieza compartida es una tarjeta corta, unida a las demás por líneas ' +
+      'punteadas, y el mapa se mira de dos maneras. En Explorar, la tarjeta elegida pasa al centro y ' +
+      'a su alrededor se acomoda todo lo que la toca; tocando las vecinas se recorre el sistema de una ' +
+      'en una. En Comparar se eligen varias y se ve qué tienen en común y cómo se comunican.',
+    apps: ['intranet'],
+    detalle:
+      'Las relaciones no se escriben a mano: salen de lo que ya dice lib/sistema/mapa.ts (quién pasa a ' +
+      'quién, qué app trabaja en qué etapa, en qué tablas guarda cada una). Están en ' +
+      'lib/sistema/relaciones.ts; la posición de cada tarjeta, en el mapa y alrededor del centro, en ' +
+      'app/intranet/sistema/disposicion.ts. Las animaciones son transiciones de CSS, sin librerías, y ' +
+      'se apagan si el equipo tiene activado «reducir movimiento».',
+  },
+  {
+    id: 'rediseno-marca',
+    fecha: '2026-09-11',
+    tipo: 'cambio',
+    titulo: 'Toda la intranet habla el lenguaje del manual de marca',
+    porque:
+      'Cada módulo se había diseñado por su lado: cabeceras blancas con títulos pesados, un verde ' +
+      'azulado que no es de la marca, tarjetas redondeadas con sombra. Solo el informe de Reporte ' +
+      'seguía el Manual de Identidad de Marca 2024.',
+    quedo:
+      'Las pantallas llevan la cabecera en tinta de Reporte, títulos en Josefin Sans, cuerpo en ' +
+      'Poppins y la paleta terrosa del manual. El calendario de vehículos y la validación de ' +
+      'reservas conservan su diseño por decisión del equipo; a ellas solo les llegó la paleta.',
+    apps: ['intranet'],
+    detalle:
+      'La paleta vive en app/globals.css y las familias estándar de Tailwind están remapeadas a la ' +
+      'marca: una clase como bg-red-500 ya no es rojo. Las piezas compartidas (cabecera, pestañas, ' +
+      'botones) están en app/components/marca. Los colores de los mapas no pasan por la paleta, a ' +
+      'propósito: tienen que leerse sobre el satelital (lib/colores-campo.ts).',
+  },
   {
     id: 'mapa-sistema',
     fecha: '2026-09-09',
@@ -76,6 +119,7 @@ export const BITACORA: Entrada[] = [
     id: 'predios-proyecto-fuente',
     fecha: '2026-09-08',
     tipo: 'cambio',
+    piezas: ['core', 'catalogo'],
     titulo: 'Cada predio dice a qué proyecto pertenece y cómo llegó',
     porque:
       'No se podía responder cuáles predios responden a Conexión Biodiversa y cuáles a Ley del Árbol, ' +
@@ -127,6 +171,7 @@ export const BITACORA: Entrada[] = [
     id: 'expediente-imprimible',
     fecha: '2026-09-02',
     tipo: 'cambio',
+    piezas: ['core', 'geo'],
     titulo: 'El expediente de un predio cabe en un solo documento',
     porque:
       'Para mirar un predio completo —o entregárselo a alguien de fuera— tocaba recorrer cuatro ' +
@@ -191,6 +236,7 @@ export const BITACORA: Entrada[] = [
     id: 'sig-ve-campo',
     fecha: '2026-08-12',
     tipo: 'cambio',
+    piezas: ['geo'],
     titulo: 'La oficina puede ver qué pasó en el terreno',
     porque:
       'El SIG mandaba predios a campo y no tenía dónde ver qué había vuelto: ni las correcciones, ni ' +
@@ -206,6 +252,7 @@ export const BITACORA: Entrada[] = [
     id: 'exportar-shapefile',
     fecha: '2026-08-12',
     tipo: 'cambio',
+    piezas: ['geo'],
     titulo: 'La geometría puede volver a salir del sistema',
     porque:
       'El SIG podía meter shapefiles pero no sacarlos. La corrección hecha en terreno se quedaba ' +
@@ -218,6 +265,7 @@ export const BITACORA: Entrada[] = [
     id: 'confirmar-borraba',
     fecha: '2026-08-06',
     tipo: 'problema',
+    piezas: ['geo'],
     titulo: 'Confirmar una zona borraba el límite que se había dibujado en campo',
     porque:
       'Si alguien corregía el límite de una zona y después le daba «confirmar», la acción posterior ' +
@@ -232,6 +280,7 @@ export const BITACORA: Entrada[] = [
     id: 'versionado-sig',
     fecha: '2026-08-05',
     tipo: 'decision',
+    piezas: ['geo'],
     titulo: 'El SIG versiona en vez de borrar',
     porque:
       'Al resubir cartografía, el sistema borraba lo anterior. Los identificadores de zona que el ' +
@@ -265,6 +314,7 @@ export const BITACORA: Entrada[] = [
     id: 'sig-ii-sincroniza',
     fecha: '2026-07-28',
     tipo: 'hito',
+    piezas: ['geo'],
     titulo: 'Las correcciones de terreno llegan a la base',
     porque:
       'La verificación cartográfica se hacía en campo pero se quedaba en el teléfono: la oficina ' +
@@ -291,6 +341,7 @@ export const BITACORA: Entrada[] = [
     id: 'sig-obligatorio',
     fecha: '2026-07-08',
     tipo: 'decision',
+    piezas: ['geo'],
     titulo: 'No se manda un predio a campo sin cartografía',
     porque:
       'Se podían enviar predios a terreno sin zonas cargadas. El evaluador llegaba al predio sin nada ' +
@@ -305,6 +356,7 @@ export const BITACORA: Entrada[] = [
     id: 'catalogo-especies',
     fecha: '2026-07-02',
     tipo: 'hito',
+    piezas: ['catalogo'],
     titulo: 'Una sola lista de especies para todo el sistema',
     porque:
       'Cada módulo escribía los nombres de las especies por su cuenta. La misma planta terminaba con ' +
@@ -319,6 +371,7 @@ export const BITACORA: Entrada[] = [
     id: 'red-arboles',
     fecha: '2026-07-02',
     tipo: 'hito',
+    piezas: ['catalogo'],
     titulo: 'El árbol semillero pasa a ser una entidad con nombre propio',
     porque:
       'La conservación solo guardaba conteos —«este predio tiene tantos árboles»— y un archivo de ' +
@@ -363,6 +416,7 @@ export const BITACORA: Entrada[] = [
     id: 'd1-expediente',
     fecha: '2026-06-19',
     tipo: 'decision',
+    piezas: ['core'],
     titulo: 'El expediente es lo que dice en qué etapa va cada predio',
     porque:
       'No había forma de responder «¿dónde está este predio hoy?» sin abrir cuatro módulos y ' +
@@ -377,6 +431,7 @@ export const BITACORA: Entrada[] = [
     id: 'cutover-core',
     fecha: '2026-06-18',
     tipo: 'decision',
+    piezas: ['core'],
     titulo: 'La persona y el predio se escriben una sola vez',
     porque:
       'Jurídica, siembra y conservación guardaban cada una su propia copia del nombre, el municipio y ' +
@@ -394,6 +449,7 @@ export const BITACORA: Entrada[] = [
     id: 'juridica-primero',
     fecha: '2026-05-26',
     tipo: 'hito',
+    piezas: ['core'],
     titulo: 'Jurídica se vuelve la puerta de entrada del proceso',
     porque:
       'Los predios entraban al sistema por donde fuera. Sin verificar antes la propiedad, se gastaba ' +
@@ -417,6 +473,8 @@ export interface Frente {
   titulo: string
   cuerpo: string
   etapas?: string[]
+  apps?: string[]
+  piezas?: string[]
   /** Qué se pierde mientras siga así. */
   costo: string
 }
@@ -425,6 +483,7 @@ export const FRENTES_ABIERTOS: Frente[] = [
   {
     id: 'campo-sin-base',
     titulo: 'Tres apps de campo guardan solo en el teléfono',
+    apps: ['app_actividades', 'app_aves', 'app_semilleros'],
     cuerpo:
       'Las apps de actividades y bodega, de aves y de semilleros funcionan y se usan, pero ninguna ' +
       'escribe en la base. Lo que se registra vive en la memoria del aparato de cada persona.',
@@ -436,6 +495,7 @@ export const FRENTES_ABIERTOS: Frente[] = [
   {
     id: 'lote-vacio',
     titulo: 'El versionado del SIG no se ha estrenado',
+    piezas: ['geo'],
     cuerpo:
       'La cartografía se versiona desde el 5 de agosto, pero no ha entrado ninguna subida nueva desde ' +
       'entonces: la tabla de lotes sigue vacía.',
@@ -447,6 +507,7 @@ export const FRENTES_ABIERTOS: Frente[] = [
   {
     id: 'arboles-sin-especie',
     titulo: 'Buena parte de la red de semilleros sigue sin especie confirmada',
+    piezas: ['catalogo'],
     cuerpo:
       'Los árboles están cargados y georreferenciados, pero muchos conservan el nombre que se les puso ' +
       'en campo, a la espera de la determinación botánica.',
@@ -458,6 +519,7 @@ export const FRENTES_ABIERTOS: Frente[] = [
   {
     id: 'conservacion-suelta',
     titulo: 'Conservación no está conectada al núcleo compartido',
+    piezas: ['core'],
     cuerpo:
       'Las familias en conservación se identifican aparte, sin enlazar a la persona y el predio del ' +
       'núcleo. Es la misma duplicación que se resolvió en siembra en junio.',
@@ -469,6 +531,7 @@ export const FRENTES_ABIERTOS: Frente[] = [
   {
     id: 'los-andes',
     titulo: 'Un predio mide 315 hectáreas y en el registro tiene 65',
+    piezas: ['geo'],
     cuerpo:
       'El predio Los Andes tiene dos polígonos de finca cargados. O el archivo es el equivocado, o son ' +
       'varios predios metidos en uno.',
@@ -572,6 +635,19 @@ export function entradasDeApp(appId: string): Entrada[] {
 
 export function frentesDeEtapa(etapaId: string): Frente[] {
   return FRENTES_ABIERTOS.filter((f) => f.etapas?.includes(etapaId))
+}
+
+/**
+ * Todo lo de la bitácora que toca a una tarjeta del mapa, sea etapa, app o
+ * pieza del núcleo. Los ids no se repiten entre los tres, así que basta con
+ * buscarlo en las tres listas.
+ */
+export function entradasDe(id: string): Entrada[] {
+  return BITACORA.filter((e) => e.etapas?.includes(id) || e.apps?.includes(id) || e.piezas?.includes(id))
+}
+
+export function frentesDe(id: string): Frente[] {
+  return FRENTES_ABIERTOS.filter((f) => f.etapas?.includes(id) || f.apps?.includes(id) || f.piezas?.includes(id))
 }
 
 /** Agrupa la bitácora por mes, para pintarla como línea de tiempo. */

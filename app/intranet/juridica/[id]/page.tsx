@@ -8,9 +8,9 @@ import {
   ESTADO_CONFIG, SEMAFORO_CONFIG,
 } from '@/lib/juridica-schema'
 import {
-  Shield, ArrowLeft, Pencil, ChevronRight, Loader2,
-  CheckCircle2, Lock, ExternalLink, AlertCircle, Plus,
+  Pencil, ChevronRight, CheckCircle2, Lock, ExternalLink, AlertCircle, Plus,
 } from 'lucide-react'
+import { Cabecera, Cargando } from '@/app/components/marca'
 import { fetchParametrosHoja1, nombreParametro, type Parametro } from '@/lib/parametros'
 
 function label(v: unknown) {
@@ -150,9 +150,7 @@ export default function AliadoDetailPage() {
 
   if (!authReady || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 className="animate-spin text-stone-400" size={32} />
-      </div>
+      <Cargando texto="Cargando el aliado…" />
     )
   }
 
@@ -163,32 +161,30 @@ export default function AliadoDetailPage() {
   const semCfg    = semaforo ? SEMAFORO_CONFIG[semaforo] : null
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      {/* Header */}
-      <div className="bg-white border-b border-stone-100 px-6 py-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-3 mb-4">
-            <Link href="/intranet/juridica" className="text-stone-400 hover:text-stone-700 transition-colors">
-              <ArrowLeft size={20} />
-            </Link>
-            <Shield size={18} className="text-teal-600" />
-            <h1 className="text-lg font-black text-stone-900 truncate">{aliado.nombre_completo}</h1>
-            <span className={`ml-auto text-[11px] font-bold px-2.5 py-1 rounded-full ${estadoCfg.bg} ${estadoCfg.text}`}>
-              {estadoCfg.label}
+    <div className="min-h-screen bg-papel">
+      <Cabecera
+        compacta
+        ancho="ficha"
+        volver={{ href: '/intranet/juridica', label: 'Jurídica' }}
+        modulo="Aliado · debida diligencia"
+        titulo={aliado.nombre_completo}
+        acciones={<>
+          <span className={`px-2.5 py-1 text-[10px] font-medium uppercase tracking-[.14em] ${estadoCfg.bg} ${estadoCfg.text}`}>
+            {estadoCfg.label}
+          </span>
+          {semCfg && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-hueso">
+              <i className={`inline-block h-2 w-2 ${semCfg.dot}`} />
+              Semáforo {semCfg.label.toLowerCase()}
             </span>
-            {semCfg && (
-              <div className="flex items-center gap-1.5">
-                <div className={`w-2.5 h-2.5 rounded-full ${semCfg.dot}`} />
-                <span className={`text-xs font-bold ${semCfg.color}`}>{semCfg.label}</span>
-              </div>
-            )}
-          </div>
-          {/* Stepper */}
+          )}
+        </>}
+      />
+
+      <div className="max-w-3xl mx-auto px-6 sm:px-10 py-10 space-y-5">
+        <div className="border border-stone-200 bg-white px-5 py-4">
           <Stepper aliado={aliado} />
         </div>
-      </div>
-
-      <div className="max-w-3xl mx-auto px-6 py-6 space-y-5">
 
         {/* Alertas de estado */}
         {aliado.estado === 'rechazado' && (

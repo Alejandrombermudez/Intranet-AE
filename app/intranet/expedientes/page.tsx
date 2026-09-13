@@ -3,26 +3,29 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 import type { ExpedienteRow } from '@/lib/expedientes'
 import {
   ESTADO_CONFIG, SEMAFORO_CONFIG, type EstadoAliado, type Semaforo,
 } from '@/lib/juridica-schema'
 import {
-  LayoutGrid, ArrowLeft, Search, Loader2, ChevronRight, X, MapPin, FileText, Map as MapIcon,
+  Search, Loader2, ChevronRight, X, MapPin, FileText, Map as MapIcon,
 } from 'lucide-react'
 
 // ─── Configuración de etapas del proceso ──────────────────────────────────────
 
 const ETAPA_ORDER = ['juridica', 'sig_i', 'campo', 'sig_ii', 'plan', 'juridica_ii', 'ejecucion', 'archivado'] as const
+// Un tono de la marca por etapa. No usar familias de Tailwind aquí: están
+// remapeadas (app/globals.css) y varias caen en el mismo color.
 const ETAPA_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  juridica:    { label: 'Jurídica',    bg: 'bg-teal-50',    text: 'text-teal-700',    dot: 'bg-teal-500' },
-  sig_i:       { label: 'SIG I',       bg: 'bg-sky-50',     text: 'text-sky-700',     dot: 'bg-sky-500' },
-  campo:       { label: 'Campo',       bg: 'bg-amber-50',   text: 'text-amber-700',   dot: 'bg-amber-500' },
-  sig_ii:      { label: 'SIG II',      bg: 'bg-indigo-50',  text: 'text-indigo-700',  dot: 'bg-indigo-500' },
-  plan:        { label: 'Plan',        bg: 'bg-violet-50',  text: 'text-violet-700',  dot: 'bg-violet-500' },
-  juridica_ii: { label: 'Jurídica II', bg: 'bg-cyan-50',    text: 'text-cyan-700',    dot: 'bg-cyan-500' },
-  ejecucion:   { label: 'Ejecución',   bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-  archivado:   { label: 'Archivado',   bg: 'bg-stone-100',  text: 'text-stone-500',   dot: 'bg-stone-400' },
+  juridica:    { label: 'Jurídica',    bg: 'bg-bosque/10',  text: 'text-bosque',     dot: 'bg-bosque' },
+  sig_i:       { label: 'SIG I',       bg: 'bg-pizarra/10', text: 'text-pizarra',    dot: 'bg-pizarra' },
+  campo:       { label: 'Campo',       bg: 'bg-ambar/15',   text: 'text-amber-800',  dot: 'bg-ambar' },
+  sig_ii:      { label: 'SIG II',      bg: 'bg-cielo/15',   text: 'text-sky-800',    dot: 'bg-cielo' },
+  plan:        { label: 'Plan',        bg: 'bg-musgo/15',   text: 'text-violet-700', dot: 'bg-musgo' },
+  juridica_ii: { label: 'Jurídica II', bg: 'bg-marron/10',  text: 'text-marron',     dot: 'bg-marron' },
+  ejecucion:   { label: 'Ejecución',   bg: 'bg-oliva/10',   text: 'text-oliva',      dot: 'bg-oliva' },
+  archivado:   { label: 'Archivado',   bg: 'bg-stone-100',  text: 'text-stone-500',  dot: 'bg-taupe' },
 }
 const etapaLabel = (e: string | null) => (e && ETAPA_CONFIG[e]?.label) || '— sin expediente'
 
@@ -134,35 +137,19 @@ export default function ExpedientesPage() {
   const hayFiltros = busqueda || fEtapa || fDD || fSemaforo || fMunicipio || fLinea
   const limpiar = () => { setBusqueda(''); setFEtapa(''); setFDD(''); setFSemaforo(''); setFMunicipio(''); setFLinea('') }
 
-  if (!authReady) {
-    return <div className="min-h-screen flex items-center justify-center bg-stone-50"><Loader2 className="animate-spin text-stone-400" size={32} /></div>
-  }
+  if (!authReady) return <Cargando texto="Cargando el tablero de predios…" />
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      {/* Header */}
-      <div className="bg-white border-b border-stone-100 px-6 py-5">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Link href="/intranet/juridica" className="text-stone-400 hover:text-stone-700 transition-colors">
-              <ArrowLeft size={20} />
-            </Link>
-            <LayoutGrid size={18} className="text-teal-600" />
-            <div>
-              <h1 className="text-xl font-black text-stone-900">Tablero de predios</h1>
-              <p className="text-sm text-stone-400">¿En qué etapa va cada predio?</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/intranet/sig" className="flex items-center gap-2 px-4 py-2 border border-stone-200 text-stone-600 rounded-xl font-bold text-sm hover:border-teal-400 hover:text-teal-700 transition-colors">
-              <MapIcon size={16} /> Módulo SIG
-            </Link>
-            <span className="text-sm font-bold text-stone-500">{rows.length} predios</span>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-papel">
+      <Cabecera
+        volver={{ href: '/intranet/juridica', label: 'Jurídica' }}
+        modulo="Expedientes"
+        titulo="Tablero de predios"
+        descripcion={`¿En qué etapa va cada predio? ${rows.length} predios en el sistema.`}
+        acciones={<Boton variante="claro" href="/intranet/sig" icono={<MapIcon size={14} />}>Módulo SIG</Boton>}
+      />
 
-      <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+      <div className="max-w-6xl mx-auto px-6 sm:px-10 py-10 space-y-6">
         {/* Resumen por etapa (clic para filtrar) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
           {ETAPA_ORDER.map((e) => {

@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { Geometry } from 'geojson'
+import { COLOR_CAMPO } from '@/lib/colores-campo'
 
 /** Una capa del mapa de campo, ya clasificada por quien la dibuja. */
 export interface CapaCampo {
@@ -14,14 +15,16 @@ export interface CapaCampo {
 }
 
 // Mismos colores que usa el técnico en la app de campo, para que la oficina y
-// el terreno estén viendo literalmente lo mismo.
+// el terreno estén viendo literalmente lo mismo. Viven en lib/colores-campo.ts
+// para que las leyendas lean de la misma fuente y no se desalineen del mapa.
+const C = COLOR_CAMPO
 const ESTILOS: Record<CapaCampo['tipo'], L.PathOptions> = {
-  finca:       { color: '#57534e', weight: 2, dashArray: '6 4', fill: false },
-  antes:       { color: '#6b7280', weight: 2, dashArray: '3 5', fillColor: '#6b7280', fillOpacity: 0.15 },
-  confirmada:  { color: '#10b981', weight: 3, fillColor: '#10b981', fillOpacity: 0.2 },
-  modificada:  { color: '#3b82f6', weight: 3, fillColor: '#3b82f6', fillOpacity: 0.25 },
-  nueva:       { color: '#14b8a6', weight: 3, fillColor: '#14b8a6', fillOpacity: 0.25 },
-  descartada:  { color: '#ef4444', weight: 2, dashArray: '4 6', fillColor: '#ef4444', fillOpacity: 0.08 },
+  finca:       { color: C.finca, weight: 2, dashArray: '6 4', fill: false },
+  antes:       { color: C.antes, weight: 2, dashArray: '3 5', fillColor: C.antes, fillOpacity: 0.15 },
+  confirmada:  { color: C.confirmada, weight: 3, fillColor: C.confirmada, fillOpacity: 0.2 },
+  modificada:  { color: C.modificada, weight: 3, fillColor: C.modificada, fillOpacity: 0.25 },
+  nueva:       { color: C.nueva, weight: 3, fillColor: C.nueva, fillOpacity: 0.25 },
+  descartada:  { color: C.descartada, weight: 2, dashArray: '4 6', fillColor: C.descartada, fillOpacity: 0.08 },
 }
 
 interface Props {

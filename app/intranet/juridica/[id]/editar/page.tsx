@@ -5,7 +5,10 @@ import { useForm, type FieldErrors } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { supabase } from '@/lib/supabase'
 import { aliadoSchema, ETIQUETAS_ALIADO, type AliadoForm, type Aliado } from '@/lib/juridica-schema'
-import { Shield, ArrowLeft, Loader2, Upload, X, ExternalLink } from 'lucide-react'
+import {
+  Loader2, Upload, X, ExternalLink,
+} from 'lucide-react'
+import { Cabecera, Cargando } from '@/app/components/marca'
 import Link from 'next/link'
 import { MUNICIPIOS_CAQUETA, VEREDAS_POR_MUNICIPIO, normalizarMunicipio, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
 import { parsearRespuestaGuardado, mensajeDocumentosFallidos } from '@/lib/fetch-guardar'
@@ -206,27 +209,23 @@ export default function EditarAliadoPage() {
   }
 
   if (!authReady || loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-stone-50"><Loader2 className="animate-spin text-stone-400" size={32} /></div>
+    return <Cargando texto="Cargando la HOJA 1…" />
   }
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <div className="bg-white border-b border-stone-100 px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <Link href={`/intranet/juridica/${id}`} className="text-stone-400 hover:text-stone-700 transition-colors">
-            <ArrowLeft size={20} />
-          </Link>
-          <Shield size={18} className="text-teal-600" />
-          <div>
-            <h1 className="text-lg font-black text-stone-900">Editar HOJA 1</h1>
-            {aliado && <p className="text-xs text-stone-400">{aliado.nombre_completo}</p>}
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-papel">
+      <Cabecera
+        compacta
+        ancho="formulario"
+        volver={{ href: `/intranet/juridica/${id}`, label: 'Aliado' }}
+        modulo="Módulo jurídico · HOJA 1"
+        titulo="Editar HOJA 1"
+        descripcion={aliado?.nombre_completo}
+      />
 
       {/* noValidate: valida solo zod. La validación nativa del navegador bloqueaba
           el envío con un globo propio al escribir "25,5" o "2.024". */}
-      <form noValidate onSubmit={handleSubmit(onSubmit, onInvalid)} className="max-w-2xl mx-auto px-6 py-8 space-y-8">
+      <form noValidate onSubmit={handleSubmit(onSubmit, onInvalid)} className="max-w-2xl mx-auto px-6 sm:px-10 py-10 space-y-8">
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Proyecto y origen</h2>
           <SelectParametro

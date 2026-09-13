@@ -9,20 +9,19 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { MARCA } from '@/lib/expediente-formato'
 import type { Pulso } from '@/app/api/sistema/pulso/route'
-import { TIPOGRAFIA } from './piezas'
-import { MapaSistema } from './mapa-vista'
-import { ArrowLeft, BookOpen, Loader2, RotateCcw } from 'lucide-react'
+import { Boton, Cabecera, Cargando, Pestanas } from '@/app/components/marca'
+import { MapaSistema, type Vista } from './mapa-vista'
+import { BookOpen, Crosshair, LayoutGrid, RotateCcw } from 'lucide-react'
 
 export default function SistemaPage() {
   const router = useRouter()
   const [autorizado, setAutorizado] = useState(false)
   const [pulso, setPulso] = useState<Pulso | null>(null)
   const [errorPulso, setErrorPulso] = useState<string | null>(null)
+  const [vista, setVista] = useState<Vista>('explorar')
 
   const medir = useCallback(async () => {
     try {
@@ -47,79 +46,49 @@ export default function SistemaPage() {
     })
   }, [router, medir])
 
-  if (!autorizado) {
-    return (
-      <div className="min-h-screen grid place-items-center" style={{ background: MARCA.papel }}>
-        <Loader2 className="animate-spin" size={24} style={{ color: MARCA.bosque }} />
-      </div>
-    )
-  }
+  if (!autorizado) return <Cargando texto="Cargando el mapa del sistema…" />
 
-  return (
-    <div className="min-h-screen" style={{ background: MARCA.papel, fontFamily: TIPOGRAFIA.cuerpo }}>
-      <Encabezado pulso={pulso} error={errorPulso} onRemedir={() => void medir()} />
-
-      <main className="mx-auto max-w-[1500px] px-6 pb-24">
-        <MapaSistema pulso={pulso} />
-      </main>
-    </div>
-  )
-}
-
-// ─── Encabezado ───────────────────────────────────────────────────────────────
-
-function Encabezado({
-  pulso, error, onRemedir,
-}: { pulso: Pulso | null; error: string | null; onRemedir: () => void }) {
   const hora = pulso
     ? new Date(pulso.medido).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
     : null
 
   return (
-    <header
-      className="sticky top-0 z-30 border-b backdrop-blur"
-      style={{ borderColor: '#ddd5c7', background: 'rgba(244,241,234,.92)' }}
-    >
-      <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-5 gap-y-2 px-6 py-3">
-        <Link
-          href="/intranet"
-          className="flex items-center gap-1.5 text-[12px] transition-opacity hover:opacity-60"
-          style={{ color: '#6f675c' }}
-        >
-          <ArrowLeft size={15} /> Intranet
-        </Link>
-
-        <h1
-          className="text-[19px]"
-          style={{ fontFamily: TIPOGRAFIA.titulo, fontWeight: 600, color: MARCA.tinta }}
-        >
-          El sistema
-        </h1>
-
-        <div className="ml-auto flex items-center gap-4">
-          {error ? (
-            <span className="text-[11px]" style={{ color: MARCA.marron }}>{error}</span>
+    <div className={`min-h-screen ${vista === 'explorar' ? 'bg-tinta' : 'bg-papel'}`}>
+      <Cabecera
+        ancho="completo"
+        compacta
+        volver={{ href: '/intranet', label: 'Intranet' }}
+        modulo="Tecnología"
+        titulo="El sistema"
+        descripcion="Cada tarjeta es una parte del sistema. Explora una a la vez o compara varias para ver qué comparten."
+        pie={<Pestanas tono="oscuro" items={[
+          {
+            id: 'explorar', label: 'Explorar', icono: <Crosshair size={13} />,
+            activa: vista === 'explorar', onClick: () => setVista('explorar'),
+          },
+          {
+            id: 'comparar', label: 'Comparar', icono: <LayoutGrid size={13} />,
+            activa: vista === 'comparar', onClick: () => setVista('comparar'),
+          },
+        ]} />}
+        acciones={<>
+          {errorPulso ? (
+            <span className="text-[11px] text-red-300">{errorPulso}</span>
           ) : (
-            <button
-              onClick={onRemedir}
-              className="flex items-center gap-1.5 text-[11px] transition-opacity hover:opacity-60"
-              style={{ color: '#8b8375' }}
-              title="Volver a leer las cifras de la base"
-            >
-              <RotateCcw size={12} />
-              {hora ? `cifras leídas a las ${hora}` : 'leyendo cifras…'}
-            </button>
+            <Boton variante="claro" onClick={() => void medir()} icono={<RotateCcw size={13} />}
+              title="Volver a leer las cifras de la base">
+              {hora ? `Cifras de las ${hora}` : 'Leyendo cifras…'}
+            </Boton>
           )}
+          <Boton variante="luz" href="/intranet/sistema/documentacion" icono={<BookOpen size={14} />}>
+            Documentación
+          </Boton>
+        </>}
+      />
 
-          <Link
-            href="/intranet/sistema/documentacion"
-            className="flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[12px] transition-opacity hover:opacity-85"
-            style={{ background: MARCA.bosque, color: MARCA.papel, fontFamily: TIPOGRAFIA.titulo, fontWeight: 600 }}
-          >
-            <BookOpen size={14} /> Documentación
-          </Link>
-        </div>
-      </div>
-    </header>
+      <main>
+        <MapaSistema pulso={pulso} vista={vista} />
+      </main>
+    </div>
   )
 }

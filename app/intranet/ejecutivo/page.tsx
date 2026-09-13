@@ -4,14 +4,13 @@ import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  ArrowLeft, Loader2, Plus, Trash2, CalendarDays,
-  Clock, CheckCircle2, XCircle, Search, ChevronRight,
-  X, Users, BookOpen, Briefcase, User, Lock, CheckCheck,
-  Ticket,
+  ArrowLeft, Loader2, Plus, Trash2, CalendarDays, Clock, CheckCircle2, XCircle, Search,
+  ChevronRight, X, Users, Briefcase, User, Lock, CheckCheck, Ticket,
 } from 'lucide-react'
+import { Cargando, Firma } from '@/app/components/marca'
 import type { IntranetUser, SesionConPersona, Indicacion, EstadoIndicacion } from '@/lib/types'
 
-const PRIMARY = '#0d7377'
+const PRIMARY = '#2f3f32'
 
 const BORDE_EJECUTIVO: Record<string, string> = {
   pendiente: 'border-l-amber-300',
@@ -701,7 +700,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 function inputCls() {
-  return 'w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#0d7377]/40 focus:border-[#0d7377] transition-colors'
+  return 'w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#2f3f32]/40 focus:border-[#2f3f32] transition-colors'
 }
 
 function labelCls() {
@@ -892,34 +891,29 @@ export default function EjecutivoPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
-  if (!ready) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-stone-400" />
-      </div>
-    )
-  }
+  if (!ready) return <Cargando texto="Cargando el panel ejecutivo…" />
 
   const indicacionModalTitle = indicacionModal?.bloque === 'colaborador'
     ? 'Agregar tarea — Colaborador'
     : 'Agregar tarea — Ejecutivo'
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col">
+    <div className="min-h-screen bg-papel flex flex-col">
 
-      {/* Header */}
-      <header className="bg-white border-b border-stone-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
+      {/* Cabecera: banda fina en tinta, fija arriba. Es fina a propósito:
+          la barra lateral de personas se ancla justo debajo (top-14). */}
+      <header className="bg-tinta text-hueso sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
           <button
             onClick={() => router.push('/intranet')}
-            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+            className="flex items-center gap-2 text-[10px] uppercase tracking-[.2em] text-taupe transition-opacity hover:opacity-70"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={13} /> <span className="hidden sm:inline">Intranet</span>
           </button>
-          <div className="w-px h-5 bg-stone-200" />
-          <BookOpen size={16} style={{ color: PRIMARY }} />
-          <span className="font-bold text-stone-900 text-sm">Panel Ejecutivo</span>
-          <span className="text-stone-300 text-xs ml-1">— Seguimiento de Sesiones</span>
+          <div className="w-px h-5 bg-hueso/20" />
+          <span className="font-display text-[15px] font-semibold text-white">Panel ejecutivo</span>
+          <span className="hidden text-[10px] uppercase tracking-[.2em] text-taupe sm:inline">Seguimiento de sesiones</span>
+          <Firma className="ml-auto" />
         </div>
       </header>
 
@@ -939,7 +933,7 @@ export default function EjecutivoPage() {
                 placeholder="Buscar..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-[#0d7377]/40 focus:border-[#0d7377] transition-colors"
+                className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-stone-200 focus:outline-none focus:ring-2 focus:ring-[#2f3f32]/40 focus:border-[#2f3f32] transition-colors"
               />
             </div>
           </div>
@@ -954,7 +948,7 @@ export default function EjecutivoPage() {
                   onClick={() => handleSelectUser(user)}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-l-2 ${
                     isSelected
-                      ? 'border-l-[#0d7377] bg-[#0d7377]/5'
+                      ? 'border-l-[#2f3f32] bg-[#2f3f32]/5'
                       : 'border-l-transparent hover:bg-stone-50'
                   }`}
                 >
@@ -970,7 +964,7 @@ export default function EjecutivoPage() {
                         {user.full_name ?? user.email}
                       </p>
                       {isMe && (
-                        <span className="text-[10px] bg-[#0d7377]/10 text-[#0d7377] px-1.5 py-0.5 rounded-full font-bold shrink-0">
+                        <span className="text-[10px] bg-[#2f3f32]/10 text-[#2f3f32] px-1.5 py-0.5 rounded-full font-bold shrink-0">
                           Yo
                         </span>
                       )}
@@ -992,7 +986,7 @@ export default function EjecutivoPage() {
           {/* Selector móvil */}
           <div className="lg:hidden mb-4">
             <select
-              className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#0d7377]/40"
+              className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#2f3f32]/40"
               value={selectedUser?.id ?? ''}
               onChange={e => {
                 const user = users.find(u => u.id === e.target.value)
@@ -1030,7 +1024,7 @@ export default function EjecutivoPage() {
                         {selectedUser.full_name ?? selectedUser.email}
                       </h2>
                       {selectedUser.id === myProfileId && (
-                        <span className="text-[11px] bg-[#0d7377]/10 text-[#0d7377] px-2 py-0.5 rounded-full font-bold">
+                        <span className="text-[11px] bg-[#2f3f32]/10 text-[#2f3f32] px-2 py-0.5 rounded-full font-bold">
                           Yo
                         </span>
                       )}
@@ -1061,7 +1055,7 @@ export default function EjecutivoPage() {
                     onClick={() => setActiveTab(tab)}
                     className={`pb-3 px-3 text-sm font-bold border-b-2 transition-colors capitalize ${
                       activeTab === tab
-                        ? 'border-[#0d7377] text-[#0d7377]'
+                        ? 'border-[#2f3f32] text-[#2f3f32]'
                         : 'border-transparent text-stone-400 hover:text-stone-700'
                     }`}
                   >
@@ -1135,7 +1129,7 @@ export default function EjecutivoPage() {
                 </div>
                 {selectedUser.full_name ?? selectedUser.email}
                 {selectedUser.id === myProfileId && (
-                  <span className="text-[10px] bg-[#0d7377]/10 text-[#0d7377] px-1.5 py-0.5 rounded-full font-bold ml-1">Yo</span>
+                  <span className="text-[10px] bg-[#2f3f32]/10 text-[#2f3f32] px-1.5 py-0.5 rounded-full font-bold ml-1">Yo</span>
                 )}
               </div>
             </div>

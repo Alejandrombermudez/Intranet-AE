@@ -11,6 +11,7 @@ import {
   TreePine, BarChart3, MapPinned, AlertTriangle,
   ScrollText, Trash2, Upload, Download,
 } from 'lucide-react'
+import { Boton, Cargando, Firma } from '@/app/components/marca'
 import {
   fetchArbolesPorFamilia, fetchIndicadoresPorFamilia, cambiarFotoArbol,
   type ArbolSemillero, type IndicadoresPredio,
@@ -33,7 +34,7 @@ const MapaArboles = dynamic(() => import('@/app/components/MapaArboles'), {
   ),
 })
 
-const PRIMARY = '#0d7377'
+const PRIMARY = '#2f3f32'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -292,9 +293,7 @@ export default function ConservacionDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 size={36} className="animate-spin" style={{ color: PRIMARY }} />
-      </div>
+      <Cargando texto="Cargando la familia…" />
     )
   }
 
@@ -326,55 +325,48 @@ export default function ConservacionDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-primary-50 to-stone-100">
+    <div className="min-h-screen bg-papel">
 
-      {/* Header */}
-      <header className="relative border-b border-stone-200 shadow-md overflow-hidden">
-        {fotoFamilia ? (
+      <header className="relative overflow-hidden bg-tinta text-hueso">
+        {fotoFamilia && (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={fotoFamilia} alt="" className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/10" />
+            <img src={fotoFamilia} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            {/* Velo en tinta, como la portada: deja leer el título sobre cualquier foto. */}
+            <div className="absolute inset-0 bg-gradient-to-t from-tinta/90 via-tinta/45 to-tinta/20" />
           </>
-        ) : (
-          <div className="absolute inset-0 bg-white" />
         )}
-        <div className={`relative w-full lg:w-[85%] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-0 ${fotoFamilia ? 'py-10 sm:py-16' : 'py-5'}`}>
-          <div className="flex items-center justify-between gap-4">
+        <div className={`relative w-full lg:w-[85%] max-w-[1600px] mx-auto px-6 sm:px-10 lg:px-0 ${fotoFamilia ? 'pt-8 pb-10 sm:pb-14' : 'pt-8 pb-9'}`}>
+          <div className="mb-9 flex items-center justify-between gap-6">
             <Link href="/intranet/ras/conservacion"
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 font-bold text-sm transition-all shrink-0 ${
-                fotoFamilia
-                  ? 'border-white/40 text-white hover:bg-white/15'
-                  : 'border-stone-200 text-stone-600 hover:border-primary hover:text-primary hover:bg-primary/5'
-              }`}>
-              <ArrowLeft size={16} />
-              <span className="hidden sm:block">Conservación</span>
+              className="flex items-center gap-2 text-[10px] uppercase tracking-[.2em] text-taupe transition-opacity hover:opacity-70">
+              <ArrowLeft size={13} /> Conservación
             </Link>
-            <div className="text-center flex-1 min-w-0">
-              <div className="inline-flex items-center gap-2 max-w-full">
-                <ShieldCheck size={18} style={{ color: fotoFamilia ? '#fff' : PRIMARY }} />
-                <h1 className={`text-xl font-black truncate max-w-xs ${fotoFamilia ? 'text-white drop-shadow' : 'text-stone-900'}`}>
-                  {familia.nombre_propietario}
-                </h1>
-              </div>
+            <Firma />
+          </div>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <p className="mb-3.5 text-[10.5px] uppercase tracking-[.28em] text-taupe">Familia en conservación</p>
+              <h1 className="font-display text-[2.1rem] font-bold leading-[1.02] text-white text-balance sm:text-5xl">
+                {familia.nombre_propietario}
+              </h1>
               {familia.nombre_finca && (
-                <p className={`text-xs mt-0.5 truncate ${fotoFamilia ? 'text-white/85' : 'text-stone-500'}`}>{familia.nombre_finca}</p>
+                <p className="mt-3 text-sm font-light text-hueso/90">{familia.nombre_finca}</p>
               )}
               {fotoFamilia && !fotoFamiliaEsReal && (
-                <p className="text-[10px] mt-1 text-white/60">Foto de muestra del catálogo — aún sin foto propia</p>
+                <p className="mt-2 text-[10px] uppercase tracking-[.16em] text-hueso/55">
+                  Foto de muestra del catálogo — aún sin foto propia
+                </p>
               )}
             </div>
-            <Link href={`/intranet/ras/conservacion/${id}/editar`}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shrink-0 shadow-sm hover:shadow-md transition-all"
-              style={{ backgroundColor: PRIMARY }}>
-              <Pencil size={15} />
-              <span className="hidden sm:block">Editar</span>
-            </Link>
+            <Boton variante="luz" href={`/intranet/ras/conservacion/${id}/editar`} icono={<Pencil size={14} />}>
+              Editar
+            </Boton>
           </div>
         </div>
       </header>
 
-      <main className="w-full lg:w-[85%] max-w-[1600px] mx-auto px-4 py-8 sm:px-6 lg:px-0 space-y-8">
+      <main className="w-full lg:w-[85%] max-w-[1600px] mx-auto px-6 py-10 sm:px-10 lg:px-0 space-y-8">
 
         {/* ── Mapa de la Red de Árboles Semilleros + ficha del árbol seleccionado ── */}
         <section className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
