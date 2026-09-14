@@ -3,11 +3,11 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { type Antecedente } from '@/lib/juridica-schema'
+import { type Antecedente, hoja3Habilitada } from '@/lib/juridica-schema'
 import { parsearRespuestaGuardado, mensajeDocumentosFallidos } from '@/lib/fetch-guardar'
 import { comprimirAdjuntos, avisoPeso, formatearBytes } from '@/lib/comprimir-imagen'
 import {
-  Loader2, Upload, X, ExternalLink, CheckCircle2, XCircle, HelpCircle,
+  Loader2, Upload, X, ExternalLink, CheckCircle2, XCircle, HelpCircle, AlertCircle,
 } from 'lucide-react'
 import { Cabecera, Cargando } from '@/app/components/marca'
 
@@ -136,6 +136,9 @@ export default function AntecedentesPage() {
   const [notaCompresion, setNotaCompresion] = useState<string | null>(null)
   const [error, setError]         = useState<string | null>(null)
   const [aliadoNombre, setAliadoNombre] = useState('')
+  // HOJA 3: se abre cuando el análisis del folio (HOJA 2) tiene semáforo que no
+  // sea rojo. 'pendiente' = aún sin semáforo; 'rojo' = el predio no procede.
+  const [bloqueo, setBloqueo] = useState<null | 'pendiente' | 'rojo'>(null)
 
   // Valores de cada lista
   const [listas, setListas]   = useState<BooleanState>({})
@@ -167,6 +170,12 @@ export default function AntecedentesPage() {
       .then((data) => {
         setAliadoNombre(data.nombre_completo)
         const ant: Antecedente | null = data.antecedentes
+        const semaforo: string | null = data.analisis_juridico?.semaforo ?? null
+        if (!hoja3Habilitada(semaforo, !!ant)) {
+          setBloqueo(semaforo === 'rojo' ? 'rojo' : 'pendiente')
+          setLoading(false)
+          return
+        }
         if (ant) {
           const initialListas: BooleanState = {}
           const allListas = [...LISTAS_NACIONALES, ...LISTAS_INTERNACIONALES]
@@ -261,21 +270,57 @@ export default function AntecedentesPage() {
     return <Cargando texto="Cargando los antecedentes…" />
   }
 
+  const cabecera = (
+    <Cabecera
+      compacta
+      ancho="ficha"
+      volver={{ href: `/intranet/juridica/${id}`, label: 'Aliado' }}
+      modulo="Módulo jurídico · HOJA 3"
+      titulo="Antecedentes"
+      descripcion={aliadoNombre}
+      acciones={banderas > 0 ? (
+        <span className="bg-red-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[.14em] text-red-700">
+          {banderas} {banderas === 1 ? 'bandera' : 'banderas'}
+        </span>
+      ) : undefined}
+    />
+  )
+
+  if (bloqueo) {
+    return (
+      <div className="min-h-screen bg-papel">
+        {cabecera}
+        <div className="max-w-3xl mx-auto px-6 sm:px-10 py-10">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-3">
+            <AlertCircle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              {bloqueo === 'rojo' ? (<>
+                <p className="font-bold text-amber-800 mb-1">El folio quedó en rojo</p>
+                <p className="text-sm text-amber-700">
+                  El análisis jurídico (HOJA 2) dice que el predio no procede, así que no hace falta revisar los
+                  antecedentes del propietario. Si el semáforo cambia, esta hoja se abre sola.
+                </p>
+              </>) : (<>
+                <p className="font-bold text-amber-800 mb-1">Primero el análisis jurídico (HOJA 2)</p>
+                <p className="text-sm text-amber-700">
+                  Los antecedentes se revisan cuando el folio tiene semáforo verde, amarillo o naranja: si el
+                  predio no tiene títulos sanos, no vale la pena consultar las 14 listas.
+                </p>
+              </>)}
+              <Link href={`/intranet/juridica/${id}/analisis-juridico`}
+                className="mt-3 inline-block text-sm font-bold text-amber-700 hover:underline">
+                Ir a HOJA 2 →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-papel">
-      <Cabecera
-        compacta
-        ancho="ficha"
-        volver={{ href: `/intranet/juridica/${id}`, label: 'Aliado' }}
-        modulo="Módulo jurídico · HOJA 2"
-        titulo="Antecedentes"
-        descripcion={aliadoNombre}
-        acciones={banderas > 0 ? (
-          <span className="bg-red-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[.14em] text-red-700">
-            {banderas} {banderas === 1 ? 'bandera' : 'banderas'}
-          </span>
-        ) : undefined}
-      />
+      {cabecera}
 
       <div className="max-w-3xl mx-auto px-6 sm:px-10 py-10 space-y-6">
         {/* Leyenda */}
@@ -342,7 +387,9 @@ export default function AntecedentesPage() {
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-3">
           <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Veredicto final</h2>
           <p className="text-xs text-stone-500">
-            ¿El aliado pasa la revisión de antecedentes y puede continuar al análisis jurídico del folio?
+            ¿El propietario pasa la revisión de antecedentes? Es el último paso de la debida diligencia: con el
+            folio en verde o amarillo, aprobarlo deja el caso Aprobado. Los antecedentes son de la persona, así
+            que el veredicto aplica a todos sus predios.
           </p>
           <div className="flex gap-3">
             {[
@@ -357,7 +404,7 @@ export default function AntecedentesPage() {
           </div>
           {aprobado === false && (
             <p className="text-xs text-red-600 font-medium">
-              El aliado quedará en estado <strong>Rechazado</strong> y no podrá continuar al módulo de siembra.
+              El aliado quedará en estado <strong>Rechazado</strong> —en todos sus predios— y no podrá continuar al módulo de siembra.
             </p>
           )}
         </section>

@@ -22,6 +22,7 @@
 | **Separar los predios por proyecto y por fuente de información** | Sin esto no se puede decir qué predios responden a Conexión Biodiversa y cuáles a Ley del Árbol, ni de dónde salió cada uno (socialización veredal/comunitaria, un aliado como Lácteos del Hogar) | `core.predios.tipo_proyecto` + `.fuente_informacion` (FK a `catalogo.proyectos` / `catalogo.fuentes_informacion`, ampliables desde HOJA 1 con «+ Agregar»); filtro por proyecto en el listado de jurídica | ✅ (2026-09-08) · SQL corrido y verificado por REST |
 | Clasificar los 111 predios que ya existen | El campo nace vacío para todo lo cargado antes; hasta clasificarlos, filtrar por proyecto no sirve | Filtro «Sin proyecto asignado» en `/intranet/juridica` para trabajarlos; UPDATEs masivos comentados en el BLOQUE 9 de la migración | 🆕 (2026-09-08) |
 | Llevar el proyecto a las demás dependencias | El dato ya vive en `core.predios` (lo ven todos), pero SIG, campo, vivero y reportes todavía no lo muestran ni filtran por él | `/intranet/sig`, `/intranet/expedientes`, `/api/reporte/predios`, GeoAE | 🆕 (2026-09-08) |
+| **Invertir el orden: análisis jurídico en HOJA 2, antecedentes en HOJA 3** | El folio es el filtro barato: con semáforo rojo no vale la pena consultar las 14 listas del dueño | Rutas y pantallas de jurídica; el estado de la DD pasa a derivarse de las dos hojas (`derivarEstadoDD`) con el estado nuevo `analisis_ok`; guardar antecedentes recalcula todos los predios de la persona | ✅ (2026-09-14) · SQL corrido y verificado por REST |
 
 ## Vivero
 

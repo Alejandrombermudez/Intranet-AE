@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 import {
   type Aliado, type EstadoAliado, type Semaforo,
-  ESTADO_CONFIG, SEMAFORO_CONFIG, H1_CAMPOS_CLAVE,
+  ESTADO_CONFIG, ESTADOS_FLUJO, SEMAFORO_CONFIG, H1_CAMPOS_CLAVE, hoja3Habilitada,
 } from '@/lib/juridica-schema'
 import {
   Plus, Search, Filter, ChevronRight, Loader2, Shield, LayoutGrid,
@@ -15,10 +15,15 @@ import { fetchParametros, nombreParametro, type Parametro } from '@/lib/parametr
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function stepFromEstado(estado: EstadoAliado): number {
-  if (estado === 'borrador') return 1
-  if (estado === 'antecedentes_ok') return 2
-  return 3
+/** HOJA 2 = análisis del folio: hecha cuando tiene semáforo. */
+function h2Hecha(a: Aliado): boolean {
+  return !!a.analisis_juridico?.semaforo
+}
+
+/** HOJA 3 = antecedentes: pendiente solo si ya se puede hacer y falta el veredicto. */
+function h3Pendiente(a: Aliado): boolean {
+  const semaforo = a.analisis_juridico?.semaforo ?? null
+  return hoja3Habilitada(semaforo, !!a.antecedentes) && (a.antecedentes?.aprobado ?? null) === null
 }
 
 function h1Completitud(a: Aliado): { hechos: number; total: number } {
@@ -33,28 +38,34 @@ function formatFecha(iso: string) {
 
 // ─── Stepper pequeño ──────────────────────────────────────────────────────────
 
-function MiniStepper({ estado }: { estado: EstadoAliado }) {
-  const step = stepFromEstado(estado)
-  const rechazado = estado === 'rechazado'
-  const labels = ['HOJA 1', 'HOJA 2', 'HOJA 3']
+// Mismo criterio que el stepper del detalle: el avance sale de las hojas, no
+// del estado derivado. HOJA 1 siempre existe; HOJA 2 = análisis (semáforo);
+// HOJA 3 = antecedentes (veredicto). En rojo la hoja que rechazó.
+function MiniStepper({ aliado }: { aliado: Aliado }) {
+  const semaforo  = aliado.analisis_juridico?.semaforo ?? null
+  const veredicto = aliado.antecedentes?.aprobado ?? null
+  const hojas = [
+    { label: 'HOJA 1', done: true,              rojo: false },
+    { label: 'HOJA 2', done: semaforo !== null,  rojo: semaforo === 'rojo' },
+    { label: 'HOJA 3', done: veredicto !== null, rojo: veredicto === false },
+  ]
+  const activa = hojas.findIndex((h) => !h.done)
 
   return (
     <div className="flex items-center gap-1">
-      {labels.map((label, i) => {
-        const done   = i + 1 < step || (i + 1 === 3 && (estado === 'juridico_ok' || estado === 'aprobado' || estado === 'rechazado'))
-        const active = i + 1 === step && !done
-        const dotClass = rechazado && i + 1 === step
+      {hojas.map((h, i) => {
+        const dotClass = h.rojo
           ? 'bg-red-400'
-          : done
+          : h.done
             ? 'bg-teal-400'
-            : active
+            : i === activa
               ? 'bg-amber-400'
               : 'bg-stone-200'
         return (
-          <div key={label} className="flex items-center gap-1">
+          <div key={h.label} className="flex items-center gap-1">
             <div className="flex flex-col items-center gap-0.5">
               <div className={`w-2 h-2 rounded-full ${dotClass}`} />
-              <span className="text-[9px] text-stone-400 font-medium">{label}</span>
+              <span className="text-[9px] text-stone-400 font-medium">{h.label}</span>
             </div>
             {i < 2 && <div className="w-4 h-px bg-stone-200 mb-3" />}
           </div>
@@ -138,7 +149,7 @@ function AliadoCard({ aliado, prediosDelPropietario, proyecto }: {
       </div>
 
       <div className="flex items-center justify-between">
-        <MiniStepper estado={aliado.estado} />
+        <MiniStepper aliado={aliado} />
         <Link
           href={`/intranet/juridica/${aliado.id}`}
           className="flex items-center gap-0.5 text-[11px] font-bold text-stone-500 hover:text-stone-800 transition-colors"
@@ -228,9 +239,9 @@ export default function JuridicaPage() {
     if (filtro === 'pendiente_h1') {
       list = list.filter((a) => h1Completitud(a).hechos < H1_CAMPOS_CLAVE.length)
     } else if (filtro === 'pendiente_h2') {
-      list = list.filter((a) => !a.antecedentes)
+      list = list.filter((a) => !h2Hecha(a))
     } else if (filtro === 'pendiente_h3') {
-      list = list.filter((a) => a.estado === 'antecedentes_ok' && !a.analisis_juridico)
+      list = list.filter(h3Pendiente)
     } else if (filtro === 'requiere_revision') {
       list = list.filter((a) => a.estado === 'juridico_ok')
     } else if (filtro !== 'todos') {
@@ -243,7 +254,7 @@ export default function JuridicaPage() {
   const stats = useMemo(() => ({
     total:     aliados.length,
     aprobados: aliados.filter((a) => a.estado === 'aprobado').length,
-    pendientes: aliados.filter((a) => ['borrador', 'antecedentes_ok', 'juridico_ok'].includes(a.estado)).length,
+    pendientes: aliados.filter((a) => ['borrador', 'analisis_ok', 'antecedentes_ok', 'juridico_ok'].includes(a.estado)).length,
     rechazados: aliados.filter((a) => a.estado === 'rechazado').length,
   }), [aliados])
 
@@ -303,16 +314,14 @@ export default function JuridicaPage() {
             >
               <option value="todos">Todos</option>
               <optgroup label="Por estado">
-                <option value="borrador">Borrador (HOJA 1)</option>
-                <option value="antecedentes_ok">Antecedentes OK</option>
-                <option value="juridico_ok">Requiere revisión (naranja)</option>
-                <option value="aprobado">Aprobados</option>
-                <option value="rechazado">Rechazados</option>
+                {ESTADOS_FLUJO.map((s) => (
+                  <option key={s} value={s}>{ESTADO_CONFIG[s].label}</option>
+                ))}
               </optgroup>
               <optgroup label="Por completitud">
                 <option value="pendiente_h1">Faltan datos HOJA 1</option>
-                <option value="pendiente_h2">Pendiente HOJA 2</option>
-                <option value="pendiente_h3">Pendiente HOJA 3</option>
+                <option value="pendiente_h2">Pendiente HOJA 2 (análisis)</option>
+                <option value="pendiente_h3">Pendiente HOJA 3 (antecedentes)</option>
                 <option value="requiere_revision">Requieren revisión comité</option>
               </optgroup>
             </select>

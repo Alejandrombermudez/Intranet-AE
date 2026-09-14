@@ -300,8 +300,8 @@ export const ETAPAS: Etapa[] = [
       'propietario se acerca.',
     hace: [
       'Identifica al propietario y verifica que el predio sea suyo.',
-      'Revisa las matrículas —un solo polígono puede estar bajo varias— y los antecedentes.',
-      'Hace el análisis jurídico y le pone semáforo al predio.',
+      'Revisa las matrículas —un solo polígono puede estar bajo varias— y hace el análisis jurídico del folio: le pone semáforo al predio.',
+      'Si el folio no sale en rojo, revisa los antecedentes del propietario en listas restrictivas.',
       'Clasifica el predio por proyecto (Conexión Biodiversa, Ley del Árbol) y por cómo llegó.',
     ],
     entrega: 'Un predio con dueño verificado y semáforo, listo para que la oficina lo cartografíe.',
@@ -318,8 +318,8 @@ export const ETAPAS: Etapa[] = [
       { nombre: 'core.predios', que: 'El predio, con sus matrículas, su proyecto y de dónde salió.' },
       { nombre: 'core.expedientes', que: 'En qué etapa va cada predio. Es lo que mueve la cadena.' },
       { nombre: 'juridica.debida_diligencia', que: 'Los soportes: cédula, certificados, escrituras.' },
-      { nombre: 'juridica.antecedentes', que: 'Consultas a listas y antecedentes del propietario.' },
-      { nombre: 'juridica.analisis_juridico', que: 'El concepto de la abogada y el semáforo.' },
+      { nombre: 'juridica.analisis_juridico', que: 'El concepto de la abogada sobre el folio y el semáforo (HOJA 2).' },
+      { nombre: 'juridica.antecedentes', que: 'Consultas a listas y antecedentes del propietario (HOJA 3).' },
     ],
     pulso: ['predios_total', 'aliados_total', 'etapa_juridica'],
     pendiente:

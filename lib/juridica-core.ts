@@ -11,6 +11,7 @@
  */
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { comprimirPdf } from '@/lib/pdf-compress'
+import { derivarEstadoDD } from '@/lib/juridica-schema'
 
 type SB = ReturnType<typeof createServerSupabaseClient>
 
@@ -209,6 +210,65 @@ function ensamblar(
     antecedentes: antecedentes ?? null,
     analisis_juridico: analisis ?? null,
   }
+}
+
+/**
+ * Recalcula `juridica.debida_diligencia.estado` de uno o varios predios a partir
+ * de sus dos hojas (análisis del folio + antecedentes de la persona), con la
+ * regla de `derivarEstadoDD`. Lo llaman las dos rutas de guardado.
+ *
+ * Recibe VARIOS predios porque los antecedentes son de la persona: vetarla (o
+ * rechazarla) cambia el estado de todos sus predios, no solo del que tenía
+ * abierto la abogada. Antes solo se actualizaba ese, y los otros predios del
+ * mismo dueño quedaban en borrador con la persona ya aprobada.
+ *
+ * El expediente acompaña al rechazo en los dos sentidos, pero solo entre
+ * 'activo' y 'rechazado': nunca pisa un expediente 'archivado' o 'completado'.
+ *
+ * Devuelve el mensaje de error si alguna escritura falla (null si todo quedó bien).
+ */
+export async function recalcularEstadoDD(supabase: SB, predioIds: string[]): Promise<string | null> {
+  if (predioIds.length === 0) return null
+
+  const [{ data: predios, error: pErr }, { data: analisis }, { data: dds }] = await Promise.all([
+    supabase.schema('core').from('predios').select('id, aliado_id').in('id', predioIds),
+    supabase.schema('juridica').from('analisis_juridico').select('predio_id, semaforo').in('predio_id', predioIds),
+    supabase.schema('juridica').from('debida_diligencia').select('predio_id, estado').in('predio_id', predioIds),
+  ])
+  if (pErr) return pErr.message
+
+  const aliadoIds = [...new Set((predios ?? []).map((p) => p.aliado_id).filter(Boolean))]
+  const { data: antecedentes } = aliadoIds.length
+    ? await supabase.schema('juridica').from('antecedentes').select('aliado_id, aprobado').in('aliado_id', aliadoIds)
+    : { data: [] as { aliado_id: string; aprobado: boolean | null }[] }
+
+  const semaforoDe = new Map((analisis ?? []).map((a) => [a.predio_id, a.semaforo as string | null]))
+  const aprobadoDe = new Map((antecedentes ?? []).map((a) => [a.aliado_id, a.aprobado as boolean | null]))
+  const estadoDe   = new Map((dds ?? []).map((d) => [d.predio_id, d.estado as string]))
+
+  for (const p of predios ?? []) {
+    const nuevo = derivarEstadoDD(semaforoDe.get(p.id), aprobadoDe.get(p.aliado_id))
+
+    if (estadoDe.get(p.id) !== nuevo) {
+      const { error } = await supabase.schema('juridica').from('debida_diligencia')
+        .update({ estado: nuevo })
+        .eq('predio_id', p.id)
+      if (error) {
+        // 23514 = la BD no conoce el estado (falta la migración que agrega 'analisis_ok').
+        return error.code === '23514'
+          ? `La base de datos todavía no acepta el estado «${nuevo}»: falta correr docs/sql/migration_orden_hojas_juridica.sql.`
+          : error.message
+      }
+    }
+
+    const { error: expErr } = nuevo === 'rechazado'
+      ? await supabase.schema('core').from('expedientes')
+          .update({ estado: 'rechazado' }).eq('predio_id', p.id).eq('estado', 'activo')
+      : await supabase.schema('core').from('expedientes')
+          .update({ estado: 'activo' }).eq('predio_id', p.id).eq('estado', 'rechazado')
+    if (expErr) return expErr.message
+  }
+  return null
 }
 
 /** Un caso por predio_id, reensamblado en la forma plana de la UI. */

@@ -56,8 +56,8 @@ export default function NuevaFamiliaRedireccionada() {
           <p className="text-xs font-bold text-stone-500 uppercase tracking-wider">Flujo actual</p>
           {[
             { paso: '1', texto: 'Abogada captura datos del aliado (HOJA 1)' },
-            { paso: '2', texto: 'Revisión de antecedentes y listas (HOJA 2)' },
-            { paso: '3', texto: 'Análisis jurídico del folio (HOJA 3)' },
+            { paso: '2', texto: 'Análisis jurídico del folio (HOJA 2)' },
+            { paso: '3', texto: 'Revisión de antecedentes y listas (HOJA 3)' },
             { paso: '✓', texto: 'Semáforo verde → familia creada en Siembra' },
           ].map(({ paso, texto }) => (
             <div key={paso} className="flex items-start gap-3">

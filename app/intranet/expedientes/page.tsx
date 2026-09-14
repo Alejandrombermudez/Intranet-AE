@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 import type { ExpedienteRow } from '@/lib/expedientes'
 import {
-  ESTADO_CONFIG, SEMAFORO_CONFIG, type EstadoAliado, type Semaforo,
+  ESTADO_CONFIG, ESTADOS_FLUJO, SEMAFORO_CONFIG, type EstadoAliado, type Semaforo,
 } from '@/lib/juridica-schema'
 import {
   Search, Loader2, ChevronRight, X, MapPin, FileText, Map as MapIcon,
@@ -197,7 +197,7 @@ export default function ExpedientesPage() {
             </select>
             <select value={fDD} onChange={(e) => setFDD(e.target.value)} className={SELECT}>
               <option value="">Estado jurídico: todos</option>
-              {(['borrador', 'antecedentes_ok', 'juridico_ok', 'aprobado', 'rechazado'] as EstadoAliado[]).map((s) =>
+              {ESTADOS_FLUJO.map((s) =>
                 <option key={s} value={s}>{ESTADO_CONFIG[s].label}</option>)}
             </select>
             <select value={fSemaforo} onChange={(e) => setFSemaforo(e.target.value)} className={SELECT}>

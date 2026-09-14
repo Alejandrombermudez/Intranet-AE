@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { recalcularEstadoDD } from '@/lib/juridica-core'
 
 async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
   const { data: profile, error } = await supabase
@@ -11,8 +12,10 @@ async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>
   return true
 }
 
-// POST /api/juridica/aliados/[id]/analisis-juridico — upsert HOJA 3  ([id] = predio_id)
-// El análisis del folio pertenece al PREDIO. El semáforo fija el estado de la DD.
+// POST /api/juridica/aliados/[id]/analisis-juridico — upsert HOJA 2  ([id] = predio_id)
+// El análisis del folio pertenece al PREDIO. Es la primera hoja de la debida
+// diligencia después de los datos básicos: no depende de ninguna otra, así que
+// no hay precondición más allá de que el caso exista.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: predioId } = await params
@@ -24,24 +27,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const ok = await authorize(supabase, email)
     if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
-    // Verificar que existe el predio y que la DD pasó antecedentes
     const { data: dd, error: ddSelErr } = await supabase
       .schema('juridica').from('debida_diligencia')
-      .select('predio_id, estado').eq('predio_id', predioId).single()
+      .select('predio_id').eq('predio_id', predioId).single()
     if (ddSelErr || !dd) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 })
-
-    // La precondición real es que HOJA 2 esté aprobada, no el estado de la DD:
-    // el propio semáforo muta ese estado, así que usarlo dejaba un caso con
-    // semáforo rojo ('rechazado') bloqueado para siempre, imposible de corregir.
-    const { data: predioRef } = await supabase
-      .schema('core').from('predios').select('aliado_id').eq('id', predioId).single()
-    const { data: ant } = predioRef
-      ? await supabase.schema('juridica').from('antecedentes')
-          .select('aprobado').eq('aliado_id', predioRef.aliado_id).maybeSingle()
-      : { data: null }
-    if (ant?.aprobado !== true) {
-      return NextResponse.json({ error: 'Debe aprobar la revisión de antecedentes (HOJA 2) primero' }, { status: 422 })
-    }
 
     const payload = {
       predio_id:                predioId,
@@ -74,32 +63,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .upsert(payload, { onConflict: 'predio_id' })
     if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 })
 
-    // Semáforo → estado de la DD
-    const semaforo: string | null = body.semaforo ?? null
-    let nuevoEstado: string | null = null
-    if (semaforo === 'verde' || semaforo === 'amarillo') nuevoEstado = 'aprobado'
-    else if (semaforo === 'naranja')                     nuevoEstado = 'juridico_ok'
-    else if (semaforo === 'rojo')                        nuevoEstado = 'rechazado'
-
-    if (nuevoEstado) {
-      await supabase.schema('juridica').from('debida_diligencia')
-        .update({ estado: nuevoEstado })
-        .eq('predio_id', predioId)
-      if (nuevoEstado === 'rechazado') {
-        await supabase.schema('core').from('expedientes')
-          .update({ estado: 'rechazado' })
-          .eq('predio_id', predioId)
-      } else {
-        // Corregir un semáforo rojo debe levantar también el rechazo del expediente.
-        // El filtro por estado evita pisar un expediente 'archivado' o 'completado'.
-        await supabase.schema('core').from('expedientes')
-          .update({ estado: 'activo' })
-          .eq('predio_id', predioId)
-          .eq('estado', 'rechazado')
-      }
+    // El estado sale del semáforo Y de los antecedentes de la persona: un verde
+    // con la HOJA 3 pendiente es 'analisis_ok', no 'aprobado'.
+    const errEstado = await recalcularEstadoDD(supabase, [predioId])
+    if (errEstado) {
+      return NextResponse.json(
+        { error: `El análisis se guardó, pero no se pudo actualizar el estado del caso: ${errEstado}` },
+        { status: 500 },
+      )
     }
 
-    return NextResponse.json({ ok: true, estado: nuevoEstado ?? dd.estado })
+    return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('POST /api/juridica/aliados/[id]/analisis-juridico error:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

@@ -130,8 +130,66 @@ export type AliadoForm       = z.infer<typeof aliadoSchema>
 export type AntecedentesForm = z.infer<typeof antecedentesSchema>
 export type AnalisisForm     = z.infer<typeof analisisSchema>
 
-export type EstadoAliado = 'borrador' | 'antecedentes_ok' | 'juridico_ok' | 'aprobado' | 'rechazado'
+export type EstadoAliado = 'borrador' | 'analisis_ok' | 'antecedentes_ok' | 'juridico_ok' | 'aprobado' | 'rechazado'
 export type Semaforo     = 'verde' | 'amarillo' | 'naranja' | 'rojo'
+
+// ─── Orden de la debida diligencia ────────────────────────────────────────────
+//
+//   HOJA 1  Datos básicos
+//   HOJA 2  Análisis jurídico del folio   (del PREDIO — semáforo)
+//   HOJA 3  Antecedentes / listas          (de la PERSONA — aprobado sí/no)
+//
+// Hasta 2026-09-14 el orden era al revés. Se invirtió porque el folio es el
+// filtro barato: si el predio no tiene títulos sanos no tiene sentido descargar
+// 14 consultas de listas por su dueño.
+//
+// El estado de la DD NO lo fija cada hoja al guardar: se DERIVA de las dos
+// hojas juntas. Con estados "de paso" cada hoja pisaba lo que había dejado la
+// otra (volver a guardar antecedentes bajaba un caso ya aprobado a
+// antecedentes_ok), y al cambiar el orden esa lógica se habría roto entera.
+
+/** true si el semáforo deja seguir a la HOJA 3. Rojo = no procede; naranja sigue, con comité. */
+export function semaforoPermiteSeguir(semaforo: Semaforo | string | null | undefined): boolean {
+  return semaforo === 'verde' || semaforo === 'amarillo' || semaforo === 'naranja'
+}
+
+/**
+ * ¿Se puede diligenciar la HOJA 3 (antecedentes) de este predio?
+ * Sí cuando la HOJA 2 dejó un semáforo que no sea rojo — o cuando la persona YA
+ * tiene antecedentes: vienen de otro predio suyo o de antes del cambio de orden,
+ * y bloquearlos escondería trabajo hecho.
+ */
+export function hoja3Habilitada(
+  semaforo: Semaforo | string | null | undefined,
+  tieneAntecedentes: boolean,
+): boolean {
+  return tieneAntecedentes || semaforoPermiteSeguir(semaforo)
+}
+
+/**
+ * Estado de la debida diligencia a partir de lo que dicen las dos hojas.
+ * Precedencia (la primera que aplica):
+ *   1. semáforo rojo  o  antecedentes no aprobados   → rechazado
+ *   2. semáforo naranja                              → juridico_ok  (comité)
+ *   3. semáforo verde/amarillo + antecedentes OK     → aprobado
+ *   4. semáforo verde/amarillo                       → analisis_ok  (falta HOJA 3)
+ *   5. antecedentes OK sin análisis                  → antecedentes_ok (casos de antes del cambio)
+ *   6. nada decidido                                 → borrador
+ * El SQL de docs/sql/migration_orden_hojas_juridica.sql aplica esta misma regla:
+ * si cambia aquí, cambia allá.
+ */
+export function derivarEstadoDD(
+  semaforo: Semaforo | string | null | undefined,
+  antecedentesAprobado: boolean | null | undefined,
+): EstadoAliado {
+  if (semaforo === 'rojo' || antecedentesAprobado === false) return 'rechazado'
+  if (semaforo === 'naranja') return 'juridico_ok'
+  if (semaforo === 'verde' || semaforo === 'amarillo') {
+    return antecedentesAprobado === true ? 'aprobado' : 'analisis_ok'
+  }
+  if (antecedentesAprobado === true) return 'antecedentes_ok'
+  return 'borrador'
+}
 
 export interface Aliado {
   id:                          string   // = predio_id (identificador del caso en la UI)
@@ -223,13 +281,20 @@ export interface AnalisisJuridico {
 
 // ─── Helpers de UI ────────────────────────────────────────────────────────────
 
+// Orden = orden del flujo; los desplegables de filtro lo recorren tal cual.
+// `juridico_ok` se llamaba «Jurídico OK», pero es el semáforo naranja: al lado de
+// «Análisis OK» ese nombre se leía como lo mismo. El valor en BD no cambia.
 export const ESTADO_CONFIG: Record<EstadoAliado, { label: string; bg: string; text: string }> = {
   borrador:         { label: 'Borrador',        bg: 'bg-stone-100',   text: 'text-stone-500' },
+  analisis_ok:      { label: 'Análisis OK',     bg: 'bg-sky-50',      text: 'text-sky-700'   },
   antecedentes_ok:  { label: 'Antecedentes OK', bg: 'bg-blue-50',     text: 'text-blue-600'  },
-  juridico_ok:      { label: 'Jurídico OK',     bg: 'bg-amber-50',    text: 'text-amber-700' },
+  juridico_ok:      { label: 'Comité (naranja)', bg: 'bg-amber-50',   text: 'text-amber-700' },
   aprobado:         { label: 'Aprobado',         bg: 'bg-teal-50',     text: 'text-teal-700'  },
   rechazado:        { label: 'Rechazado',        bg: 'bg-red-50',      text: 'text-red-600'   },
 }
+
+/** Los estados en el orden del flujo, para los desplegables de filtro. */
+export const ESTADOS_FLUJO = Object.keys(ESTADO_CONFIG) as EstadoAliado[]
 
 export const SEMAFORO_CONFIG: Record<Semaforo, { label: string; color: string; dot: string }> = {
   verde:    { label: 'Verde',    color: 'text-emerald-600', dot: 'bg-emerald-500' },

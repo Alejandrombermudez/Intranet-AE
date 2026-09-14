@@ -5,10 +5,10 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import {
   type Aliado, type EstadoAliado, type Semaforo,
-  ESTADO_CONFIG, SEMAFORO_CONFIG,
+  ESTADO_CONFIG, SEMAFORO_CONFIG, hoja3Habilitada,
 } from '@/lib/juridica-schema'
 import {
-  Pencil, ChevronRight, CheckCircle2, Lock, ExternalLink, AlertCircle, Plus,
+  Pencil, ChevronRight, CheckCircle2, XCircle, Lock, ExternalLink, AlertCircle, Plus,
 } from 'lucide-react'
 import { Cabecera, Cargando } from '@/app/components/marca'
 import { fetchParametrosHoja1, nombreParametro, type Parametro } from '@/lib/parametros'
@@ -30,40 +30,43 @@ function DataRow({ k, v }: { k: string; v: unknown }) {
 
 // ─── Stepper ──────────────────────────────────────────────────────────────────
 
+// El avance se lee de las hojas mismas, no del estado de la DD: el estado es
+// derivado y no dice cuál de las dos hojas falta (un 'rechazado' puede venir del
+// folio en rojo o de los antecedentes).
 function Stepper({ aliado }: { aliado: Aliado }) {
-  const { estado } = aliado
-  const rechazado  = estado === 'rechazado'
-  const h2Habilitada = true // siempre accesible una vez existe el aliado
-  const h3Habilitada = aliado.antecedentes?.aprobado === true
+  const semaforo    = aliado.analisis_juridico?.semaforo ?? null
+  const veredicto   = aliado.antecedentes?.aprobado ?? null
+  const h2Hecha     = semaforo !== null
+  const h3Hecha     = veredicto !== null
+  const h3Abierta   = hoja3Habilitada(semaforo, !!aliado.antecedentes)
 
   const steps = [
     {
       num: 1, label: 'Datos básicos', sub: 'HOJA 1',
-      done: true, active: false,
+      done: true, active: false, rojo: false,
       href: `/intranet/juridica/${aliado.id}/editar`,
       locked: false,
     },
     {
-      num: 2, label: 'Antecedentes', sub: 'HOJA 2',
-      done: ['antecedentes_ok', 'juridico_ok', 'aprobado', 'rechazado'].includes(estado),
-      active: estado === 'borrador',
-      href: `/intranet/juridica/${aliado.id}/antecedentes`,
-      locked: !h2Habilitada,
+      num: 2, label: 'Análisis jurídico', sub: 'HOJA 2',
+      done: h2Hecha, active: !h2Hecha, rojo: semaforo === 'rojo',
+      href: `/intranet/juridica/${aliado.id}/analisis-juridico`,
+      locked: false,
     },
     {
-      num: 3, label: 'Análisis jurídico', sub: 'HOJA 3',
-      done: ['juridico_ok', 'aprobado', 'rechazado'].includes(estado),
-      active: estado === 'antecedentes_ok',
-      href: `/intranet/juridica/${aliado.id}/analisis-juridico`,
-      locked: !h3Habilitada,
+      num: 3, label: 'Antecedentes', sub: 'HOJA 3',
+      done: h3Hecha, active: h2Hecha && !h3Hecha && h3Abierta, rojo: veredicto === false,
+      href: `/intranet/juridica/${aliado.id}/antecedentes`,
+      locked: !h3Abierta,
     },
   ]
 
   return (
     <div className="flex items-center gap-2">
       {steps.map((step, i) => {
-        const dotClass = rechazado && step.num === steps.length
-          ? 'bg-red-400'
+        // En rojo solo la hoja que rechazó, para que se vea de dónde salió el rechazo.
+        const dotClass = step.rojo
+          ? 'bg-red-400 text-white'
           : step.done
             ? 'bg-teal-500 text-white'
             : step.active
@@ -83,10 +86,10 @@ function Stepper({ aliado }: { aliado: Aliado }) {
         ) : (
           <Link href={step.href} className="flex flex-col items-center gap-1 group">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm transition-all ${dotClass} group-hover:scale-110`}>
-              {step.done ? <CheckCircle2 size={16} /> : <span>{step.num}</span>}
+              {step.rojo ? <XCircle size={16} /> : step.done ? <CheckCircle2 size={16} /> : <span>{step.num}</span>}
             </div>
             <div className="text-center">
-              <p className={`text-[10px] font-bold ${step.done ? 'text-teal-600' : step.active ? 'text-amber-600' : 'text-stone-500'}`}>{step.label}</p>
+              <p className={`text-[10px] font-bold ${step.rojo ? 'text-red-600' : step.done ? 'text-teal-600' : step.active ? 'text-amber-600' : 'text-stone-500'}`}>{step.label}</p>
               <p className="text-[9px] text-stone-400">{step.sub}</p>
             </div>
           </Link>
@@ -207,7 +210,7 @@ export default function AliadoDetailPage() {
             <div>
               <p className="text-sm font-bold text-sky-800">Visible para SIG</p>
               <p className="text-xs text-sky-600">
-                SIG ya puede zonificar este predio. Completa la debida diligencia (antecedentes, análisis, documentos) en paralelo.
+                SIG ya puede zonificar este predio. Completa la debida diligencia (análisis, antecedentes, documentos) en paralelo.
               </p>
             </div>
           </div>
@@ -294,41 +297,16 @@ export default function AliadoDetailPage() {
           )}
         </section>
 
-        {/* HOJA 2 */}
+        {/* HOJA 2 — el folio va primero: es el filtro barato. */}
         <section className="bg-white rounded-2xl border border-stone-100 p-5">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-black text-stone-800">HOJA 2 — Antecedentes</h2>
-            <Link href={`/intranet/juridica/${aliado.id}/antecedentes`}
+            <h2 className="font-black text-stone-800">HOJA 2 — Análisis jurídico</h2>
+            <Link href={`/intranet/juridica/${aliado.id}/analisis-juridico`}
               className="flex items-center gap-1 text-xs font-bold text-teal-600 hover:underline">
-              {aliado.antecedentes ? <><Pencil size={12} /> Editar</> : <>Completar <ChevronRight size={12} /></>}
+              {aliado.analisis_juridico ? <><Pencil size={12} /> Editar</> : <>Completar <ChevronRight size={12} /></>}
             </Link>
           </div>
-          {aliado.antecedentes ? (
-            <div className="space-y-1">
-              <DataRow k="Veredicto final" v={aliado.antecedentes.aprobado === true ? '✅ Aprobado' : aliado.antecedentes.aprobado === false ? '❌ Rechazado' : 'Pendiente'} />
-              <DataRow k="Observaciones"   v={aliado.antecedentes.observaciones} />
-            </div>
-          ) : (
-            <p className="text-sm text-stone-400 italic">Pendiente de completar</p>
-          )}
-        </section>
-
-        {/* HOJA 3 */}
-        <section className="bg-white rounded-2xl border border-stone-100 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-black text-stone-800">HOJA 3 — Análisis jurídico</h2>
-            {aliado.antecedentes?.aprobado === true && (
-              <Link href={`/intranet/juridica/${aliado.id}/analisis-juridico`}
-                className="flex items-center gap-1 text-xs font-bold text-teal-600 hover:underline">
-                {aliado.analisis_juridico ? <><Pencil size={12} /> Editar</> : <>Completar <ChevronRight size={12} /></>}
-              </Link>
-            )}
-          </div>
-          {!aliado.antecedentes?.aprobado ? (
-            <div className="flex items-center gap-2 text-sm text-stone-400">
-              <Lock size={14} /> Disponible cuando HOJA 2 esté aprobada
-            </div>
-          ) : aliado.analisis_juridico ? (
+          {aliado.analisis_juridico ? (
             <div className="space-y-1">
               {semCfg && (
                 <div className="flex gap-3 py-2 border-b border-stone-50">
@@ -342,6 +320,34 @@ export default function AliadoDetailPage() {
               <DataRow k="Estado del folio"   v={aliado.analisis_juridico.estado_folio} />
               <DataRow k="Naturaleza jurídica" v={aliado.analisis_juridico.naturaleza_juridica} />
               <DataRow k="Observaciones"       v={aliado.analisis_juridico.observaciones} />
+            </div>
+          ) : (
+            <p className="text-sm text-stone-400 italic">Pendiente de completar</p>
+          )}
+        </section>
+
+        {/* HOJA 3 — antecedentes de la persona, cuando el folio no salió en rojo. */}
+        <section className="bg-white rounded-2xl border border-stone-100 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-black text-stone-800">HOJA 3 — Antecedentes</h2>
+            {hoja3Habilitada(semaforo, !!aliado.antecedentes) && (
+              <Link href={`/intranet/juridica/${aliado.id}/antecedentes`}
+                className="flex items-center gap-1 text-xs font-bold text-teal-600 hover:underline">
+                {aliado.antecedentes ? <><Pencil size={12} /> Editar</> : <>Completar <ChevronRight size={12} /></>}
+              </Link>
+            )}
+          </div>
+          {aliado.antecedentes ? (
+            <div className="space-y-1">
+              <DataRow k="Veredicto final" v={aliado.antecedentes.aprobado === true ? '✅ Aprobado' : aliado.antecedentes.aprobado === false ? '❌ Rechazado' : 'Pendiente'} />
+              <DataRow k="Observaciones"   v={aliado.antecedentes.observaciones} />
+            </div>
+          ) : !hoja3Habilitada(semaforo, false) ? (
+            <div className="flex items-center gap-2 text-sm text-stone-400">
+              <Lock size={14} />
+              {semaforo === 'rojo'
+                ? 'El folio quedó en rojo: el predio no procede y no hace falta revisar antecedentes'
+                : 'Disponible cuando el análisis jurídico (HOJA 2) tenga semáforo verde, amarillo o naranja'}
             </div>
           ) : (
             <p className="text-sm text-stone-400 italic">Pendiente de completar</p>

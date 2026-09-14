@@ -27,6 +27,18 @@
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
+-- ── 2026-09-14  migration_orden_hojas_juridica.sql ───────────────────────────
+--             Jurídica invierte el orden: HOJA 2 = análisis jurídico, HOJA 3 =
+--             antecedentes. Estado nuevo 'analisis_ok' en el CHECK de
+--             juridica.debida_diligencia.estado, y el estado pasa a derivarse de
+--             las dos hojas. Verificado por REST el 2026-09-14: el comentario de
+--             la columna que escribe el BLOQUE 1 (justo después del CHECK) está
+--             puesto; reparto borrador 81 · antecedentes_ok 5 · juridico_ok 3 ·
+--             aprobado 19 · rechazado 3 (el esperado tras el BLOQUE 3); y la regla
+--             de lib/juridica-schema.ts corrida contra los 111 predios da 0
+--             desfases. El CHECK no se pudo leer por REST: se infiere del
+--             comentario, no de escribir un 'analisis_ok' de prueba.
+
 -- ── 2026-09-08  migration_proyecto_fuente.sql ────────────────────────────────
 --             Clasificación del predio por proyecto y por fuente de información:
 --             catalogo.proyectos (2 filas: conexion_biodiversa, ley_arbol),

@@ -5,9 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { type AnalisisJuridico, type Semaforo, SEMAFORO_CONFIG } from '@/lib/juridica-schema'
 import { parsearRespuestaGuardado } from '@/lib/fetch-guardar'
-import {
-  Loader2, AlertCircle,
-} from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Cabecera, Cargando } from '@/app/components/marca'
 
 const TEXTAREA = 'w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl focus:outline-none focus:border-teal-400 transition-colors resize-none'
@@ -125,7 +123,9 @@ export default function AnalisisJuridicoPage() {
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState<string | null>(null)
   const [aliadoNombre, setAliadoNombre]   = useState('')
-  const [bloqueado, setBloqueado]         = useState(false)
+  // Solo para anticipar en qué estado queda el caso al guardar (el análisis ya
+  // no espera a los antecedentes: es la HOJA 2 y va primero).
+  const [antecedentesAprobado, setAntecedentesAprobado] = useState<boolean | null>(null)
 
   // Campos del formulario
   const [estadoFolio, setEstadoFolio]   = useState<'ACTIVO' | 'CERRADO' | ''>('')
@@ -175,12 +175,7 @@ export default function AnalisisJuridicoPage() {
       .then((r) => { if (!r.ok) throw new Error(); return r.json() })
       .then((data) => {
         setAliadoNombre(data.nombre_completo)
-        // Bloquear si HOJA 2 no está aprobada
-        if (data.antecedentes?.aprobado !== true) {
-          setBloqueado(true)
-          setLoading(false)
-          return
-        }
+        setAntecedentesAprobado(data.antecedentes?.aprobado ?? null)
         const a: AnalisisJuridico | null = data.analisis_juridico
         if (a) {
           setEstadoFolio((a.estado_folio as 'ACTIVO' | 'CERRADO' | '') ?? '')
@@ -263,155 +258,141 @@ export default function AnalisisJuridicoPage() {
         compacta
         ancho="ficha"
         volver={{ href: `/intranet/juridica/${id}`, label: 'Aliado' }}
-        modulo="Módulo jurídico · HOJA 3"
+        modulo="Módulo jurídico · HOJA 2"
         titulo="Análisis jurídico"
         descripcion={aliadoNombre}
       />
 
-      {bloqueado ? (
-        <div className="max-w-3xl mx-auto px-6 sm:px-10 py-10">
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-3">
-            <AlertCircle size={20} className="text-amber-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold text-amber-800 mb-1">HOJA 2 pendiente</p>
-              <p className="text-sm text-amber-700">Debes completar y aprobar la revisión de antecedentes antes de acceder al análisis jurídico del folio.</p>
-              <Link href={`/intranet/juridica/${id}/antecedentes`}
-                className="mt-3 inline-block text-sm font-bold text-amber-700 hover:underline">
-                Ir a HOJA 2 →
-              </Link>
+      <div className="max-w-3xl mx-auto px-6 sm:px-10 py-10 space-y-6">
+
+        {/* Estado del folio */}
+        <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
+          <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Estado del folio</h2>
+          <Field label="Estado del folio (FMI)">
+            <div className="flex gap-3">
+              {(['ACTIVO', 'CERRADO', ''] as const).map((v) => (
+                <button key={v || 'nd'} type="button" onClick={() => setEstadoFolio(v)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-colors ${estadoFolio === v ? 'border-teal-400 bg-teal-50 text-teal-700' : 'border-stone-200 text-stone-500 hover:border-stone-300'}`}>
+                  {v || '—'}
+                </button>
+              ))}
             </div>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Vereda registral">
+              <input value={veredaReg} onChange={(e) => setVeredaReg(e.target.value)} className={INPUT} placeholder="Según el folio" />
+            </Field>
+            <Field label="FMI matrices">
+              <input value={fmiMatrices} onChange={(e) => setFmiMatrices(e.target.value)} className={INPUT} placeholder="Folios de origen" />
+            </Field>
           </div>
-        </div>
-      ) : (
-        <div className="max-w-3xl mx-auto px-6 sm:px-10 py-10 space-y-6">
+          <Field label="FMI derivados">
+            <input value={fmiDerivados} onChange={(e) => setFmiDerivados(e.target.value)} className={INPUT} placeholder="Folios derivados de éste" />
+          </Field>
+        </section>
 
-          {/* Estado del folio */}
-          <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
-            <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Estado del folio</h2>
-            <Field label="Estado del folio (FMI)">
-              <div className="flex gap-3">
-                {(['ACTIVO', 'CERRADO', ''] as const).map((v) => (
-                  <button key={v || 'nd'} type="button" onClick={() => setEstadoFolio(v)}
-                    className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-colors ${estadoFolio === v ? 'border-teal-400 bg-teal-50 text-teal-700' : 'border-stone-200 text-stone-500 hover:border-stone-300'}`}>
-                    {v || '—'}
-                  </button>
-                ))}
-              </div>
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Vereda registral">
-                <input value={veredaReg} onChange={(e) => setVeredaReg(e.target.value)} className={INPUT} placeholder="Según el folio" />
-              </Field>
-              <Field label="FMI matrices">
-                <input value={fmiMatrices} onChange={(e) => setFmiMatrices(e.target.value)} className={INPUT} placeholder="Folios de origen" />
-              </Field>
-            </div>
-            <Field label="FMI derivados">
-              <input value={fmiDerivados} onChange={(e) => setFmiDerivados(e.target.value)} className={INPUT} placeholder="Folios derivados de éste" />
-            </Field>
-          </section>
+        {/* Tradición */}
+        <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
+          <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Tradición</h2>
+          <Field label="Acto de origen">
+            <input value={actoOrigen} onChange={(e) => setActoOrigen(e.target.value)} className={INPUT} placeholder="Ej: adjudicación, compraventa…" />
+          </Field>
+          <Field label="Descripción del acto de origen">
+            <textarea value={descOrigen} onChange={(e) => setDescOrigen(e.target.value)} rows={2} className={TEXTAREA} placeholder="Descripción libre…" />
+          </Field>
+          <Field label="Naturaleza jurídica">
+            <input value={naturaleza} onChange={(e) => setNaturaleza(e.target.value)} className={INPUT} placeholder="Privado, baldío, reserva, etc." />
+          </Field>
+        </section>
 
-          {/* Tradición */}
-          <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
-            <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Tradición</h2>
-            <Field label="Acto de origen">
-              <input value={actoOrigen} onChange={(e) => setActoOrigen(e.target.value)} className={INPUT} placeholder="Ej: adjudicación, compraventa…" />
-            </Field>
-            <Field label="Descripción del acto de origen">
-              <textarea value={descOrigen} onChange={(e) => setDescOrigen(e.target.value)} rows={2} className={TEXTAREA} placeholder="Descripción libre…" />
-            </Field>
-            <Field label="Naturaleza jurídica">
-              <input value={naturaleza} onChange={(e) => setNaturaleza(e.target.value)} className={INPUT} placeholder="Privado, baldío, reserva, etc." />
-            </Field>
-          </section>
+        {/* Banderas jurídicas */}
+        <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
+          <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Banderas jurídicas</h2>
+          <p className="text-xs text-stone-500">«Sí» indica un problema detectado en el folio.</p>
+          <BoolFlag label="Falsa tradición" value={falsaTradicion} onChange={setFalsaTradicion} />
+          <BoolFlag label="Procesos judiciales inscritos" value={procJudiciales} onChange={setProcJudiciales}>
+            <textarea value={procJudicialesDesc} onChange={(e) => setProcJudicialesDesc(e.target.value)} rows={2} className={TEXTAREA} placeholder="Describir los procesos…" />
+          </BoolFlag>
+          <BoolFlag label="Medidas cautelares inscritas" value={medCautelares} onChange={setMedCautelares}>
+            <textarea value={medCautelaresDesc} onChange={(e) => setMedCautelaresDesc(e.target.value)} rows={2} className={TEXTAREA} placeholder="Describir las medidas…" />
+          </BoolFlag>
+          <BoolFlag label="Liquidaciones" value={liquidaciones} onChange={setLiquidaciones}>
+            <textarea value={liquidacionesDesc} onChange={(e) => setLiquidacionesDesc(e.target.value)} rows={2} className={TEXTAREA} placeholder="Describir las liquidaciones…" />
+          </BoolFlag>
+          <BoolFlag label="Sucesiones" value={sucesiones} onChange={setSucesiones}>
+            <textarea value={sucesionesDesc} onChange={(e) => setSucesionesDesc(e.target.value)} rows={2} className={TEXTAREA} placeholder="Describir las sucesiones…" />
+          </BoolFlag>
+        </section>
 
-          {/* Banderas jurídicas */}
-          <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
-            <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Banderas jurídicas</h2>
-            <p className="text-xs text-stone-500">«Sí» indica un problema detectado en el folio.</p>
-            <BoolFlag label="Falsa tradición" value={falsaTradicion} onChange={setFalsaTradicion} />
-            <BoolFlag label="Procesos judiciales inscritos" value={procJudiciales} onChange={setProcJudiciales}>
-              <textarea value={procJudicialesDesc} onChange={(e) => setProcJudicialesDesc(e.target.value)} rows={2} className={TEXTAREA} placeholder="Describir los procesos…" />
-            </BoolFlag>
-            <BoolFlag label="Medidas cautelares inscritas" value={medCautelares} onChange={setMedCautelares}>
-              <textarea value={medCautelaresDesc} onChange={(e) => setMedCautelaresDesc(e.target.value)} rows={2} className={TEXTAREA} placeholder="Describir las medidas…" />
-            </BoolFlag>
-            <BoolFlag label="Liquidaciones" value={liquidaciones} onChange={setLiquidaciones}>
-              <textarea value={liquidacionesDesc} onChange={(e) => setLiquidacionesDesc(e.target.value)} rows={2} className={TEXTAREA} placeholder="Describir las liquidaciones…" />
-            </BoolFlag>
-            <BoolFlag label="Sucesiones" value={sucesiones} onChange={setSucesiones}>
-              <textarea value={sucesionesDesc} onChange={(e) => setSucesionesDesc(e.target.value)} rows={2} className={TEXTAREA} placeholder="Describir las sucesiones…" />
-            </BoolFlag>
-          </section>
+        {/* Conceptos institucionales */}
+        <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-5">
+          <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Conceptos institucionales</h2>
+          <ConceptoField
+            label="ANT — Agencia Nacional de Tierras"
+            mode={conceptoAntMode} text={conceptoAntText}
+            onModeChange={setConceptoAntMode} onTextChange={setConceptoAntText}
+          />
+          <ConceptoField
+            label="URT — Unidad de Restitución de Tierras"
+            mode={conceptoUrtMode} text={conceptoUrtText}
+            onModeChange={setConceptoUrtMode} onTextChange={setConceptoUrtText}
+          />
+          <ConceptoField
+            label="PNN — Parques Nacionales Naturales"
+            mode={conceptoPnnMode} text={conceptoPnnText}
+            onModeChange={setConceptoPnnMode} onTextChange={setConceptoPnnText}
+          />
+        </section>
 
-          {/* Conceptos institucionales */}
-          <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-5">
-            <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Conceptos institucionales</h2>
-            <ConceptoField
-              label="ANT — Agencia Nacional de Tierras"
-              mode={conceptoAntMode} text={conceptoAntText}
-              onModeChange={setConceptoAntMode} onTextChange={setConceptoAntText}
-            />
-            <ConceptoField
-              label="URT — Unidad de Restitución de Tierras"
-              mode={conceptoUrtMode} text={conceptoUrtText}
-              onModeChange={setConceptoUrtMode} onTextChange={setConceptoUrtText}
-            />
-            <ConceptoField
-              label="PNN — Parques Nacionales Naturales"
-              mode={conceptoPnnMode} text={conceptoPnnText}
-              onModeChange={setConceptoPnnMode} onTextChange={setConceptoPnnText}
-            />
-          </section>
-
-          {/* Semáforo y conclusión */}
-          <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
-            <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Semáforo — Veredicto final *</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {(['verde', 'amarillo', 'naranja', 'rojo'] as Semaforo[]).map((s) => {
-                const cfg = SEMAFORO_CONFIG[s]
-                return (
-                  <button key={s} type="button" onClick={() => setSemaforo(s)}
-                    className={`py-3 rounded-xl text-sm font-bold border-2 transition-colors flex flex-col items-center gap-1.5 ${semaforo === s ? `border-current ${cfg.color} bg-stone-50` : 'border-stone-200 text-stone-400 hover:border-stone-300'}`}>
-                    <div className={`w-4 h-4 rounded-full ${cfg.dot}`} />
-                    {cfg.label}
-                  </button>
-                )
-              })}
-            </div>
-            {semaforo && (
-              <div className={`text-xs font-medium px-3 py-2 rounded-xl ${
-                semaforo === 'verde'    ? 'bg-emerald-50 text-emerald-700' :
-                semaforo === 'amarillo' ? 'bg-yellow-50 text-yellow-700'  :
-                semaforo === 'naranja'  ? 'bg-orange-50 text-orange-700'  :
-                                          'bg-red-50 text-red-700'
-              }`}>
-                {semaforo === 'verde'    && 'Sin observaciones — se autoriza visita de campo. El aliado pasará a estado Aprobado.'}
-                {semaforo === 'amarillo' && 'Observaciones menores — se procede con seguimiento. El aliado pasará a estado Aprobado.'}
-                {semaforo === 'naranja'  && 'Observaciones significativas — requiere revisión del comité. Quedará pendiente de aprobación manual.'}
-                {semaforo === 'rojo'     && 'No procede. El aliado será marcado como Rechazado y no podrá avanzar a siembra.'}
-              </div>
-            )}
-            <Field label="Observaciones generales">
-              <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} rows={4} className={TEXTAREA} placeholder="Conclusiones y notas del análisis jurídico…" />
-            </Field>
-          </section>
-
-          {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm font-bold px-4 py-3 rounded-xl">{error}</div>}
-
-          <div className="flex gap-3 pb-8">
-            <Link href={`/intranet/juridica/${id}`}
-              className="flex-1 py-3 border border-stone-200 rounded-xl text-sm font-bold text-stone-600 hover:bg-stone-50 text-center transition-colors">
-              Cancelar
-            </Link>
-            <button onClick={handleGuardar} disabled={saving || !semaforo}
-              className="flex-1 py-3 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
-              {saving && <Loader2 size={14} className="animate-spin" />}
-              Guardar análisis
-            </button>
+        {/* Semáforo y conclusión */}
+        <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-4">
+          <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Semáforo — Veredicto final *</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {(['verde', 'amarillo', 'naranja', 'rojo'] as Semaforo[]).map((s) => {
+              const cfg = SEMAFORO_CONFIG[s]
+              return (
+                <button key={s} type="button" onClick={() => setSemaforo(s)}
+                  className={`py-3 rounded-xl text-sm font-bold border-2 transition-colors flex flex-col items-center gap-1.5 ${semaforo === s ? `border-current ${cfg.color} bg-stone-50` : 'border-stone-200 text-stone-400 hover:border-stone-300'}`}>
+                  <div className={`w-4 h-4 rounded-full ${cfg.dot}`} />
+                  {cfg.label}
+                </button>
+              )
+            })}
           </div>
+          {semaforo && (
+            <div className={`text-xs font-medium px-3 py-2 rounded-xl ${
+              semaforo === 'verde'    ? 'bg-emerald-50 text-emerald-700' :
+              semaforo === 'amarillo' ? 'bg-yellow-50 text-yellow-700'  :
+              semaforo === 'naranja'  ? 'bg-orange-50 text-orange-700'  :
+                                        'bg-red-50 text-red-700'
+            }`}>
+              {semaforo === 'verde'    && `Sin observaciones — se autoriza visita de campo. ${
+                antecedentesAprobado ? 'Con los antecedentes ya aprobados, el aliado pasará a Aprobado.' : 'Sigue la revisión de antecedentes del propietario (HOJA 3).'}`}
+              {semaforo === 'amarillo' && `Observaciones menores — se procede con seguimiento. ${
+                antecedentesAprobado ? 'Con los antecedentes ya aprobados, el aliado pasará a Aprobado.' : 'Sigue la revisión de antecedentes del propietario (HOJA 3).'}`}
+              {semaforo === 'naranja'  && 'Observaciones significativas — requiere revisión del comité. Mientras tanto se pueden revisar los antecedentes (HOJA 3).'}
+              {semaforo === 'rojo'     && 'No procede. El aliado será marcado como Rechazado y no hace falta revisar antecedentes.'}
+            </div>
+          )}
+          <Field label="Observaciones generales">
+            <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} rows={4} className={TEXTAREA} placeholder="Conclusiones y notas del análisis jurídico…" />
+          </Field>
+        </section>
+
+        {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm font-bold px-4 py-3 rounded-xl">{error}</div>}
+
+        <div className="flex gap-3 pb-8">
+          <Link href={`/intranet/juridica/${id}`}
+            className="flex-1 py-3 border border-stone-200 rounded-xl text-sm font-bold text-stone-600 hover:bg-stone-50 text-center transition-colors">
+            Cancelar
+          </Link>
+          <button onClick={handleGuardar} disabled={saving || !semaforo}
+            className="flex-1 py-3 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            Guardar análisis
+          </button>
         </div>
-      )}
+      </div>
     </div>
   )
 }

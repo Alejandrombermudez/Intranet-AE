@@ -794,7 +794,7 @@ Tras el cutover guarda **solo lo jurídico**; persona/predio viven en `core`. **
 |---------|------|-------|
 | `id` | uuid PK | |
 | `predio_id` | uuid FK → core.predios | **UNIQUE** |
-| `estado` | text | `borrador`→`antecedentes_ok`→`juridico_ok`→`aprobado`\|`rechazado` |
+| `estado` | text | derivado de HOJA 2 (análisis) + HOJA 3 (antecedentes): `borrador` · `analisis_ok` · `antecedentes_ok` · `juridico_ok` (naranja) · `aprobado` · `rechazado`. `analisis_ok` lo agregó `migration_orden_hojas_juridica.sql` (2026-09-14). Regla en `docs/ARQUITECTURA_DATOS.md` §3.2 |
 | `cedula_url` / `certificado_tradicion_url` / `recibo_predial_url` / `manifestacion_url` | text | PDF/imagen/Word en bucket `juridica-documentos` |
 | `anio_ultimo_pago_predial` | integer | |
 | `manifestacion_interes` / `manifestacion_observaciones` | bool / text | |

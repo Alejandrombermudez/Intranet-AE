@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { subirDocumento } from '@/lib/juridica-core'
+import { subirDocumento, recalcularEstadoDD } from '@/lib/juridica-core'
+import { hoja3Habilitada } from '@/lib/juridica-schema'
 
 async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
   const { data: profile, error } = await supabase
@@ -17,7 +18,7 @@ const LISTAS = [
   'onu', 'ofac', 'bid', 'banco_mundial', 'hm_treasury', 'fbi', 'interpol', 'ue_terroristas', 'dea',
 ] as const
 
-// POST /api/juridica/aliados/[id]/antecedentes — upsert HOJA 2   ([id] = predio_id)
+// POST /api/juridica/aliados/[id]/antecedentes — upsert HOJA 3   ([id] = predio_id)
 // Antecedentes pertenece a la PERSONA (core.aliados): se veta una vez y sirve
 // para todos sus predios. El estado del workflow vive en juridica.debida_diligencia.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -41,6 +42,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .schema('core').from('predios').select('id, aliado_id').eq('id', predioId).single()
     if (pErr || !predio) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 })
     const aliadoId = predio.aliado_id
+
+    // Precondición: la HOJA 2 (análisis del folio) dejó un semáforo que no es rojo.
+    // Se revisa ANTES de subir los soportes, para no dejar archivos huérfanos de
+    // un guardado rechazado. Se mira el dato de la hoja y no el estado de la DD,
+    // que es derivado. Si la persona ya tiene antecedentes (de otro predio o de
+    // antes del cambio de orden) se deja editarlos igual.
+    const [{ data: analisis }, { data: antPrevio }] = await Promise.all([
+      supabase.schema('juridica').from('analisis_juridico')
+        .select('semaforo').eq('predio_id', predioId).maybeSingle(),
+      supabase.schema('juridica').from('antecedentes')
+        .select('id').eq('aliado_id', aliadoId).maybeSingle(),
+    ])
+    if (!hoja3Habilitada(analisis?.semaforo, !!antPrevio)) {
+      return NextResponse.json({
+        error: analisis?.semaforo === 'rojo'
+          ? 'El análisis jurídico (HOJA 2) quedó en rojo: el predio no procede y no hace falta revisar antecedentes.'
+          : 'Primero el análisis jurídico (HOJA 2): los antecedentes se revisan cuando el folio tiene semáforo verde, amarillo o naranja.',
+      }, { status: 422 })
+    }
 
     // Documentos de cada consulta (PDF o imagen) → {aliado_id}/antecedentes/{lista}
     // Solo se registra la URL cuando la subida tuvo éxito: escribir null
@@ -74,27 +94,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .upsert(payload, { onConflict: 'aliado_id' })
     if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 })
 
-    // Avanzar el estado de la debida diligencia del predio
-    let nuevoEstado: string | null = null
-    if (data.aprobado === true)  nuevoEstado = 'antecedentes_ok'
-    if (data.aprobado === false) nuevoEstado = 'rechazado'
-
-    if (nuevoEstado) {
-      await supabase.schema('juridica').from('debida_diligencia')
-        .update({ estado: nuevoEstado })
-        .eq('predio_id', predioId)
-      if (nuevoEstado === 'rechazado') {
-        await supabase.schema('core').from('expedientes')
-          .update({ estado: 'rechazado' })
-          .eq('predio_id', predioId)
-      } else {
-        // Revertir un rechazo de antecedentes debe levantar también el del expediente.
-        // El filtro por estado evita pisar un expediente 'archivado' o 'completado'.
-        await supabase.schema('core').from('expedientes')
-          .update({ estado: 'activo' })
-          .eq('predio_id', predioId)
-          .eq('estado', 'rechazado')
-      }
+    // Los antecedentes son de la persona: el veredicto mueve el estado de TODOS
+    // sus predios, no solo del que está abierto.
+    const { data: prediosPersona } = await supabase
+      .schema('core').from('predios').select('id').eq('aliado_id', aliadoId)
+    const errEstado = await recalcularEstadoDD(supabase, (prediosPersona ?? []).map((p) => p.id))
+    if (errEstado) {
+      return NextResponse.json(
+        { error: `Los antecedentes se guardaron, pero no se pudo actualizar el estado del caso: ${errEstado}` },
+        { status: 500 },
+      )
     }
 
     return NextResponse.json({ ok: true, documentos_fallidos: documentosFallidos })

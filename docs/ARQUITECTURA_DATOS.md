@@ -239,16 +239,20 @@ erDiagram
 |---|---|---|---|
 | id | uuid | PK | |
 | predio_id | uuid | FK→ core.predios · UQ | el `[id]` de la UI de jurídica = `predio_id` |
-| estado | text | | `borrador`→`antecedentes_ok`→`juridico_ok`→`aprobado`\|`rechazado` |
+| estado | text | | **derivado** de las dos hojas: `borrador` · `analisis_ok` · `antecedentes_ok` · `juridico_ok` (naranja, comité) · `aprobado` · `rechazado`. Ver regla abajo |
 | cedula_url / certificado_tradicion_url / recibo_predial_url / manifestacion_url | text | | PDF/imagen/Word en bucket `juridica-documentos` |
 | anio_ultimo_pago_predial | integer | | |
 | manifestacion_interes / manifestacion_observaciones | bool / text | | |
 
-**`juridica.antecedentes`** — 14 listas restrictivas + PEP/prensa (1:1 por persona). FK `aliado_id`→`core.aliados`.
-Banderas booleanas con `_url`: rama_judicial, procuraduria, contraloria, policia_nacional, rnmc, onu, ofac, bid, banco_mundial, hm_treasury, fbi, interpol, ue_terroristas, dea. Más: `pep`, `prensa_negativa`, `observaciones`, `aprobado`.
+> **Orden de las hojas (desde 2026-09-14):** HOJA 1 datos básicos → **HOJA 2 análisis jurídico** (del predio) → **HOJA 3 antecedentes** (de la persona). Antes era al revés; se invirtió porque el folio es el filtro barato: con semáforo rojo no tiene sentido consultar las 14 listas del dueño. La HOJA 3 se abre cuando el análisis deja verde, amarillo o naranja — o si la persona ya tiene antecedentes (de otro predio suyo o de antes del cambio).
+>
+> **El estado no lo escribe cada hoja: se deriva de las dos** (`derivarEstadoDD` en `lib/juridica-schema.ts`, la misma regla en SQL en `migration_orden_hojas_juridica.sql`). Primera que aplica: folio rojo o antecedentes no aprobados → `rechazado`; naranja → `juridico_ok`; verde/amarillo + antecedentes aprobados → `aprobado`; verde/amarillo solo → `analisis_ok`; antecedentes aprobados sin análisis → `antecedentes_ok`; si no, `borrador`. Como los antecedentes son de la persona, guardarlos recalcula **todos** sus predios. Con estados "de paso" escritos por cada hoja, una volvía a guardar y pisaba lo que había dejado la otra.
 
-**`juridica.analisis_juridico`** — folio de matrícula + semáforo (1:1 predio). FK `predio_id`→`core.predios`.
+**`juridica.analisis_juridico`** — HOJA 2. Folio de matrícula + semáforo (1:1 predio). FK `predio_id`→`core.predios`.
 Folios (fmi_matrices/derivados, acto_origen), banderas (falsa_tradicion, procesos_judiciales+desc, medidas_cautelares+desc, liquidaciones, sucesiones), conceptos ANT/URT/PNN, `semaforo` (verde/amarillo/naranja/rojo).
+
+**`juridica.antecedentes`** — HOJA 3. 14 listas restrictivas + PEP/prensa (1:1 por persona). FK `aliado_id`→`core.aliados`.
+Banderas booleanas con `_url`: rama_judicial, procuraduria, contraloria, policia_nacional, rnmc, onu, ofac, bid, banco_mundial, hm_treasury, fbi, interpol, ue_terroristas, dea. Más: `pep`, `prensa_negativa`, `observaciones`, `aprobado`.
 
 ### 3.3 `siembra` — campo (evaluación + encuesta) 🟢 reconectado a core+SIG (2026-07-07)
 

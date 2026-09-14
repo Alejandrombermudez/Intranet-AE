@@ -137,8 +137,8 @@ salió de `juridica.aliados` (que se archivó y luego se borró) y ahora vive en
 
 **Tablas reales (schema `juridica`, sobre `core`):**
 - `juridica.debida_diligencia` — workflow + soportes, 1:1 con `core.predios` (HOJA 1)
-- `juridica.antecedentes` — 14 listas restrictivas + PEP + prensa, 1:1 con `core.aliados` (HOJA 2)
-- `juridica.analisis_juridico` — folio matrícula + semáforo, 1:1 con `core.predios` (HOJA 3)
+- `juridica.analisis_juridico` — folio matrícula + semáforo, 1:1 con `core.predios` (HOJA 2)
+- `juridica.antecedentes` — 14 listas restrictivas + PEP + prensa, 1:1 con `core.aliados` (HOJA 3; orden invertido el 2026-09-14)
 
 **Punto clave de integración:** evita reprocesos. Los datos básicos capturados en jurídica se leen por JOIN
 desde `core` en las etapas siguientes (SIG, Campo vía `core.v_predios_campo`) — no se copian a mano.
