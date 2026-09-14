@@ -109,7 +109,7 @@ node _query.mjs
 | `department` | text | `RAS` \| `Ejecutivo` \| `Financiero` \| null |
 | `is_admin` | boolean | acceso total al panel admin |
 | `can_access_intranet` | boolean | acceso al módulo propio sin ser admin |
-| `last_login` | timestamptz | |
+| `last_login` | timestamptz | última vez que abrió la intranet (se registra al abrir, máx. cada 30 min), no solo el último inicio de sesión con Microsoft |
 | `created_at` | timestamptz | |
 
 **Usuarios activos (Mayo 2026):**

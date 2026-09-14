@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Josefin_Sans, Poppins } from "next/font/google";
 import "./globals.css";
 import InstallPrompt from "./components/InstallPrompt";
+import RegistroAcceso from "./components/RegistroAcceso";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -51,6 +52,7 @@ export default function RootLayout({
       >
         {children}
         <InstallPrompt />
+        <RegistroAcceso />
       </body>
     </html>
   );

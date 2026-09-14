@@ -406,7 +406,7 @@ erDiagram
 
 ## 6. Soporte / Administración 🟢
 
-- **`people.user_profiles`** (id PK, email UQ, full_name, role, department `RAS`/`Ejecutivo`/`Financiero`, is_admin, can_access_intranet, last_login). Trigger desde `auth.users`.
+- **`people.user_profiles`** (id PK, email UQ, full_name, role, department `RAS`/`Ejecutivo`/`Financiero`, is_admin, can_access_intranet, last_login). Trigger desde `auth.users`. `last_login` = **última vez que abrió la intranet** (desde 2026-09-14), no el último inicio de sesión: la sesión se renueva sola en el navegador y el trigger solo salta al iniciar sesión, así que antes figuraba gente sin entrar desde junio que trabajaba a diario. Lo registra `lib/registro-acceso.ts` (montado en el layout raíz, máximo cada 30 min por persona) vía `POST /api/users/sync-profile`, que toma el correo del token.
 - **`fleet.vehicle_reservations`** · **`fleet.vehicle_inspections`** (reservation_id FK, cat1..6_status/issues/other, fotos) · **`fleet.vehicle_documents`** (soat/tecno_expiry).
 - **`ejecutivo.sesiones`** (iniciado_por/ejecutivo_id/persona_id FK→people) · **`ejecutivo.indicaciones`** (sesion_id FK, bloque, estado, nota).
 - **`public.consentimientos`** (tratamiento de datos) · **`public.proyecciones`** (metas por fase I/II/III).

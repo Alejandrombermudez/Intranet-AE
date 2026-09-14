@@ -2,6 +2,7 @@
 import { useEffect, useState, Suspense, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { registrarAcceso } from '@/lib/registro-acceso'
 import { AUTH_TIMEOUT_MS } from '@/lib/types'
 import { XCircle, Home, RefreshCw, Loader2 } from 'lucide-react'
 import { Boton, Firma, Rotulo } from '@/app/components/marca'
@@ -40,17 +41,9 @@ function AuthCallbackContent() {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-          // Registrar / actualizar perfil en user_profiles (respaldo del trigger DB)
-          // Azure AD puede enviar el nombre en 'full_name' o en 'name'
-          const meta = session.user.user_metadata ?? {}
-          const full_name = (meta.full_name as string | null)
-            || (meta.name as string | null)
-            || null
-          fetch('/api/users/sync-profile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: session.user.email, full_name }),
-          }).catch(() => {/* el trigger de DB es el mecanismo principal */})
+          // Un inicio de sesión siempre cuenta como acceso, aunque haya habido
+          // otro hace menos de 30 min (respaldo del trigger de auth.users).
+          registrarAcceso({ forzar: true }).catch(() => {/* el trigger de BD también lo registra */})
           setTimeout(() => {
             router.push('/')
           }, 500)
