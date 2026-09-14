@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { Pulso } from '@/app/api/sistema/pulso/route'
+import { ladosDeVecinas } from './disposicion'
 import { Escena } from './escena'
 import { Lienzo } from './lienzo'
 import { Panel } from './panel'
@@ -32,8 +33,29 @@ export type LectorDeCifras = (
   id: string,
 ) => { valor: number | null; etiqueta: string; de?: string; problema?: string } | null
 
-/** El recorrido de Explorar no crece sin fin: se guardan las últimas paradas. */
-const PARADAS = 6
+/**
+ * Cómo avanza el recorrido de Explorar. No es el historial de clics: es el
+ * camino que se lee arriba de la escena, y tiene que decir algo.
+ *
+ *   · Volver a una tarjeta que ya está en el camino lo corta ahí.
+ *   · Subir —ir a una tarjeta que en la escena está encima del centro: la
+ *     aplicación de una etapa, o la etapa de una pieza del núcleo— empieza un
+ *     camino nuevo desde ella. La intranet, por ejemplo, es un punto de
+ *     partida, no un paso más de «Jurídica › SIG › Campo».
+ *   · Seguir a los lados (el flujo del trabajo) o bajar lo alarga.
+ *   · Lo que no es vecina del centro (los atajos de la hoja) también empieza de cero.
+ *
+ * Con estas reglas el camino no puede pasar de una app, una cadena de etapas y
+ * una pieza del núcleo, así que no hace falta recortarlo.
+ */
+export function siguienteRecorrido(recorrido: string[], id: string): string[] {
+  const i = recorrido.indexOf(id)
+  if (i >= 0) return recorrido.slice(0, i + 1)
+  const foco = recorrido[recorrido.length - 1]
+  const lado = foco ? ladosDeVecinas(foco).get(id) : undefined
+  if (!lado || lado === 'arriba') return [id]
+  return [...recorrido, id]
+}
 
 /** El mapa completo. Recibe las cifras ya leídas; no sabe de dónde salieron. */
 export function MapaSistema({ pulso, vista }: { pulso: Pulso | null; vista: Vista }) {
@@ -60,12 +82,7 @@ export function MapaSistema({ pulso, vista }: { pulso: Pulso | null; vista: Vist
   )
   const agregar = useCallback((id: string) => setElegidas((l) => (l.includes(id) ? l : [...l, id])), [])
 
-  // Ir a una tarjeta que ya está en el recorrido es volver a ella, no repetirla.
-  const ir = useCallback(
-    (id: string) =>
-      setRecorrido((r) => (r.includes(id) ? r.slice(0, r.indexOf(id) + 1) : [...r, id].slice(-PARADAS))),
-    [],
-  )
+  const ir = useCallback((id: string) => setRecorrido((r) => siguienteRecorrido(r, id)), [])
   const volverA = useCallback((i: number) => setRecorrido((r) => r.slice(0, i + 1)), [])
 
   // Escape suelta todo: en Explorar vuelve al mapa completo.

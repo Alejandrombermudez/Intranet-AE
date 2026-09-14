@@ -310,7 +310,7 @@ function alejada(c: Caja): Puesto {
   return { x: CX + dx * 1.45 - c.w / 2, y: CY + dy * 1.45 - c.h / 2, escala: 0.8, lado: 'fuera', retraso: 0 }
 }
 
-type LadoVecino = 'izquierda' | 'derecha' | 'arriba' | 'abajo'
+export type LadoVecino = 'izquierda' | 'derecha' | 'arriba' | 'abajo'
 
 function ladoDeRelacion(r: Relacion, foco: string): LadoVecino {
   const tipoFoco = NODO_POR_ID.get(foco)?.tipo
@@ -318,6 +318,21 @@ function ladoDeRelacion(r: Relacion, foco: string): LadoVecino {
   if (r.tipo === 'devolucion') return r.de === foco ? 'izquierda' : 'derecha'
   if (r.tipo === 'usa') return tipoFoco === 'etapa' ? 'arriba' : 'abajo'
   return tipoFoco === 'etapa' ? 'abajo' : 'arriba'
+}
+
+/**
+ * En qué lado del centro queda cada vecina. Si la une más de una línea (SIG y
+ * Campo: el avance y la devolución), manda la primera, que es la del avance.
+ * Lo usan la escena, para acomodarlas, y el recorrido, para saber si un paso
+ * sube (y empieza un camino nuevo) o sigue.
+ */
+export function ladosDeVecinas(foco: string): Map<string, LadoVecino> {
+  const lados = new Map<string, LadoVecino>()
+  for (const r of relacionesDe(foco)) {
+    const otra = otraPunta(r, foco)
+    if (CAJAS.has(otra) && !lados.has(otra)) lados.set(otra, ladoDeRelacion(r, foco))
+  }
+  return lados
 }
 
 /** El rectángulo que ocupa lo visible: la cámara de la escena se ajusta a él. */
@@ -337,14 +352,8 @@ export function disposicionFoco(
     return { puestos, trazos: [], marco: { x: 0, y: 0, w: LIENZO.ancho, h: LIENZO.alto } }
   }
 
-  // A cada vecina, un lado. Si la une más de una línea (SIG y Campo: el avance
-  // y la devolución), manda la primera, que es la del avance.
   const rels = relacionesDe(foco).filter((r) => CAJAS.has(otraPunta(r, foco)))
-  const ladoDe = new Map<string, LadoVecino>()
-  for (const r of rels) {
-    const otra = otraPunta(r, foco)
-    if (!ladoDe.has(otra)) ladoDe.set(otra, ladoDeRelacion(r, foco))
-  }
+  const ladoDe = ladosDeVecinas(foco)
   const grupo = (l: LadoVecino) => enOrden([...ladoDe].filter(([, x]) => x === l).map(([id]) => id))
 
   const w = TARJETA.ancho
