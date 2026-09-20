@@ -74,7 +74,12 @@ export default function Nucleacion({
   useEffect(() => { cargar().catch(() => setCargando(false)) }, [cargar])
 
   const confirmados = useMemo(() => lotes.filter(l => l.estado === 'definitiva'), [lotes])
-  const candidatas  = useMemo(() => lotes.filter(l => l.estado !== 'definitiva'), [lotes])
+  // Solo lo que volvió VERIFICADO de terreno puede ser lote: una zona
+  // 'potencial' es una propuesta de la oficina que nadie ha ido a mirar. La
+  // base aplica la misma regla, así que ofrecerlas aquí sería ofrecer un botón
+  // que no hace nada.
+  const candidatas  = useMemo(() => lotes.filter(l => l.estado === 'validada'), [lotes])
+  const sinVerificar = useMemo(() => lotes.filter(l => l.estado !== 'definitiva' && l.estado !== 'validada'), [lotes])
   const sinLote     = useMemo(() => nucleos.filter(n => !n.zona_id).length, [nucleos])
   const haLotes     = confirmados.reduce((s, l) => s + Number(l.area_ha ?? 0), 0)
 
@@ -188,10 +193,27 @@ export default function Nucleacion({
           </p>
         </div>
 
+        {sinVerificar.length > 0 && (
+          <p className="flex items-start gap-2 text-xs text-stone-500 bg-stone-50 border border-stone-100 rounded-xl px-3 py-2.5">
+            <Info size={13} className="shrink-0 mt-0.5" />
+            <span>
+              <strong className="text-stone-700">{sinVerificar.length} zona(s) todavía sin verificar en campo</strong> — no
+              aparecen abajo. Un lote sale de lo que el técnico marcó en terreno; una zona que solo propuso la oficina
+              no puede serlo todavía.
+            </span>
+          </p>
+        )}
+
         {lotes.length === 0 ? (
           <p className="flex items-start gap-2 text-xs text-stone-500 bg-stone-50 border border-stone-100 rounded-xl px-3 py-2.5">
             <Info size={13} className="shrink-0 mt-0.5" />
             Este predio no tiene zonas de siembra vigentes. Primero cárgalas en la pestaña «Sitios de siembra» y espera la verificación de campo.
+          </p>
+        ) : candidatas.length === 0 && confirmados.length === 0 ? (
+          <p className="flex items-start gap-2 text-xs text-stone-500 bg-stone-50 border border-stone-100 rounded-xl px-3 py-2.5">
+            <Info size={13} className="shrink-0 mt-0.5" />
+            Ninguna zona ha vuelto verificada de campo todavía. Cuando el técnico las confirme o las corrija en terreno,
+            aparecen aquí para dar por buenas.
           </p>
         ) : (
           <>
@@ -210,7 +232,7 @@ export default function Nucleacion({
                         <span className="flex-1 min-w-0">
                           <span className="block text-sm font-bold text-stone-800 truncate">{l.nombre || '(zona sin nombre)'}</span>
                           <span className="block text-[11px] text-stone-400">
-                            {l.estado === 'validada' ? 'Verificada en campo' : 'Sin verificar en campo todavía'}
+                            Verificada en campo
                             {l.origen === 'campo' && ' · la dibujó el técnico en terreno'}
                           </span>
                         </span>
