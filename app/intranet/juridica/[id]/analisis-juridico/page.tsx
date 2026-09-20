@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import { type AnalisisJuridico, type Semaforo, SEMAFORO_CONFIG } from '@/lib/juridica-schema'
 import { parsearRespuestaGuardado } from '@/lib/fetch-guardar'
 import { Loader2 } from 'lucide-react'
@@ -171,7 +172,7 @@ export default function AnalisisJuridicoPage() {
 
   useEffect(() => {
     if (!authReady || !userEmail || !id) return
-    fetch(`/api/juridica/aliados/${id}?email=${encodeURIComponent(userEmail)}`)
+    fetchConSesion(`/api/juridica/aliados/${id}`)
       .then((r) => { if (!r.ok) throw new Error(); return r.json() })
       .then((data) => {
         setAliadoNombre(data.nombre_completo)
@@ -212,11 +213,10 @@ export default function AnalisisJuridicoPage() {
     if (!userEmail || !semaforo) { setError('Debes seleccionar el semáforo antes de guardar'); return }
     setSaving(true); setError(null)
     try {
-      const res = await fetch(`/api/juridica/aliados/${id}/analisis-juridico`, {
+      const res = await fetchConSesion(`/api/juridica/aliados/${id}/analisis-juridico`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          created_by:               userEmail,
           estado_folio:             estadoFolio || null,
           vereda_registral:         veredaReg || null,
           fmi_matrices:             fmiMatrices || null,

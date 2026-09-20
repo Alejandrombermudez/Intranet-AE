@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
 
 // POST /api/juridica/aliados/[id]/crear-en-siembra   ([id] = predio_id)
 // "Enviar a Campo": crea la familia en siembra (enlazada a core, sin duplicar
@@ -11,18 +12,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id: predioId } = await params
     const supabase = createServerSupabaseClient()
-    const body = await req.json()
-    const email: string | null = body.created_by ?? null
-    if (!email) return NextResponse.json({ error: 'Email requerido' }, { status: 400 })
-
-    const { data: profile, error: pErr } = await supabase
-      .schema('people').from('user_profiles')
-      .select('is_admin, department')
-      .eq('email', email)
-      .single()
-    if (pErr || (!profile?.is_admin && !['Juridica', 'RAS', 'SIG'].includes(profile?.department ?? ''))) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-    }
+    const sesion = await exigirSesion(req, supabase, PUEDE.procesoPredio)
+    if (!sesion.ok) return sesion.respuesta
+    const email = sesion.perfil.email
 
     // Predio + persona + DD + expediente + zonas del SIG
     const { data: predio, error: prErr } = await supabase

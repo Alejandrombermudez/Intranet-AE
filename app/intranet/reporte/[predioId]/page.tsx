@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import type { Expediente } from '@/app/api/reporte/expediente/route'
 import InformeExpediente from '@/app/components/InformeExpediente'
 import { ArrowLeft, Printer, Loader2, AlertTriangle } from 'lucide-react'
@@ -33,7 +34,7 @@ export default function ExpedientePage() {
 
   useEffect(() => {
     if (!email || !predioId) return
-    fetch(`/api/reporte/expediente?predio_id=${predioId}&email=${encodeURIComponent(email)}`)
+    fetchConSesion(`/api/reporte/expediente?predio_id=${predioId}`)
       .then(async r => {
         if (!r.ok) throw new Error((await r.json()).error ?? 'Error')
         return r.json()

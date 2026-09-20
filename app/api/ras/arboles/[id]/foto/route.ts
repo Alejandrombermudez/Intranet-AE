@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
 
 const BUCKET = 'ras-fotos-arboles'
 
 // POST /api/ras/arboles/[id]/foto — sube/cambia la foto propia de un árbol semillero
+// Admin o RAS, igual que la pantalla /intranet/ras desde donde se sube. Antes no
+// verificaba nada: cualquiera podía cambiar la foto de cualquier árbol.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createServerSupabaseClient()
+  const sesion = await exigirSesion(req, supabase, PUEDE.ras)
+  if (!sesion.ok) return sesion.respuesta
 
   const form = await req.formData()
   const file = form.get('foto')

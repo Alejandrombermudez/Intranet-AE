@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -126,7 +127,7 @@ export async function fetchIndicadoresDeFamilias(familiaIds: string[]): Promise<
 export async function cambiarFotoArbol(id: string, file: File): Promise<string | null> {
   const fd = new FormData()
   fd.append('foto', file)
-  const r = await fetch(`/api/ras/arboles/${id}/foto`, { method: 'POST', body: fd })
+  const r = await fetchConSesion(`/api/ras/arboles/${id}/foto`, { method: 'POST', body: fd })
   if (!r.ok) {
     console.warn('[ras-arboles] cambiarFotoArbol:', await r.text())
     return null

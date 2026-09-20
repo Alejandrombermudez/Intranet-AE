@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 import type { ExpedienteRow } from '@/lib/expedientes'
 import {
@@ -70,7 +71,7 @@ export default function ExpedientesPage() {
 
   useEffect(() => {
     if (!authReady || !userEmail) return
-    fetch(`/api/expedientes?email=${encodeURIComponent(userEmail)}`)
+    fetchConSesion('/api/expedientes')
       .then((r) => r.json())
       .then((data) => { setRows(Array.isArray(data) ? data : []); setLoading(false) })
       .catch(() => setLoading(false))

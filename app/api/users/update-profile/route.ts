@@ -1,36 +1,30 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
 
 /**
- * PATCH /api/users/update-profile
- * Permite a un administrador cambiar role, department e is_admin de cualquier usuario.
- * Verifica que requesterEmail tenga is_admin = true antes de proceder.
+ * PATCH /api/users/update-profile   (Authorization: Bearer <token>)
+ * Permite a un administrador cambiar role, department, is_admin y
+ * can_access_intranet de cualquier usuario.
+ *
+ * Quien pide el cambio sale del token. Antes venía como `requesterEmail` en el
+ * cuerpo, así que bastaba con escribir el correo de un administrador para darse
+ * permisos de administrador sin haber iniciado sesión.
  */
 export async function PATCH(req: NextRequest) {
-  const body = await req.json().catch(() => null)
+  const supabase = createServerSupabaseClient()
+  const sesion = await exigirSesion(req, supabase, PUEDE.admin)
+  if (!sesion.ok) return sesion.respuesta
 
-  const requesterEmail: string | undefined = body?.requesterEmail
+  const body = await req.json().catch(() => null)
   const targetEmail: string | undefined = body?.targetEmail
   const role: string | undefined = body?.role
   const department: string | undefined = body?.department
   const is_admin: boolean | undefined = body?.is_admin
   const can_access_intranet: boolean | undefined = body?.can_access_intranet
 
-  if (!requesterEmail || !targetEmail) {
-    return NextResponse.json({ error: 'requesterEmail and targetEmail required' }, { status: 400 })
-  }
-
-  const supabase = createServerSupabaseClient()
-
-  // Verificar que el solicitante sea administrador
-  const { data: requester, error: reqError } = await supabase
-    .schema('people').from('user_profiles')
-    .select('is_admin')
-    .eq('email', requesterEmail)
-    .single()
-
-  if (reqError || !requester?.is_admin) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  if (!targetEmail) {
+    return NextResponse.json({ error: 'targetEmail required' }, { status: 400 })
   }
 
   // Construir solo los campos que se quieren actualizar

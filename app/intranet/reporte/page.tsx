@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import type { PredioReporte } from '@/app/api/reporte/predios/route'
 import { SEMAFORO, MARCA } from '@/lib/expediente-formato'
 import Isotipo from '@/app/components/Isotipo'
@@ -40,7 +41,7 @@ export default function ReportePage() {
 
   useEffect(() => {
     if (!email) return
-    fetch(`/api/reporte/predios?email=${encodeURIComponent(email)}`)
+    fetchConSesion('/api/reporte/predios')
       .then(r => r.json())
       .then((d: PredioReporte[]) => { setFilas(Array.isArray(d) ? d : []); setCargando(false) })
       .catch(() => setCargando(false))

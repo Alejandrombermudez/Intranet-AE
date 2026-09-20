@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
 
 /**
  * Alta de opciones en los catálogos parametrizables desde la UI
@@ -33,20 +34,14 @@ function aCodigo(nombre: string): string {
     .slice(0, 60)
 }
 
-async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
-  const { data: profile, error } = await supabase
-    .schema('people').from('user_profiles')
-    .select('is_admin, department')
-    .eq('email', email)
-    .single()
-  if (error || (!profile?.is_admin && profile?.department !== 'Juridica')) return false
-  return true
-}
-
-// POST /api/catalogo/parametros — { lista, nombre, created_by }
+// POST /api/catalogo/parametros — { lista, nombre }   (Authorization: Bearer <token>)
 export async function POST(req: NextRequest) {
   try {
     const supabase = createServerSupabaseClient()
+    const sesion = await exigirSesion(req, supabase, PUEDE.juridica)
+    if (!sesion.ok) return sesion.respuesta
+    const email = sesion.perfil.email
+
     const body = await req.json().catch(() => null)
     if (!body) return NextResponse.json({ error: 'Datos requeridos' }, { status: 400 })
 
@@ -54,11 +49,6 @@ export async function POST(req: NextRequest) {
     if (!LISTAS.includes(lista)) {
       return NextResponse.json({ error: 'Catálogo no válido' }, { status: 400 })
     }
-
-    const email: string | null = body.created_by ?? null
-    if (!email) return NextResponse.json({ error: 'Email requerido' }, { status: 400 })
-    const ok = await authorize(supabase, email)
-    if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
     const nombre = String(body.nombre ?? '').trim().replace(/\s+/g, ' ')
     if (!nombre) return NextResponse.json({ error: 'Escribe el nombre de la opción' }, { status: 400 })

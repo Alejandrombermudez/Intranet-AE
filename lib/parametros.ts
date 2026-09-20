@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 
 /**
  * Catálogos parametrizables desde la UI: los dos que clasifican un predio.
@@ -70,13 +71,13 @@ export async function fetchParametrosHoja1(): Promise<{
 export async function crearParametro(
   lista: ListaParametro,
   nombre: string,
-  email: string,
 ): Promise<{ ok: true; parametro: Parametro } | { ok: false; error: string }> {
   try {
-    const res = await fetch('/api/catalogo/parametros', {
+    // Quién agrega la opción lo dice la sesión, no un correo en el cuerpo.
+    const res = await fetchConSesion('/api/catalogo/parametros', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lista, nombre, created_by: email }),
+      body: JSON.stringify({ lista, nombre }),
     })
     const body = await res.json().catch(() => null)
     if (!res.ok) {

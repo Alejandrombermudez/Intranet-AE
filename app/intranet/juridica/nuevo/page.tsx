@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useForm, type FieldErrors } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import { aliadoSchema, ETIQUETAS_ALIADO, type AliadoForm } from '@/lib/juridica-schema'
 import {
   Loader2, Upload, X, Users,
@@ -196,11 +197,11 @@ export default function NuevoAliadoPage() {
       fd.append('data', JSON.stringify({
         ...values,
         matriculas: matriculas.map((m) => m.trim()).filter(Boolean),
-        departamento: 'Caquetá', created_by: userEmail,
+        departamento: 'Caquetá',
       }))
       for (const [campo, file] of Object.entries(comprimidos.archivos)) fd.append(campo, file)
 
-      const res = await fetch('/api/juridica/aliados', { method: 'POST', body: fd })
+      const res = await fetchConSesion('/api/juridica/aliados', { method: 'POST', body: fd })
       const result = await parsearRespuestaGuardado(res)
       if (!result.ok) { setError(result.error); return }
       // El caso ya quedó creado: no se puede reintentar aquí sin duplicarlo. Si algún
@@ -263,7 +264,6 @@ export default function NuevoAliadoPage() {
             value={tipoProyecto}
             onChange={(v) => setValue('tipo_proyecto', v)}
             onNueva={(p) => setProyectos((arr) => [...arr, p])}
-            email={userEmail}
           />
           <SelectParametro
             label="Fuente de información"
@@ -273,7 +273,6 @@ export default function NuevoAliadoPage() {
             value={fuenteInformacion}
             onChange={(v) => setValue('fuente_informacion', v)}
             onNueva={(p) => setFuentes((arr) => [...arr, p])}
-            email={userEmail}
           />
         </section>
 

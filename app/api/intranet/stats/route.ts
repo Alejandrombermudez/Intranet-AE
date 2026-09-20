@@ -1,30 +1,16 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
 
 /**
- * GET /api/intranet/stats?email=admin@email.com
+ * GET /api/intranet/stats   (Authorization: Bearer <token>)
  * Devuelve todas las inspecciones completadas con datos del vehículo.
- * Solo accesible para administradores (verificado contra user_profiles).
+ * Admin o departamento Financiero, según el perfil de la sesión.
  */
 export async function GET(req: NextRequest) {
-  const email = req.nextUrl.searchParams.get('email')
-
-  if (!email) {
-    return NextResponse.json({ error: 'email required' }, { status: 400 })
-  }
-
   const supabase = createServerSupabaseClient()
-
-  // Verificar que el solicitante sea admin o pertenezca al departamento Financiero
-  const { data: profile, error: profileError } = await supabase
-    .schema('people').from('user_profiles')
-    .select('is_admin, department')
-    .eq('email', email)
-    .single()
-
-  if (profileError || (!profile?.is_admin && profile?.department !== 'Financiero')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-  }
+  const sesion = await exigirSesion(req, supabase, PUEDE.financiero)
+  if (!sesion.ok) return sesion.respuesta
 
   // Inspecciones completadas con JOIN a vehicle_reservations (via FK reservation_id)
   const { data, error } = await supabase

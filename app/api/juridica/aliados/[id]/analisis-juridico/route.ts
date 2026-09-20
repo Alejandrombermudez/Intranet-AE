@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { recalcularEstadoDD } from '@/lib/juridica-core'
-
-async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
-  const { data: profile, error } = await supabase
-    .schema('people').from('user_profiles')
-    .select('is_admin, department')
-    .eq('email', email)
-    .single()
-  if (error || (!profile?.is_admin && profile?.department !== 'Juridica')) return false
-  return true
-}
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
 
 // POST /api/juridica/aliados/[id]/analisis-juridico — upsert HOJA 2  ([id] = predio_id)
 // El análisis del folio pertenece al PREDIO. Es la primera hoja de la debida
@@ -20,12 +11,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id: predioId } = await params
     const supabase = createServerSupabaseClient()
-    const body = await req.json()
-    const email: string | null = body.created_by ?? null
-    if (!email) return NextResponse.json({ error: 'Email requerido' }, { status: 400 })
+    const sesion = await exigirSesion(req, supabase, PUEDE.juridica)
+    if (!sesion.ok) return sesion.respuesta
+    const email = sesion.perfil.email
 
-    const ok = await authorize(supabase, email)
-    if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    const body = await req.json()
 
     const { data: dd, error: ddSelErr } = await supabase
       .schema('juridica').from('debida_diligencia')

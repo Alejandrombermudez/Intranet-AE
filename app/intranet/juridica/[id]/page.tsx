@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import {
   type Aliado, type EstadoAliado, type Semaforo,
   ESTADO_CONFIG, SEMAFORO_CONFIG, hoja3Habilitada,
@@ -145,7 +146,7 @@ export default function AliadoDetailPage() {
 
   useEffect(() => {
     if (!authReady || !userEmail || !id) return
-    fetch(`/api/juridica/aliados/${id}?email=${encodeURIComponent(userEmail)}`)
+    fetchConSesion(`/api/juridica/aliados/${id}`)
       .then((r) => { if (!r.ok) throw new Error(); return r.json() })
       .then((data) => { setAliado(data); setLoading(false) })
       .catch(() => { router.push('/intranet/juridica') })

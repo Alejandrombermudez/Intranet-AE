@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 
 export interface Especie {
   id: string
@@ -90,7 +91,7 @@ export function fotoAleatoriaCatalogo(especies: Especie[], seed: string): string
 export async function cambiarFoto(id: string, file: File): Promise<string | null> {
   const fd = new FormData()
   fd.append('foto', file)
-  const r = await fetch(`/api/catalogo/${id}/foto`, { method: 'POST', body: fd })
+  const r = await fetchConSesion(`/api/catalogo/${id}/foto`, { method: 'POST', body: fd })
   if (!r.ok) {
     console.warn('[catalogo] cambiarFoto:', await r.text())
     return null

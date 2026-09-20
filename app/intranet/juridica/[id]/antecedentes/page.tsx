@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import { type Antecedente, hoja3Habilitada } from '@/lib/juridica-schema'
 import { parsearRespuestaGuardado, mensajeDocumentosFallidos } from '@/lib/fetch-guardar'
 import { comprimirAdjuntos, avisoPeso, formatearBytes } from '@/lib/comprimir-imagen'
@@ -165,7 +166,7 @@ export default function AntecedentesPage() {
 
   useEffect(() => {
     if (!authReady || !userEmail || !id) return
-    fetch(`/api/juridica/aliados/${id}?email=${encodeURIComponent(userEmail)}`)
+    fetchConSesion(`/api/juridica/aliados/${id}`)
       .then((r) => { if (!r.ok) throw new Error(); return r.json() })
       .then((data) => {
         setAliadoNombre(data.nombre_completo)
@@ -220,7 +221,6 @@ export default function AntecedentesPage() {
     try {
       const allListas = [...LISTAS_NACIONALES, ...LISTAS_INTERNACIONALES]
       const payload: Record<string, unknown> = {
-        created_by:      userEmail,
         pep,
         prensa_negativa: prensa,
         observaciones,
@@ -248,7 +248,7 @@ export default function AntecedentesPage() {
         fd.append(key, file)
       }
 
-      const res = await fetch(`/api/juridica/aliados/${id}/antecedentes`, { method: 'POST', body: fd })
+      const res = await fetchConSesion(`/api/juridica/aliados/${id}/antecedentes`, { method: 'POST', body: fd })
       const result = await parsearRespuestaGuardado(res)
       if (!result.ok) { setError(result.error); return }
       // Los datos se guardaron; si algún archivo falló, quedarse aquí para reintentarlo.

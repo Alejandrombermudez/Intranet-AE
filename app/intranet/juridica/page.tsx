@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 import {
   type Aliado, type EstadoAliado, type Semaforo,
@@ -200,7 +201,7 @@ export default function JuridicaPage() {
   useEffect(() => {
     if (!authReady || !userEmail) return
     setLoading(true)
-    fetch(`/api/juridica/aliados?email=${encodeURIComponent(userEmail)}`)
+    fetchConSesion('/api/juridica/aliados')
       .then((r) => r.json())
       .then((data) => { setAliados(Array.isArray(data) ? data : []); setLoading(false) })
       .catch(() => setLoading(false))

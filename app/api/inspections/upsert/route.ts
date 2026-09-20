@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
 
 const BUCKET = 'inspection-photos'
 const MAX_PER_TYPE = 2   // máximo de formularios completos por vehículo y tipo
@@ -47,6 +48,25 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServerSupabaseClient()
+
+    // Antes esta ruta no verificaba nada: cualquiera podía escribir la inspección
+    // de cualquier reserva y, al cerrarla, disparar el borrado de fotos viejas.
+    // Ahora exige sesión y que la reserva sea de quien llama (o ser admin) — lo
+    // mismo que ya muestra /validar-reserva, que solo lista las reservas propias.
+    const sesion = await exigirSesion(request, supabase, PUEDE.conSesion)
+    if (!sesion.ok) return sesion.respuesta
+    const { data: reserva } = await supabase
+      .schema('fleet').from('vehicle_reservations')
+      .select('user_email')
+      .eq('id', body.reservation_id)
+      .maybeSingle()
+    if (!reserva) {
+      return NextResponse.json({ error: 'Reserva no encontrada' }, { status: 404 })
+    }
+    const esDueno = (reserva.user_email ?? '').toLowerCase() === sesion.perfil.email.toLowerCase()
+    if (!esDueno && !sesion.perfil.is_admin) {
+      return NextResponse.json({ error: 'Esa reserva no es tuya' }, { status: 403 })
+    }
 
     // Construir payload limpio (sin campos undefined)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

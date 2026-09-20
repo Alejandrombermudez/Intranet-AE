@@ -2,16 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { subirDocumento, recalcularEstadoDD } from '@/lib/juridica-core'
 import { hoja3Habilitada } from '@/lib/juridica-schema'
-
-async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
-  const { data: profile, error } = await supabase
-    .schema('people').from('user_profiles')
-    .select('is_admin, department')
-    .eq('email', email)
-    .single()
-  if (error || (!profile?.is_admin && profile?.department !== 'Juridica')) return false
-  return true
-}
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
 
 const LISTAS = [
   'rama_judicial', 'procuraduria', 'contraloria', 'policia_nacional', 'rnmc',
@@ -25,17 +16,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id: predioId } = await params
     const supabase = createServerSupabaseClient()
+    const sesion = await exigirSesion(req, supabase, PUEDE.juridica)
+    if (!sesion.ok) return sesion.respuesta
+    const email = sesion.perfil.email
+
     const formData = await req.formData()
     const raw = formData.get('data')
     if (!raw || typeof raw !== 'string') {
       return NextResponse.json({ error: 'Datos requeridos' }, { status: 400 })
     }
     const data = JSON.parse(raw)
-    const email: string | null = data.created_by ?? null
-    if (!email) return NextResponse.json({ error: 'Email requerido' }, { status: 400 })
-
-    const ok = await authorize(supabase, email)
-    if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
     // Predio → persona
     const { data: predio, error: pErr } = await supabase

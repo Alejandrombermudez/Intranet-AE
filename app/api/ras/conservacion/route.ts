@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
 
 /**
  * POST /api/ras/conservacion
@@ -11,6 +12,11 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 export async function POST(req: NextRequest) {
   try {
     const supabase = createServerSupabaseClient()
+    // ── Autorización: solo admin o departamento RAS, según la sesión ──
+    const sesion = await exigirSesion(req, supabase, PUEDE.ras)
+    if (!sesion.ok) return sesion.respuesta
+    const requesterEmail = sesion.perfil.email
+
     const formData = await req.formData()
     const rawData = formData.get('data')
 
@@ -19,22 +25,6 @@ export async function POST(req: NextRequest) {
     }
 
     const data = JSON.parse(rawData)
-    const requesterEmail: string | null = data.created_by ?? null
-
-    if (!requesterEmail) {
-      return NextResponse.json({ error: 'Email requerido' }, { status: 400 })
-    }
-
-    // ── Autorización: solo admin o departamento RAS ──
-    const { data: profile, error: profileError } = await supabase
-      .schema('people').from('user_profiles')
-      .select('is_admin, department')
-      .eq('email', requesterEmail)
-      .single()
-
-    if (profileError || (!profile?.is_admin && profile?.department !== 'RAS')) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-    }
 
     // ── Subir shapefiles y documentos ──
     let shapefile_finca_url: string | null = null
@@ -92,6 +82,7 @@ export async function POST(req: NextRequest) {
       .from('familias')
       .insert({
         ...familiaData,
+        created_by: requesterEmail,   // el de la sesión, aunque el cuerpo traiga otro
         shapefile_finca_url,
         shapefile_conservacion_url,
         documento_acuerdo_url,

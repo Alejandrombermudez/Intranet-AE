@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import dynamic from 'next/dynamic'
 import type { Geometry } from 'geojson'
 import {
@@ -133,10 +134,9 @@ function Seccion({ titulo, children, defaultOpen = false }: { titulo: string; ch
 
 // ─── Componente principal ────────────────────────────────────────────────────
 export default function ResultadosCampo({
-  predioId, email, fincaGeoms, nombrePredio,
+  predioId, fincaGeoms, nombrePredio,
 }: {
   predioId: string
-  email: string
   /** Polígono(s) del predio, para dar contexto al mapa. */
   fincaGeoms: Geometry[]
   nombrePredio: string
@@ -160,12 +160,12 @@ export default function ResultadosCampo({
 
   useEffect(() => {
     let vivo = true
-    fetch(`/api/sig/campo?predio_id=${predioId}&email=${encodeURIComponent(email)}`)
+    fetchConSesion(`/api/sig/campo?predio_id=${predioId}`)
       .then(r => r.json())
       .then((d: CampoResumen) => { if (vivo) { setData(d); setLoading(false) } })
       .catch(() => { if (vivo) setLoading(false) })
     return () => { vivo = false }
-  }, [predioId, email])
+  }, [predioId])
 
   // Última revisión por zona: es el estado con el que quedó el predio.
   const ultimasPorZona = useMemo(() => {

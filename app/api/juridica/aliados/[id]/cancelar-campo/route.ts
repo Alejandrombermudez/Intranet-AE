@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
 
 // POST /api/juridica/aliados/[id]/cancelar-campo   ([id] = predio_id)
 // Deshace "Enviar a Campo": devuelve el expediente de 'campo' a 'juridica' y hace
@@ -13,20 +14,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id: predioId } = await params
     const supabase = createServerSupabaseClient()
-    const body = await req.json()
-    const email: string | null = body.created_by ?? null
-    if (!email) return NextResponse.json({ error: 'Email requerido' }, { status: 400 })
-
     // Mismo permiso que crear-en-siembra: quien puede enviar puede cancelar
     // (Jurídica, RAS o SIG — el envío/cancelación vive en la página de SIG).
-    const { data: profile, error: pErr } = await supabase
-      .schema('people').from('user_profiles')
-      .select('is_admin, department')
-      .eq('email', email)
-      .single()
-    if (pErr || (!profile?.is_admin && !['Juridica', 'RAS', 'SIG'].includes(profile?.department ?? ''))) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-    }
+    const sesion = await exigirSesion(req, supabase, PUEDE.procesoPredio)
+    if (!sesion.ok) return sesion.respuesta
 
     // Expediente del predio: solo se cancela un envío que sigue en 'campo'.
     const { data: exp } = await supabase

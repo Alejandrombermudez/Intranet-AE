@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import { familiaSchema, type FamiliaForm } from '@/lib/ras-schema'
 import {
   ArrowLeft, ArrowRight, Check, Plus, Trash2, Upload, FileArchive, X, Loader2, Camera,
@@ -225,7 +226,7 @@ export default function NuevaFamiliaPage() {
         files.forEach((f) => formData.append(`camara_${idx}_foto`, f))
       })
 
-      const res = await fetch('/api/ras/familias', { method: 'POST', body: formData })
+      const res = await fetchConSesion('/api/ras/familias', { method: 'POST', body: formData })
       if (res.ok) {
         router.push('/intranet/ras')
       } else {

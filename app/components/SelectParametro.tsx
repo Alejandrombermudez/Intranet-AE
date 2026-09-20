@@ -18,7 +18,7 @@ const INPUT = 'w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl foc
  * `value` es el CÓDIGO (slug), no el id: es lo que se guarda en core.predios.
  */
 export default function SelectParametro({
-  label, hint, lista, opciones, value, onChange, onNueva, email, disabled,
+  label, hint, lista, opciones, value, onChange, onNueva, disabled,
 }: {
   label:     string
   hint?:     string
@@ -28,7 +28,6 @@ export default function SelectParametro({
   onChange:  (codigo: string) => void
   /** El padre agrega la opción recién creada a su lista para que se vea al instante. */
   onNueva:   (p: Parametro) => void
-  email:     string | null
   disabled?: boolean
 }) {
   const [agregando, setAgregando] = useState(false)
@@ -43,9 +42,9 @@ export default function SelectParametro({
 
   async function guardar() {
     const limpio = nombre.trim()
-    if (!limpio || !email) return
+    if (!limpio) return
     setGuardando(true); setError(null)
-    const res = await crearParametro(lista, limpio, email)
+    const res = await crearParametro(lista, limpio)
     setGuardando(false)
     if (!res.ok) { setError(res.error); return }
     onNueva(res.parametro)

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import type { User } from '@supabase/supabase-js'
 import type { Reservation } from '@/lib/types'
 import {
@@ -911,7 +912,7 @@ export default function ValidarReservaPage() {
       }
       if (inspectionId) body.inspection_id = inspectionId
 
-      const res = await fetch('/api/inspections/upsert', {
+      const res = await fetchConSesion('/api/inspections/upsert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

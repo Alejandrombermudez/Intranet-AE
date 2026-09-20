@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
 import type { Geometry } from 'geojson'
 
 /**
@@ -28,21 +29,14 @@ export interface CampoResumen {
   encuesta:   Record<string, unknown> | null
 }
 
-// GET /api/sig/campo?predio_id=...&email=... — resultados de campo del predio
+// GET /api/sig/campo?predio_id=... — resultados de campo del predio   (Authorization: Bearer <token>)
 export async function GET(req: NextRequest) {
   const supabase = createServerSupabaseClient()
-  const email    = req.nextUrl.searchParams.get('email')
-  const predioId = req.nextUrl.searchParams.get('predio_id')
-  if (!email || !predioId) return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 })
+  const sesion = await exigirSesion(req, supabase, PUEDE.intranet)
+  if (!sesion.ok) return sesion.respuesta
 
-  const { data: profile } = await supabase
-    .schema('people').from('user_profiles')
-    .select('is_admin, department, can_access_intranet')
-    .eq('email', email)
-    .single()
-  if (!profile || (!profile.is_admin && !profile.can_access_intranet && !profile.department)) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-  }
+  const predioId = req.nextUrl.searchParams.get('predio_id')
+  if (!predioId) return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 })
 
   try {
     const [{ data: revisiones }, { data: evals }, { data: encuestas }] = await Promise.all([
