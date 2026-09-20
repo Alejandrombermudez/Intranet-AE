@@ -169,19 +169,26 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Panel de identidad y acceso ── */}
-      <section className="flex flex-col px-8 py-10 sm:px-12 lg:order-1 lg:min-h-screen lg:w-[44%] lg:py-12 xl:w-[40%] xl:px-16">
+      {/* ── Panel de identidad y acceso ──
+          El ritmo vertical va en `vh`, no en tallas fijas: este panel lleva
+          título, descripción, acceso, servicios, novedades y pie, y con los
+          valores fijos de antes medía 1057 px — en un portátil de 768 px de
+          alto, «Novedades» y el pie quedaban fuera de pantalla y tocaba hacer
+          scroll para entrar. Ahora cada espacio se encoge con la pantalla, así
+          que cabe completo tanto en un portátil como en un monitor grande, y
+          crece hasta el tope de siempre cuando hay sitio. */}
+      <section className="flex flex-col px-8 py-[clamp(0.875rem,2vh,2.5rem)] sm:px-12 lg:order-1 lg:min-h-screen lg:w-[44%] lg:py-[clamp(0.875rem,2vh,3rem)] xl:w-[40%] xl:px-16">
         <Firma />
 
-        <div className="flex flex-1 flex-col justify-center py-12 lg:py-16">
+        <div className="flex flex-1 flex-col justify-center py-[clamp(0.25rem,1vh,4rem)]">
           <div className="w-full max-w-md">
-            <p className="mb-4 text-[10.5px] uppercase tracking-[.28em] text-taupe">Uso interno del equipo</p>
-            <h1 className="font-display text-5xl leading-[1.02] text-white sm:text-6xl">
+            <p className="mb-[clamp(0.5rem,1.4vh,1rem)] text-[10.5px] uppercase tracking-[.28em] text-taupe">Uso interno del equipo</p>
+            <h1 className="font-display text-[clamp(2rem,4.6vh,3.75rem)] leading-[1.02] text-white">
               <span className="font-bold">Intranet</span>
               <br />
               <span className="font-thin">corporativa</span>
             </h1>
-            <p className="mt-6 text-sm font-light leading-relaxed text-hueso/75">
+            <p className="mt-[clamp(0.75rem,2vh,1.5rem)] text-[clamp(0.8125rem,1.7vh,0.875rem)] font-light leading-relaxed text-hueso/75">
               Sistema de gestión interna para el equipo de Amazonia Emprende. Reserva vehículos
               corporativos, registra inspecciones de recepción y devolución, monitorea el avance de
               familias en procesos de restauración y conservación ambiental, y coordina el seguimiento
@@ -189,7 +196,7 @@ export default function LandingPage() {
             </p>
 
             {/* ── Acceso ── */}
-            <div className="mt-10 border-t border-hueso/15 pt-8">
+            <div className="mt-[clamp(1rem,2.5vh,2.5rem)] border-t border-hueso/15 pt-[clamp(0.875rem,1.9vh,2rem)]">
               {authLoading && (
                 <div className="flex justify-center py-8">
                   <Loader2 className="animate-spin text-taupe" size={22} />
@@ -251,7 +258,7 @@ export default function LandingPage() {
 
             {/* ── Servicios ── */}
             {!authLoading && (
-              <nav className="mt-9" aria-label="Servicios">
+              <nav className="mt-[clamp(0.625rem,1.7vh,2.25rem)]" aria-label="Servicios">
                 <p className="mb-1 text-[10px] uppercase tracking-[.2em] text-taupe">Servicios</p>
                 <div className="border-t border-hueso/15">
                   {/* Intranet — admins y usuarios con departamento */}
@@ -279,11 +286,11 @@ export default function LandingPage() {
                       <button
                         type="button"
                         onClick={() => setValidarMsg(v => !v)}
-                        className="flex w-full items-center gap-4 border-b border-hueso/15 py-3.5 text-left"
+                        className="flex w-full items-center gap-4 border-b border-hueso/15 py-[clamp(0.375rem,0.85vh,0.875rem)] text-left"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="font-display text-[15px] font-semibold text-hueso/45">Validar mi reserva</p>
-                          <p className="text-[11.5px] font-light text-hueso/35">Requiere inicio de sesión</p>
+                          <p className="text-[11.5px] font-light leading-tight text-hueso/35">Requiere inicio de sesión</p>
                         </div>
                         <ArrowRight size={15} className="shrink-0 text-hueso/20" />
                       </button>
@@ -299,7 +306,7 @@ export default function LandingPage() {
             )}
 
             {/* ── Novedades del sistema ── */}
-            <div className="mt-8">
+            <div className="mt-[clamp(0.625rem,1.8vh,2rem)]">
               <button
                 onClick={() => setShowChangelog(v => !v)}
                 className="flex w-full items-center justify-between text-[10px] uppercase tracking-[.2em] text-hueso/50 transition-colors hover:text-hueso/80"
@@ -344,7 +351,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <footer className="flex items-center justify-between gap-4 border-t border-hueso/10 pt-6 text-[10px] uppercase tracking-[.2em] text-hueso/40">
+        <footer className="flex items-center justify-between gap-4 border-t border-hueso/10 pt-[clamp(0.75rem,1.6vh,1.5rem)] text-[10px] uppercase tracking-[.2em] text-hueso/40">
           <span className="font-display">Inspirar · Nutrir · Actuar</span>
           <span>© {new Date().getFullYear()}</span>
         </footer>
@@ -366,11 +373,11 @@ function Fila({
   destacada?: boolean
 }) {
   return (
-    <Link href={href} className="group flex items-center gap-4 border-b border-hueso/15 py-3.5">
+    <Link href={href} className="group flex items-center gap-4 border-b border-hueso/15 py-[clamp(0.375rem,0.85vh,0.875rem)]">
       {destacada && <i className="h-8 w-[2px] shrink-0 bg-ambar" />}
       <div className="min-w-0 flex-1">
         <p className="font-display text-[15px] font-semibold text-white">{titulo}</p>
-        <p className="text-[11.5px] font-light text-hueso/55">{sub}</p>
+        <p className="text-[11.5px] font-light leading-tight text-hueso/55">{sub}</p>
       </div>
       <ArrowRight
         size={15}
