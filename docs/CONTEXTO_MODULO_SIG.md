@@ -12,6 +12,76 @@ Hoy toda la geometría se guarda como un `.zip` (shapefile) en Storage y el geov
 
 ---
 
+## Lotes de siembra y nucleación — lo que sigue después de campo (2026-09-20)
+
+El ciclo SIG → Campo → SIG II cerraba en "ver lo que devolvió el técnico" y ahí se acababa. El proceso real
+sigue: **el SIG revisa lo que volvió y lo da por bueno; cada zona que queda en firme es un LOTE de siembra**
+(un predio puede quedar con 0, 1 o n — campo bien pudo descartarlas todas), y **sobre esos lotes se sube la
+nucleación**, los núcleos de siembra dibujados dentro de cada uno.
+
+**Un lote no es una tabla nueva.** Es una zona de `geo.zonas` con `estado = 'definitiva'` — estado que
+existía en el CHECK desde `migration_geo.sql` y que nadie usaba: era exactamente este paso. No se inventó
+una entidad paralela que habría que mantener sincronizada con las zonas.
+
+> **"Lote" ya significa una sola cosa.** Hasta el 2026-09-20 la subida versionada del SIG también se
+> llamaba lote (`geo.zonas_lote`); se renombró a **carga** — `geo.zonas_carga`, `abrir_carga`,
+> `cerrar_carga`, `zonas.carga_id` — en [`sql/migration_renombrar_carga.sql`](sql/migration_renombrar_carga.sql),
+> **antes** de que la nucleación pusiera las dos acepciones en la misma pantalla. La palabra del negocio
+> gana y la maquinaria cede. Queda pendiente la misma cirugía con "RAS".
+
+**La nucleación se sube en un solo archivo por predio** y la base le asigna a cada núcleo el lote que lo
+contiene (`ST_Contains`; si cae en el borde, el que más lo intersecte). Así el SIG no tiene que partir el
+shapefile por lote a mano. El núcleo que no caiga en ningún lote **se guarda igual**, con `zona_id` NULL, y
+la intranet lo reporta — perderlo en silencio sería peor. La geometría es genérica
+(`geometry(Geometry, 4326)`): sirve igual si los núcleos vienen como polígonos o como puntos, sin migrar.
+Y la carga es versionada, como todo lo del SIG: resubir deja la anterior en `vigente = false`.
+
+**Dónde está:** pestaña **Nucleación** en `/intranet/sig/[predioId]`, visible solo cuando el predio ya salió
+a terreno. Paso 1 confirmar lotes, paso 2 subir la nucleación (bloqueado mientras no haya ningún lote).
+APIs `/api/sig/lotes` y `/api/sig/nucleacion`. Modelo: [`sql/migration_nucleacion.sql`](sql/migration_nucleacion.sql).
+
+**Por qué no rompe la app de campo** (verificado en su código, no supuesto): `app_campo/src/lib/core.ts`
+descarta solo `estado = 'descartada'`, así que una zona `definitiva` se sigue bajando al celular; y
+`src/lib/actualizarSig.ts` compara **geometría y área** para avisar de cambios del SIG — el estado no entra
+en la comparación, así que confirmar lotes no le genera ruido a quien está en terreno.
+
+**No confundir con la app de actividades y rendimientos** (`actividades_monitoreo_campo/`): la verificación
+de zonas que habilita este paso es la de la **PWA de campo** (`app_campo/`), la de evaluación + SIG II.
+
+---
+
+## Unidades de siembra — varios predios, un solo polígono (2026-09-17)
+
+**El problema.** La parte predial y la cartográfica no van una a una. Un mismo polígono de siembra cae sobre
+**varios predios** (englobes, herencias sin partir, fincas contiguas del mismo dueño, vecinos que entran
+juntos), y `geo.zonas.predio_id` apunta a UN predio: el polígono total había que subirlo repetido o partirlo
+a mano. El síntoma ya está en producción — "Los Andes" carga dos polígonos de finca que son de otros dos
+predios, y esos mismos 251,36 ha y 64,02 ha aparecen también colgados de "Parcela" y "FINCA PROVIDENCIA".
+
+**La decisión: fusionar es AGRUPAR, no fundir registros.** Cada predio conserva su matrícula, su dueño y su
+expediente jurídico — la debida diligencia es por predio y no se toca. Lo que se comparte es la cartografía.
+Una **unidad de siembra** (`core.predio_grupos`) tiene un **predio principal**, y el polígono total se sube
+contra él marcado con `geo.zonas.grupo_id`. Coherente con la regla de la casa: nada se destruye y la fusión
+se deshace sin perder el rastro (`disuelto_at`, no `DELETE`).
+
+**En el tablero.** El botón **Fusionar predios** entra en modo selección; se marcan los predios, se elige
+cuál lleva la cartografía (por defecto el que ya tenga lindero) y se le pone nombre a la unidad. La UI avisa
+si la unidad cruza municipios o propietarios distintos. Desde entonces la unidad es **una sola línea de
+trabajo**: los miembros van plegados bajo el principal y las cuatro tarjetas de fase cuentan unidades, no
+predios sueltos contándose cada uno como "sin cartografía". La fusión se deshace desde la ficha del predio.
+
+**Lo que NO cambia, a propósito.** `geo.zonas.predio_id` sigue NOT NULL apuntando al predio principal, así
+que `core.v_predios_campo`, `geo.zonas_de_predio`, el versionado por lotes y la sincronización de
+`app_campo` (en producción) ven exactamente lo mismo que antes; `grupo_id` es información añadida.
+**Pendiente de decidir:** si una unidad sale a Campo completa (que los miembros también aparezcan en el
+celular con el polígono de la unidad) o solo el predio principal, que es lo que pasa hoy. Eso toca
+`core.v_predios_campo`, que lee el celular — no se cambió sin decisión explícita.
+
+Modelo y razones: [`sql/migration_predio_grupos.sql`](sql/migration_predio_grupos.sql) ·
+`ARQUITECTURA_DATOS.md` §2.1 · API `/api/sig/grupos`.
+
+---
+
 ## Estado de implementación (2026-08-12) — el vigente
 
 El módulo SIG ya es productivo de punta a punta: **el SIG sube, campo corrige, y el SIG ve y descarga el resultado.**
@@ -20,13 +90,13 @@ El módulo SIG ya es productivo de punta a punta: **el SIG sube, campo corrige, 
 
 **Dos áreas que no son lo mismo, y confundían:** `core.predios.area_registral` la captura **Jurídica a mano** desde la escritura o el certificado de tradición — *no* sale del shapefile (por eso hay predios con área y sin cartografía; solo 11 de 111 la tienen). El área que manda es la **medida** por PostGIS sobre el `.zip`. El tablero muestra la medida grande y la registral debajo. La comparación ya destapó casos: **Los Andes** tiene 315 ha medidas (dos polígonos de finca: El Olivo 251 + Lagunilla 64) contra 65,5 ha escrituradas — o es el shapefile equivocado o son varios predios en uno.
 
-**Versionado de subidas (`migration_geo_versionado.sql`, corrida 2026-08-11)** — responde la pregunta 11 de este documento. Cada subida es un **lote con versión** (backup 1, 2, 3…); lo reemplazado queda `vigente=false`, consultable, **no borrado**. Antes se hacía `DELETE`, lo que rompía las correcciones que campo tenía pendientes. Se agregó la casilla **"Reemplazar los sitios ya guardados"** en la pestaña de siembra: hasta entonces la única forma de cambiar las zonas era volver a subirlas y que se acumularan duplicadas (por eso La Dalia tiene dos zonas llamadas "Lote 2").
+**Versionado de subidas (`migration_geo_versionado.sql`, corrida 2026-08-11)** — responde la pregunta 11 de este documento. Cada subida es una **carga con versión** (backup 1, 2, 3…); lo reemplazado queda `vigente=false`, consultable, **no borrado**. Antes se hacía `DELETE`, lo que rompía las correcciones que campo tenía pendientes. Se agregó la casilla **"Reemplazar los sitios ya guardados"** en la pestaña de siembra: hasta entonces la única forma de cambiar las zonas era volver a subirlas y que se acumularan duplicadas (por eso La Dalia tiene dos zonas llamadas "Lote 2").
 
 **Pestaña "Resultados de campo"** (aparece apenas el predio sale a terreno) — mapa satelital con lo que corrigió el técnico, con los mismos colores que ve él en el celular y la sombra gris del límite anterior; bitácora de revisiones (quién, cuándo, acción, área, observaciones); y las respuestas completas de la **evaluación de campo AE-CAMPO-001** y la **encuesta predial**. Lo alimenta `/api/sig/campo`.
 
 **Descarga a shapefile** — `lib/shapefile-write.ts` (escrito a mano siguiendo la especificación ESRI: las librerías de JS tratan mal los MultiPolygon, que es como PostGIS guarda todo, y no dejan controlar el `.dbf`). Sale `.zip` con `.shp/.shx/.dbf/.prj/.cpg` en **EPSG:4326** — el sistema en que quedan las geometrías tras la ingesta — con los atributos del sistema. Cada corrección exporta dos polígonos (`momento` = `antes`/`despues`). Verificado de ida y vuelta con shpjs (`scripts/verificar-shapefile.mjs`) y con la corrección real de La Dalia.
 
-**Lo que falta:** estrenar el versionado con una subida real (`geo.zonas_lote` está en cero — el SIG no ha subido nada desde la migración); respaldo del `.zip` en Storage; y el pipeline a PMTiles.
+**Lo que falta:** respaldo del `.zip` en Storage y el pipeline a PMTiles. (El versionado ya se estrenó: `geo.zonas_carga` tiene historial real — verificado por REST el 2026-09-17.)
 
 ---
 
@@ -125,7 +195,7 @@ Como en Fase I son ~6 predios, no hace falta construirlo todo de golpe:
 
 ### D. Futuro (lo más estratégico)
 10. **¿Quieren editar polígonos DENTRO de la Intranet** (dibujar/ajustar zonas en el navegador), o seguir editando en QGIS y solo subir?
-11. ~~**¿Cómo quieren manejar el versionado**? ¿Sobrescribir o guardar versiones?~~ → **RESUELTA (2026-08-11): guardar versiones.** Cada subida es un lote (`geo.zonas_lote`) y lo anterior queda `vigente=false`, consultable. Nada se borra. Ver el estado vigente arriba.
+11. ~~**¿Cómo quieren manejar el versionado**? ¿Sobrescribir o guardar versiones?~~ → **RESUELTA (2026-08-11): guardar versiones.** Cada subida es una carga (`geo.zonas_carga`, llamada "lote" hasta el 2026-09-20) y lo anterior queda `vigente=false`, consultable. Nada se borra. Ver el estado vigente arriba.
 12. **¿Las capas de cobertura del modelo de IA** (`modelo-web`) deben entrar como insumo de las zonas potenciales (SIG I)?
 
 ---

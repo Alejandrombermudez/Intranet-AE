@@ -80,6 +80,8 @@ erDiagram
     predios ||--o{ predio_propietarios : "copropiedad N-N"
     aliados ||--o{ predio_propietarios : ""
     predios ||--|| expedientes : "1:1 proceso"
+    predio_grupos ||--o{ predio_grupo_miembros : "unidad de siembra"
+    predios ||--o{ predio_grupo_miembros : "un polígono, varios predios"
 ```
 
 **`core.aliados`** — persona natural o jurídica. 🟢
@@ -114,6 +116,33 @@ erDiagram
 | aliado_id | uuid | FK→ core.aliados | |
 | rol | text | | `principal` \| `copropietario` |
 | cuota_pct | numeric(5,2) | | opcional |
+
+**`core.predio_grupos`** + **`core.predio_grupo_miembros`** — unidad de siembra: varios predios, UN polígono. 🔧 escrito, migración pendiente (`sql/migration_predio_grupos.sql`)
+
+La parte predial y la cartográfica no van una a una: un polígono de siembra cae sobre varios predios
+(englobes, herencias sin partir, fincas contiguas, vecinos que entran juntos). **Fusionar es agrupar, no
+fundir registros:** cada predio conserva su matrícula, su dueño y su expediente jurídico — la debida
+diligencia sigue siendo por predio. Lo que se comparte es la cartografía, y la lleva el **predio principal**
+del grupo: el polígono total se sube contra él y queda marcado con `geo.zonas.grupo_id`.
+
+| Parámetro | Tipo | Llave | Notas |
+|---|---|---|---|
+| id | uuid | PK | |
+| nombre | text | | cómo se llama la unidad; por defecto el nombre del predio principal |
+| predio_principal_id | uuid | FK→ core.predios | el que lleva el polígono de la unidad |
+| nota | text | | |
+| disuelto_at / disuelto_por | — | | deshacer la fusión **no borra**: la unidad queda disuelta y consultable |
+
+`predio_grupo_miembros(grupo_id, predio_id, activo)` — PK compuesta, y un **índice único parcial sobre
+`predio_id WHERE activo`**: un predio no puede estar en dos unidades vigentes a la vez (sí en varias ya
+disueltas). Vista de lectura: `core.v_predio_grupos` (una fila por unidad, con sus miembros y cuántos
+municipios/propietarios toca). Se arma desde `/intranet/sig` con **Fusionar predios**.
+
+> **Lo que esto NO cambia, a propósito:** `geo.zonas.predio_id` sigue NOT NULL apuntando al predio
+> principal, así que `core.v_predios_campo`, `geo.zonas_de_predio`, el versionado por lotes y la
+> sincronización de `app_campo` (en producción) ven exactamente lo mismo que antes. **Que los predios
+> miembros también salgan a Campo con el polígono de la unidad es una decisión aparte, todavía sin tomar:
+> hoy sale a campo el predio principal.**
 
 **`core.expedientes`** — máquina de estados del proceso (1 por predio). 🟢
 | Parámetro | Tipo | Llave | Notas |
@@ -183,6 +212,36 @@ erDiagram
 > **Regla de negocio: el terreno tiene la última palabra.** La oficina propone, campo dispone, y ninguna de las dos versiones se destruye. En concreto, `revisar_zona` **nunca falla** por un cambio hecho en el SIG: si la zona fue retirada por un lote nuevo la **revive**; si el SIG la borró de raíz (subidas anteriores al versionado) la **recrea** con `p_geojson_respaldo`, la copia que el propio celular guardaba; y si no hay geometría con qué recrearla, registra la revisión con `zona_id` nulo en vez de levantar excepción. En sentido inverso, `cerrar_lote` **no retira** zonas que campo ya tocó (tienen revisión, u `origen='campo'`): sobreviven marcadas en `geo.v_zonas_conflicto` para que el SIG lo resuelva viendo las dos versiones.
 >
 > **Salida:** la intranet exporta zonas y correcciones a shapefile (`.zip` con `.shp/.shx/.dbf/.prj/.cpg`, EPSG:4326 y atributos en el `.dbf`) desde `lib/shapefile-write.ts` + `lib/exportar-zonas.ts`. Cierra el círculo: lo que campo corrigió vuelve al GIS de escritorio del SIG. Cada corrección exporta dos polígonos (`momento` = `antes`/`despues`) para superponerlos.
+
+#### Lotes de siembra y nucleación 🔧 escrito, migración pendiente (`sql/migration_nucleacion.sql`)
+
+El paso que sigue a la verificación de campo. **Un lote de siembra NO es una tabla**: es una zona de
+`geo.zonas` (tipo `restauracion`) que el SIG dio por buena → `estado = 'definitiva'`, estado que existía en
+el CHECK desde el principio y que nadie usaba. Un predio queda con 0, 1 o n lotes.
+
+> ⚠ `geo.zonas_lote` es el **lote de subida** (versionado). El **lote de siembra** es la zona definitiva.
+> Misma palabra, cosas distintas — como "RAS".
+
+**`geo.nucleos`** — los núcleos de siembra dentro de un lote.
+
+| Parámetro | Tipo | Llave | Notas |
+|---|---|---|---|
+| id | uuid | PK | |
+| predio_id | uuid | FK→ core.predios | ON DELETE CASCADE |
+| zona_id | uuid | FK→ geo.zonas | el lote que lo contiene. **NULL = cayó fuera de todo lote**: se guarda igual y la intranet lo reporta |
+| carga_id | uuid | FK→ geo.nucleos_carga | la subida a la que pertenece |
+| geom | geometry(**Geometry**, 4326) | | genérica a propósito: puntos o polígonos, sin migrar |
+| area_ha | numeric | | solo si es superficie; en puntos NULL |
+| n_plantas | int | | si el `.dbf` lo trae |
+| propiedades | jsonb | | la fila completa del `.dbf`, como en `geo.zonas` |
+| vigente | boolean | | resubir no borra: la carga anterior queda `false` |
+
+`geo.crear_nucleo` asigna el lote por geometría (`ST_Contains`; si cae en el borde, el que más intersecte),
+así el SIG sube **un solo archivo por predio** y no parte el shapefile a mano. Lecturas:
+`geo.lotes_de_predio`, `geo.nucleos_de_predio`.
+
+**Confirmar lotes no afecta a la app de campo** (verificado en su código): `app_campo/src/lib/core.ts`
+filtra solo `descartada`, y su detector de cambios compara geometría y área, no el estado.
 
 ### 2.3 `catalogo` — maestro de especies 🔴 por construir
 

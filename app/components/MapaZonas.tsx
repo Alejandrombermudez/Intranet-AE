@@ -12,7 +12,14 @@ interface Props {
   className?: string
 }
 
-/** Mapa con basemap OpenStreetMap que pinta zonas (polígonos) en 4326. */
+/**
+ * Mapa con basemap OpenStreetMap que pinta geometrías en 4326.
+ *
+ * Polígonos y PUNTOS: la nucleación puede venir como un punto por núcleo, y el
+ * marcador por defecto de Leaflet pide un icono por URL que con el bundler de
+ * Next no resuelve (sale el cuadro roto). Por eso los puntos se dibujan como
+ * círculos vectoriales, que además respetan el color de selección.
+ */
 export default function MapaZonas({ features, baseFeatures, selectedIndices, onSelect, className }: Props) {
   const elRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
@@ -47,11 +54,26 @@ export default function MapaZonas({ features, baseFeatures, selectedIndices, onS
     if (!map) return
     if (layerRef.current) { layerRef.current.remove(); layerRef.current = null }
 
+    const esSel = (feat?: Feature) => {
+      const idx = feat ? features.indexOf(feat) : -1
+      return idx >= 0 && (selectedIndices?.includes(idx) ?? false)
+    }
+
     const layer = L.geoJSON({ type: 'FeatureCollection', features } as FeatureCollection, {
       style: (feat) => {
-        const idx = feat ? features.indexOf(feat as Feature) : -1
-        const sel = idx >= 0 && (selectedIndices?.includes(idx) ?? false)
+        const sel = esSel(feat as Feature | undefined)
         return { color: sel ? '#0d9488' : '#94a3b8', weight: sel ? 3 : 1.5, fillColor: sel ? '#14b8a6' : '#cbd5e1', fillOpacity: sel ? 0.4 : 0.12 }
+      },
+      // Un punto como círculo vectorial, no como marcador con icono
+      pointToLayer: (feat, latlng) => {
+        const sel = esSel(feat as Feature)
+        return L.circleMarker(latlng, {
+          radius: sel ? 7 : 5,
+          color: sel ? '#0d9488' : '#64748b',
+          weight: sel ? 3 : 1.5,
+          fillColor: sel ? '#14b8a6' : '#cbd5e1',
+          fillOpacity: 0.85,
+        })
       },
       onEachFeature: onSelect
         ? (feat, lyr) => { const idx = features.indexOf(feat as Feature); lyr.on('click', () => onSelect(idx)) }

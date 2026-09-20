@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import { parsearShapefile, perimetroGeom, type ShapefileParseado } from '@/lib/shapefile-client'
 import { exportarZonas } from '@/lib/exportar-zonas'
 import { area as turfArea } from '@turf/area'
@@ -10,9 +11,10 @@ import { booleanIntersects } from '@turf/boolean-intersects'
 import type { Feature, Geometry } from 'geojson'
 import {
   Loader2, FileUp, Save, AlertCircle, AlertTriangle, CheckCircle2, Ruler, Layers, Hexagon as Sq,
-  ExternalLink, MousePointerClick, Check, Send, Undo2, Download, ClipboardList,
+  ExternalLink, MousePointerClick, Check, Send, Undo2, Download, ClipboardList, Combine, Sprout,
 } from 'lucide-react'
 import { Boton, Cabecera, Cargando } from '@/app/components/marca'
+import type { UnidadDePredio } from '@/app/api/sig/grupos/route'
 
 const MapaZonas = dynamic(() => import('@/app/components/MapaZonas'), {
   ssr: false,
@@ -20,6 +22,11 @@ const MapaZonas = dynamic(() => import('@/app/components/MapaZonas'), {
 })
 
 const ResultadosCampo = dynamic(() => import('@/app/components/ResultadosCampo'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin text-stone-300" size={32} /></div>,
+})
+
+const Nucleacion = dynamic(() => import('@/app/components/Nucleacion'), {
   ssr: false,
   loading: () => <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin text-stone-300" size={32} /></div>,
 })
@@ -32,7 +39,7 @@ interface ZonaGuardada {
   area_ha: number | null; perimetro_m: number | null
   propiedades: Record<string, unknown> | null; geojson: string
 }
-type Tab = 'poligono' | 'siembra' | 'campo'
+type Tab = 'poligono' | 'siembra' | 'campo' | 'nucleacion'
 
 const zonaToFeature = (z: ZonaGuardada): Feature => ({ type: 'Feature', geometry: JSON.parse(z.geojson), properties: { nombre: z.nombre, tipo: z.tipo } })
 const todos = (n: number) => new Set(Array.from({ length: n }, (_, i) => i))
@@ -116,6 +123,11 @@ export default function SigPredioPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('poligono')
 
+  // Unidad de siembra: varios predios, un solo polígono (null = predio suelto)
+  const [unidad, setUnidad] = useState<UnidadDePredio | null>(null)
+  const [disolviendo, setDisolviendo] = useState(false)
+  const [confirmarDisolver, setConfirmarDisolver] = useState(false)
+
   const [parsePoly, setParsePoly] = useState<ShapefileParseado | null>(null)
   const [selPoly, setSelPoly] = useState<Set<number>>(new Set())
   const [parseandoPoly, setParseandoPoly] = useState(false)
@@ -143,25 +155,52 @@ export default function SigPredioPage() {
     })
   }, [])
 
-  const cargarZonas = useCallback(async (email: string) => {
-    const r = await fetch(`/api/sig/zonas?predio_id=${predioId}&email=${encodeURIComponent(email)}`)
+  const cargarZonas = useCallback(async () => {
+    const r = await fetchConSesion(`/api/sig/zonas?predio_id=${predioId}`)
     const d = await r.json(); setZonas(Array.isArray(d) ? d : [])
   }, [predioId])
 
-  const cargarCaso = useCallback(async (email: string) => {
-    const r = await fetch(`/api/juridica/aliados/${predioId}?email=${encodeURIComponent(email)}`)
+  const cargarCaso = useCallback(async () => {
+    const r = await fetchConSesion(`/api/juridica/aliados/${predioId}`)
     const c = r.ok ? await r.json() : null
     setCaso(c)
     return c
   }, [predioId])
 
+  const cargarUnidad = useCallback(async () => {
+    const r = await fetchConSesion(`/api/sig/grupos?predio_id=${predioId}`)
+    setUnidad(r.ok ? await r.json() : null)
+  }, [predioId])
+
   useEffect(() => {
     if (!authReady || !userEmail || !predioId) return
     Promise.all([
-      cargarCaso(userEmail),
-      cargarZonas(userEmail),
+      cargarCaso(),
+      cargarZonas(),
+      cargarUnidad(),
     ]).then(() => setLoading(false)).catch(() => setLoading(false))
-  }, [authReady, userEmail, predioId, cargarCaso, cargarZonas])
+  }, [authReady, userEmail, predioId, cargarCaso, cargarZonas, cargarUnidad])
+
+  // Este predio es el que lleva la cartografía de la unidad: lo que se sube
+  // aquí es el polígono TOTAL, y así queda marcado en geo.zonas.
+  const esPrincipal = !!unidad && unidad.predio_principal_id === predioId
+  const grupoIdSubida = esPrincipal ? unidad!.grupo_id : null
+
+  // ── Deshacer la fusión (no borra: la unidad queda disuelta y consultable) ──
+  async function disolverUnidad() {
+    if (!unidad || disolviendo) return
+    setDisolviendo(true)
+    try {
+      const res = await fetchConSesion(`/api/sig/grupos/${unidad.grupo_id}`, { method: 'DELETE' })
+      const body = await res.json()
+      if (!res.ok) { showToast('error', body.error ?? 'No se pudo deshacer la fusión'); return }
+      showToast('ok', 'Fusión deshecha — los predios vuelven a trabajarse por separado')
+      await cargarUnidad()
+    } finally {
+      setDisolviendo(false)
+      setConfirmarDisolver(false)
+    }
+  }
 
   // El predio ya salió a terreno alguna vez: desde ahí tiene sentido mostrar
   // lo que campo devolvió (aunque después se haya cancelado el envío).
@@ -205,14 +244,14 @@ export default function SigPredioPage() {
     setGuardando(true)
     try {
       const features = [...selPoly].map((i) => parsePoly.features[i]).map((f) => ({ geometry: f.geometry, properties: f.properties ?? {}, perimetro_m: perimetroGeom(f.geometry) }))
-      const res = await fetch('/api/sig/ingesta', {
+      const res = await fetchConSesion('/api/sig/ingesta', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ predio_id: predioId, expediente_id: caso?.expediente_id ?? null, email: userEmail, tipo: 'finca', modo, unir_ids, features }),
+        body: JSON.stringify({ predio_id: predioId, expediente_id: caso?.expediente_id ?? null, tipo: 'finca', modo, unir_ids, features, grupo_id: grupoIdSubida }),
       })
       const body = await res.json()
       if (!res.ok) { showToast('error', body.error ?? 'Error al guardar'); return }
       showToast('ok', (modo === 'unir' ? 'Polígono unido y guardado' : `${body.creadas} polígono(s) del predio guardado(s)`) + avisoConflicto(body))
-      setParsePoly(null); setOverlap(null); await cargarZonas(userEmail)
+      setParsePoly(null); setOverlap(null); await cargarZonas()
     } finally { setGuardando(false) }
   }
 
@@ -224,14 +263,11 @@ export default function SigPredioPage() {
     if (!userEmail || siembraZonas.length === 0 || enviandoCampo) return
     setEnviandoCampo(true)
     try {
-      const res = await fetch(`/api/juridica/aliados/${predioId}/crear-en-siembra`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ created_by: userEmail }),
-      })
+      const res = await fetchConSesion(`/api/juridica/aliados/${predioId}/crear-en-siembra`, { method: 'POST' })
       const body = await res.json()
       if (!res.ok) { showToast('error', body.error ?? 'No se pudo enviar a Campo'); return }
       showToast('ok', 'Predio enviado a Campo')
-      await cargarCaso(userEmail)
+      await cargarCaso()
     } finally {
       setEnviandoCampo(false)
     }
@@ -244,14 +280,11 @@ export default function SigPredioPage() {
     if (!userEmail || cancelandoCampo) return
     setCancelandoCampo(true)
     try {
-      const res = await fetch(`/api/juridica/aliados/${predioId}/cancelar-campo`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ created_by: userEmail }),
-      })
+      const res = await fetchConSesion(`/api/juridica/aliados/${predioId}/cancelar-campo`, { method: 'POST' })
       const body = await res.json()
       if (!res.ok) { showToast('error', body.error ?? 'No se pudo cancelar el envío'); return }
       showToast('ok', 'Envío a Campo cancelado — el predio volvió a SIG I')
-      await cargarCaso(userEmail)
+      await cargarCaso()
     } finally {
       setCancelandoCampo(false)
       setConfirmarCancelar(false)
@@ -264,19 +297,20 @@ export default function SigPredioPage() {
     setGuardando(true)
     try {
       const features = [...selSites].map((i) => parseSites.features[i]).map((f) => ({ geometry: f.geometry, properties: f.properties ?? {}, perimetro_m: perimetroGeom(f.geometry) }))
-      const res = await fetch('/api/sig/ingesta', {
+      const res = await fetchConSesion('/api/sig/ingesta', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          predio_id: predioId, expediente_id: caso?.expediente_id ?? null, email: userEmail,
+          predio_id: predioId, expediente_id: caso?.expediente_id ?? null,
           tipo: 'restauracion',
           modo: reemplazarSitios && siembraZonas.length > 0 ? 'sobreescribir' : 'insertar',
           features,
+          grupo_id: grupoIdSubida,
         }),
       })
       const body = await res.json()
       if (!res.ok) { showToast('error', body.error ?? 'Error al guardar'); return }
       showToast('ok', `${body.creadas} sitio(s) de siembra guardado(s)` + avisoConflicto(body))
-      setParseSites(null); setReemplazarSitios(false); await cargarZonas(userEmail)
+      setParseSites(null); setReemplazarSitios(false); await cargarZonas()
     } finally { setGuardando(false) }
   }
 
@@ -307,6 +341,83 @@ export default function SigPredioPage() {
       />
 
       <div className="max-w-5xl mx-auto px-6 sm:px-10 py-10 space-y-5">
+        {/* Unidad de siembra: varios predios, un solo polígono. La parte predial
+            sigue separada (matrícula, dueño y expediente de cada uno); lo que se
+            comparte es la cartografía, y la lleva el predio principal. */}
+        {unidad && (
+          <section className="bg-white rounded-2xl border border-stone-200 p-5 space-y-3">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex items-start gap-3 min-w-0">
+                <Combine size={18} className="text-stone-400 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <h2 className="font-black text-stone-800 text-sm">
+                    Unidad de siembra · {unidad.nombre}
+                  </h2>
+                  <p className="text-xs text-stone-500 mt-0.5 leading-relaxed">
+                    {unidad.n_predios} predios comparten un mismo polígono de siembra.{' '}
+                    {esPrincipal
+                      ? 'Este predio es el que lleva la cartografía: lo que subas aquí es el polígono total de la unidad.'
+                      : 'La cartografía la lleva el predio principal — súbela allí, no aquí.'}
+                  </p>
+                </div>
+              </div>
+              {!esPrincipal && (
+                <Boton variante="claro" href={`/intranet/sig/${unidad.predio_principal_id}`} icono={<ExternalLink size={13} />}>
+                  Ir al predio principal
+                </Boton>
+              )}
+            </div>
+
+            <ul className="border-t border-stone-100 pt-3 space-y-1.5">
+              {unidad.miembros.map((m) => (
+                <li key={m.predio_id} className="flex items-center gap-2 text-xs">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.es_principal ? 'bg-teal-500' : 'bg-stone-300'}`} />
+                  <span className={`font-bold truncate ${m.predio_id === predioId ? 'text-stone-900' : 'text-stone-600'}`}>
+                    {m.nombre_predio || '(predio sin nombre)'}
+                  </span>
+                  {m.es_principal && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 shrink-0">principal</span>}
+                  {m.predio_id === predioId && <span className="text-[10px] text-stone-400 shrink-0">(estás aquí)</span>}
+                  <span className="text-stone-400 truncate">
+                    · {m.propietario} · {m.municipio}{m.matricula_inmobiliaria ? ` · Mat. ${m.matricula_inmobiliaria}` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {unidad.n_propietarios > 1 && (
+              <p className="flex items-start gap-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                Son {unidad.n_propietarios} propietarios distintos. Cada uno mantiene su expediente jurídico aparte:
+                aquí solo se comparte el polígono.
+              </p>
+            )}
+
+            <div className="border-t border-stone-100 pt-3 flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-[11px] text-stone-400">
+                Deshacer la fusión no borra nada: los predios vuelven a trabajarse por separado y el polígono
+                se queda donde está.
+              </p>
+              {confirmarDisolver ? (
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => setConfirmarDisolver(false)} className="px-3 py-2 text-xs font-bold text-stone-500 hover:text-stone-800">
+                    Cancelar
+                  </button>
+                  <button onClick={disolverUnidad} disabled={disolviendo}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-rose-200 text-rose-700 text-xs font-bold hover:bg-rose-50 transition-colors disabled:opacity-50">
+                    {disolviendo ? <Loader2 size={13} className="animate-spin" /> : <Undo2 size={13} />}
+                    Sí, deshacer la fusión
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmarDisolver(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-stone-200 text-stone-600 text-xs font-bold hover:bg-stone-50 transition-colors shrink-0">
+                  <Undo2 size={13} /> Deshacer fusión
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* Enviar a Campo — obligatorio: exige sitios de siembra guardados.
             Disponible desde 'juridica' (SIG ve el predio desde su creación) o 'sig_i' (legado). */}
         {(caso?.etapa === 'juridica' || caso?.etapa === 'sig_i') && (
@@ -353,16 +464,18 @@ export default function SigPredioPage() {
           </div>
         )}
 
-        {/* Tabs — "Resultados de campo" aparece apenas el predio sale a terreno */}
+        {/* Tabs — "Resultados de campo" y "Nucleación" aparecen apenas el predio
+            sale a terreno: la nucleación es el paso siguiente a que campo
+            verifique las zonas, no algo que se pueda hacer antes. */}
         <div className="flex gap-1 bg-white rounded-xl p-1 border border-stone-100 w-fit flex-wrap">
           {([
             ['poligono', 'Polígono del predio'],
             ['siembra',  'Sitios de siembra'],
-            ...(yaFueACampo ? [['campo', 'Resultados de campo'] as const] : []),
+            ...(yaFueACampo ? [['campo', 'Resultados de campo'] as const, ['nucleacion', 'Nucleación'] as const] : []),
           ] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k as Tab)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${tab === k ? 'bg-teal-600 text-white' : 'text-stone-500 hover:bg-stone-100'}`}>
-              {k === 'poligono' ? <Sq size={14} /> : k === 'siembra' ? <Layers size={14} /> : <ClipboardList size={14} />} {label}
+              {k === 'poligono' ? <Sq size={14} /> : k === 'siembra' ? <Layers size={14} /> : k === 'nucleacion' ? <Sprout size={14} /> : <ClipboardList size={14} />} {label}
               {k === 'poligono' && fincaZonas.length > 0 && <CheckCircle2 size={13} className={tab === k ? 'text-white' : 'text-teal-500'} />}
             </button>
           ))}
@@ -372,9 +485,16 @@ export default function SigPredioPage() {
         {tab === 'campo' && userEmail && (
           <ResultadosCampo
             predioId={predioId}
-            email={userEmail}
             fincaGeoms={fincaZonas.map(z => JSON.parse(z.geojson) as Geometry)}
             nombrePredio={caso?.nombre_predio ?? 'predio'}
+          />
+        )}
+
+        {/* ════ Nucleación: confirmar lotes y subir los núcleos ════ */}
+        {tab === 'nucleacion' && userEmail && (
+          <Nucleacion
+            predioId={predioId}
+            fincaGeoms={fincaZonas.map(z => JSON.parse(z.geojson) as Geometry)}
           />
         )}
 

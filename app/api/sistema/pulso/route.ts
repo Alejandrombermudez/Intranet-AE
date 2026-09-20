@@ -85,7 +85,7 @@ const DEFINICIONES: Def[] = [
     etiqueta: 'zonas vigentes',
     filtro: { op: 'esVerdadero', col: 'vigente' },
   },
-  { id: 'zonas_lote', schema: 'geo', tabla: 'zonas_lote', etiqueta: 'subidas versionadas del SIG' },
+  { id: 'zonas_carga', schema: 'geo', tabla: 'zonas_carga', etiqueta: 'subidas versionadas del SIG' },
   { id: 'revisiones_zona', schema: 'geo', tabla: 'zona_revision', etiqueta: 'zonas revisadas en terreno' },
 
   // ── Campo ─────────────────────────────────────────────────────────────────

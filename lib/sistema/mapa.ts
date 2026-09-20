@@ -339,6 +339,7 @@ export const ETAPAS: Etapa[] = [
       'Marca dentro de ella los sitios donde se podría sembrar.',
       'Reproyecta todo a coordenadas geográficas y calcula el área real en hectáreas.',
       'Si ya había cartografía, la nueva subida entra como versión nueva y la anterior queda consultable.',
+      'Cuando un mismo polígono cae sobre varios predios, los fusiona en una unidad y sube el polígono total una sola vez.',
     ],
     entrega: 'Zonas potenciales dibujadas sobre el predio, con área medida, listas para ir a verificar.',
     apps: [
@@ -358,13 +359,14 @@ export const ETAPAS: Etapa[] = [
     },
     datos: [
       { nombre: 'geo.zonas', que: 'Los polígonos: la finca y los sitios de siembra, con su área.' },
-      { nombre: 'geo.zonas_lote', que: 'Cada subida es un lote con versión. Lo reemplazado no se borra.' },
+      { nombre: 'geo.zonas_carga', que: 'Cada subida es una carga con versión. Lo reemplazado no se borra.' },
+      { nombre: 'core.predio_grupos', que: 'Unidades de siembra: varios predios que comparten un polígono.' },
       { nombre: 'core.v_predios_campo', que: 'La lista que el celular puede descargar. Exige cartografía.' },
     ],
-    pulso: ['zonas_vigentes', 'zonas_lote', 'etapa_sig'],
+    pulso: ['zonas_vigentes', 'zonas_carga', 'etapa_sig'],
     pendiente:
-      'El versionado por lotes está construido desde el 11 de agosto pero no se ha estrenado con una ' +
-      'subida real: la tabla de lotes sigue vacía.',
+      'Los lotes de siembra y la nucleación están construidos pero su migración no se ha corrido en ' +
+      'Supabase: hasta entonces la pestaña «Nucleación» del predio lo dice y no deja subir nada.',
   },
   {
     id: 'campo',
@@ -622,7 +624,7 @@ export const REGLA_DEL_TERRENO = {
   titulo: 'El terreno tiene la última palabra',
   cuerpo:
     'La oficina propone las zonas y la persona parada en el predio dispone. Pero ninguna de las dos ' +
-    'versiones se destruye: cada subida del SIG entra como un lote con versión y lo que se reemplaza ' +
+    'versiones se destruye: cada subida del SIG entra como una carga con versión y lo que se reemplaza ' +
     'queda consultable. Esto no es una preferencia de diseño — se perdieron correcciones reales de ' +
     'campo una vez por no tenerlo así.',
 }
@@ -662,7 +664,7 @@ export const PIEZAS: Pieza[] = [
       'y el geoportal.',
     datos: [
       { nombre: 'geo.zonas', que: 'Fincas y sitios de siembra.', etiqueta: 'Zonas', pulso: 'zonas_vigentes' },
-      { nombre: 'geo.zonas_lote', que: 'Cada subida, versionada.', etiqueta: 'Subidas del SIG', pulso: 'zonas_lote' },
+      { nombre: 'geo.zonas_carga', que: 'Cada subida, versionada.', etiqueta: 'Subidas del SIG', pulso: 'zonas_carga' },
       { nombre: 'geo.zona_revision', que: 'Lo que el terreno decidió sobre cada zona.', etiqueta: 'Revisiones de campo', pulso: 'revisiones_zona' },
     ],
     pulso: ['zonas_vigentes', 'revisiones_zona'],

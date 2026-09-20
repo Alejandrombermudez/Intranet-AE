@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { listExpedientes, type ExpedienteRow } from '@/lib/expedientes'
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
 
 /**
  * Fila del tablero SIG: el expediente + qué cartografía tiene ya cargada.
@@ -20,6 +21,15 @@ export interface SigWorklistRow extends ExpedienteRow {
   n_revisiones:     number
   tiene_eval_campo: boolean
   tiene_encuesta:   boolean
+  // ── Unidad de siembra (varios predios, un solo polígono) ──
+  // El tablero pliega los miembros bajo el predio principal: la unidad es UNA
+  // línea de trabajo, no N predios sin cartografía. Ver /api/sig/grupos.
+  grupo_id:         string | null
+  grupo_nombre:     string | null
+  /** Este predio es el que lleva el polígono de la unidad. */
+  es_principal:     boolean
+  /** Cuántos predios tiene la unidad (0 si el predio no está fusionado). */
+  grupo_n_predios:  number
 }
 
 interface ZonaMin {
@@ -30,30 +40,33 @@ interface ZonaMin {
   vigente: boolean | null
 }
 
-// GET /api/sig/worklist?email=... — tablero SIG con resumen cartográfico
+// GET /api/sig/worklist — tablero SIG con resumen cartográfico   (Authorization: Bearer <token>)
 export async function GET(req: NextRequest) {
   const supabase = createServerSupabaseClient()
-  const email = req.nextUrl.searchParams.get('email')
-  if (!email) return NextResponse.json({ error: 'Email requerido' }, { status: 400 })
-
-  const { data: profile } = await supabase
-    .schema('people').from('user_profiles')
-    .select('is_admin, department, can_access_intranet')
-    .eq('email', email)
-    .single()
-  if (!profile || (!profile.is_admin && !profile.can_access_intranet && !profile.department)) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-  }
+  const sesion = await exigirSesion(req, supabase, PUEDE.intranet)
+  if (!sesion.ok) return sesion.respuesta
 
   try {
-    const [expedientes, { data: zonas }, { data: evals }, { data: encuestas }, { data: revisiones }] =
+    const [expedientes, { data: zonas }, { data: evals }, { data: encuestas }, { data: revisiones }, grupos] =
       await Promise.all([
         listExpedientes(supabase),
         supabase.schema('geo').from('zonas').select('predio_id, tipo, estado, area_ha, vigente'),
         supabase.schema('siembra').from('evaluaciones_campo').select('predio_id'),
         supabase.schema('siembra').from('familias').select('predio_id').is('deleted_at', null),
         supabase.schema('geo').from('zona_revision').select('predio_id'),
+        // Unidades de siembra. Si migration_predio_grupos.sql no está corrida,
+        // el tablero funciona igual que antes: sin unidades.
+        supabase.schema('core').from('v_predio_grupos')
+          .select('grupo_id, nombre, predio_principal_id, n_predios, predio_ids')
+          .then(({ data, error }) => (error ? [] : (data ?? []))),
       ])
+
+    // predio_id → la unidad a la que pertenece
+    interface GrupoMin { grupo_id: string; nombre: string; predio_principal_id: string; n_predios: number; predio_ids: string[] }
+    const grupoDePredio = new Map<string, GrupoMin>()
+    for (const g of grupos as GrupoMin[]) {
+      for (const pid of (g.predio_ids ?? [])) grupoDePredio.set(pid, g)
+    }
 
     // Resumen cartográfico por predio (pocas filas: se agrega en memoria)
     const geo = new Map<string, { finca: number; haFinca: number; siembra: number; haSiembra: number; descartadas: number }>()
@@ -79,6 +92,7 @@ export async function GET(req: NextRequest) {
 
     const rows: SigWorklistRow[] = expedientes.map(e => {
       const g = geo.get(e.predio_id)
+      const grupo = grupoDePredio.get(e.predio_id)
       const tieneFinca = (g?.finca ?? 0) > 0
       const nSiembra   = g?.siembra ?? 0
       const enCampo    = e.etapa === 'campo' || e.etapa === 'sig_ii'
@@ -100,6 +114,10 @@ export async function GET(req: NextRequest) {
         n_revisiones:     revPorPredio.get(e.predio_id) ?? 0,
         tiene_eval_campo: conEval.has(e.predio_id),
         tiene_encuesta:   conEnc.has(e.predio_id),
+        grupo_id:         grupo?.grupo_id ?? null,
+        grupo_nombre:     grupo?.nombre ?? null,
+        es_principal:     grupo ? grupo.predio_principal_id === e.predio_id : false,
+        grupo_n_predios:  grupo?.n_predios ?? 0,
       }
     })
 
