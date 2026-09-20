@@ -7,6 +7,7 @@ import {
   Image as ImageIcon,
 } from 'lucide-react'
 import { Boton, Cabecera, Cargando } from '@/app/components/marca'
+import { PUEDE_SIEMBRA } from '@/lib/departamentos'
 
 const PRIMARY = '#2f3f32'
 
@@ -143,7 +144,7 @@ export default function SiembraEditPage() {
 
       const { data: profile } = await supabase
         .schema('people').from('user_profiles').select('is_admin, department').eq('email', user.email).single()
-      if (!profile?.is_admin && profile?.department !== 'RAS') { router.push('/'); return }
+      if (!profile?.is_admin && !PUEDE_SIEMBRA.includes(profile?.department ?? '')) { router.push('/'); return }
 
       const { data: { session } } = await supabase.auth.getSession()
       setAccessToken(session?.access_token ?? null)
@@ -151,7 +152,7 @@ export default function SiembraEditPage() {
       const { data: fam, error } = await supabase
         .schema('siembra').from('familias').select('*').eq('id', id).single()
 
-      if (error || !fam) { router.push('/intranet/ras/siembra'); return }
+      if (error || !fam) { router.push('/intranet/siembra'); return }
 
       setForm({
         municipio: fam.municipio ?? '',
@@ -265,7 +266,7 @@ export default function SiembraEditPage() {
       })
 
       if (res.ok) {
-        router.push(`/intranet/ras/siembra/${id}`)
+        router.push(`/intranet/siembra/${id}`)
       } else {
         const err = await res.json().catch(() => ({}))
         alert(err.error ?? 'Error al guardar los cambios.')
@@ -287,7 +288,7 @@ export default function SiembraEditPage() {
       <Cabecera
         compacta
         ancho="medio"
-        volver={{ href: `/intranet/ras/siembra/${id}`, label: 'Familia' }}
+        volver={{ href: `/intranet/siembra/${id}`, label: 'Familia' }}
         modulo="Restauración · Siembra"
         titulo={<>Editar — {form.nombre_propietario_display}</>}
         acciones={

@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { fetchConSesion } from '@/lib/fetch-sesion'
 import type { UserProfile } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 import { MisSesiones } from '@/app/components/MisSesiones'
@@ -117,6 +118,10 @@ const DEPARTMENTS = ['Financiero', 'Ejecutivo', 'RAS', 'Siembra', 'Tecnología',
 // sola tabla evita que agregar un módulo se olvide en uno de los dos sitios.
 const RUTA_MODULO: Record<string, string> = {
   RAS:       '/intranet/ras',
+  // Siembra vivía en /intranet/ras/siembra, sin entrada en esta tabla y sin un
+  // solo enlace que llevara hasta allá: a quien tuviera ese departamento la
+  // intranet le decía "módulo en construcción" aunque el módulo estaba hecho.
+  Siembra:   '/intranet/siembra',
   SIG:       '/intranet/sig',
   Juridica:  '/intranet/juridica',
   Ejecutivo: '/intranet/ejecutivo',
@@ -1283,7 +1288,7 @@ export default function IntranetPage() {
     if (statsLoaded || !currentUser?.email) return
     setStatsLoading(true)
     try {
-      const res = await fetch(`/api/intranet/stats?email=${encodeURIComponent(currentUser.email)}`)
+      const res = await fetchConSesion('/api/intranet/stats')
       if (res.ok) {
         const body = await res.json()
         setInspections(body.inspections ?? [])
@@ -1300,10 +1305,10 @@ export default function IntranetPage() {
   }
 
   const handleSave = async (targetEmail: string, updates: Partial<UserProfile>) => {
-    const res = await fetch('/api/users/update-profile', {
+    const res = await fetchConSesion('/api/users/update-profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requesterEmail: currentUser?.email, targetEmail, ...updates }),
+      body: JSON.stringify({ targetEmail, ...updates }),
     })
     if (res.ok) {
       setEditingEmail(null)

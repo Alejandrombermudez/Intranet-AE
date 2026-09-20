@@ -7,6 +7,7 @@ import {
   XCircle, Pencil, FileText, Image as ImageIcon,
 } from 'lucide-react'
 import { Boton, Cabecera, Cargando } from '@/app/components/marca'
+import { PUEDE_SIEMBRA } from '@/lib/departamentos'
 
 const PRIMARY = '#2f3f32'
 
@@ -113,12 +114,12 @@ export default function SiembraDetailPage() {
       if (!user) { router.push('/'); return }
       const { data: profile } = await supabase
         .schema('people').from('user_profiles').select('is_admin, department').eq('email', user.email).single()
-      if (!profile?.is_admin && profile?.department !== 'RAS') { router.push('/'); return }
+      if (!profile?.is_admin && !PUEDE_SIEMBRA.includes(profile?.department ?? '')) { router.push('/'); return }
 
       // Familia
       const { data: fam, error: famErr } = await supabase
         .schema('siembra').from('familias').select('*').eq('id', id).single()
-      if (famErr || !fam) { router.push('/intranet/ras/siembra'); return }
+      if (famErr || !fam) { router.push('/intranet/siembra'); return }
       setFamilia(fam)
 
       // Monitoreos
@@ -172,12 +173,12 @@ export default function SiembraDetailPage() {
       <Cabecera
         compacta
         ancho="medio"
-        volver={{ href: '/intranet/ras/siembra', label: 'Restauración · Siembra' }}
+        volver={{ href: '/intranet/siembra', label: 'Restauración · Siembra' }}
         modulo="Familia en restauración"
         titulo={familia.nombre_propietario}
         descripcion={familia.nombre_finca || undefined}
         acciones={
-          <Boton variante="luz" href={`/intranet/ras/siembra/${id}/editar`} icono={<Pencil size={14} />}>Editar</Boton>
+          <Boton variante="luz" href={`/intranet/siembra/${id}/editar`} icono={<Pencil size={14} />}>Editar</Boton>
         }
       />
 

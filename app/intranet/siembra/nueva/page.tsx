@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { Shield, ArrowLeft, Loader2, Lock } from 'lucide-react'
+import { PUEDE_SIEMBRA } from '@/lib/departamentos'
 
 // La creación de familias en Siembra ya no se realiza desde este formulario.
 // Ahora el flujo es: Módulo Jurídico (HOJA 1 → 2 → 3, semáforo verde) →
@@ -22,7 +23,7 @@ export default function NuevaFamiliaRedireccionada() {
         .select('is_admin, department')
         .eq('email', user.email)
         .single()
-      if (!profile?.is_admin && profile?.department !== 'RAS') {
+      if (!profile?.is_admin && !PUEDE_SIEMBRA.includes(profile?.department ?? '')) {
         router.push('/'); return
       }
       setIsAdmin(profile?.is_admin ?? false)
@@ -69,7 +70,7 @@ export default function NuevaFamiliaRedireccionada() {
           ))}
         </div>
         <div className="flex gap-3">
-          <Link href="/intranet/ras/siembra"
+          <Link href="/intranet/siembra"
             className="flex-1 flex items-center justify-center gap-2 py-3 border border-stone-200 rounded-xl text-sm font-bold text-stone-600 hover:bg-stone-50 transition-colors">
             <ArrowLeft size={16} /> Volver a Siembra
           </Link>

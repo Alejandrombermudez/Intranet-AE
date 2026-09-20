@@ -6,6 +6,7 @@ import {
   Loader2, MapPin, CalendarDays, Trash2, AlertTriangle, RotateCcw, Archive,
 } from 'lucide-react'
 import { Cabecera, Cargando } from '@/app/components/marca'
+import { PUEDE_SIEMBRA } from '@/lib/departamentos'
 
 
 interface Familia {
@@ -44,7 +45,7 @@ export default function FamiliasEliminadasPage() {
         .eq('email', user.email)
         .single()
 
-      if (!profile?.is_admin && profile?.department !== 'RAS') {
+      if (!profile?.is_admin && !PUEDE_SIEMBRA.includes(profile?.department ?? '')) {
         router.push('/'); return
       }
 
@@ -112,7 +113,7 @@ export default function FamiliasEliminadasPage() {
 
       <Cabecera
         ancho="amplio"
-        volver={{ href: '/intranet/ras/siembra', label: 'Siembra' }}
+        volver={{ href: '/intranet/siembra', label: 'Siembra' }}
         modulo="Restauración · Siembra"
         titulo="Familias eliminadas"
         descripcion="Pendientes de eliminación definitiva"
