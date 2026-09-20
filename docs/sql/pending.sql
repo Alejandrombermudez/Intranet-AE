@@ -1,6 +1,6 @@
 -- ============================================================
 -- SQL Pendiente — Intranet AE
--- Última revisión: 2026-08-12 (verificado contra BD real vía REST API)
+-- Última revisión: 2026-09-20 (verificado contra BD real vía REST API)
 --
 -- REGLA: solo están aquí cosas que NO se han podido verificar
 -- vía REST API. Una vez ejecutadas, mover al historial abajo.
@@ -11,93 +11,16 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-09-20  migration_renombrar_carga_fix.sql — TERMINAR el renombre ────
--- ⚠ LO PRIMERO QUE HAY QUE CORRER. La base está a medio renombrar.
--- migration_renombrar_carga.sql se corrió el 2026-09-20 y murió en el BLOQUE 5:
---   ERROR 42P13: cannot change return type of existing function
---   HINT: Use DROP FUNCTION geo.zonas_historial(uuid) first.
--- Faltaba ese DROP (la columna de SALIDA de esa función cambia de nombre; el
--- caso estaba previsto para crear_zona, donde cambia un parámetro de ENTRADA).
---
--- Y EL BEGIN/COMMIT NO PROTEGIÓ NADA: el editor SQL de Supabase ejecuta las
--- sentencias por separado. Lección para las próximas migraciones: que cada
--- sentencia pueda correrse sola y de nuevo, sin depender de la transacción.
---
--- Estado verificado por REST el 2026-09-20:
---   YA APLICADO  → geo.zonas_carga (zonas_lote ya no existe) · zonas.carga_id,
---                  reemplazada_por_carga, conflicto_con_carga · abrir_carga y
---                  cerrar_carga funcionando · crear_zona ya solo acepta p_carga_id
---   FALTA        → geo.zonas_historial EXISTE pero ROTA (busca geo.zonas_lote) ·
---                  v_zonas_conflicto con la columna vieja · abrir_lote y
---                  cerrar_lote siguen expuestas y ROTAS (su DROP iba al final)
---
--- ⚠ crear_zona YA pide p_carga_id: cualquier intranet desplegada con el código
--- anterior NO puede subir shapefiles hasta que se despliegue. No se corrompe
--- nada (la subida se cae entera), pero conviene desplegar ya.
-
--- ── 2026-09-20  migration_renombrar_carga.sql — "lote" deja de ser ambiguo ──
--- ⚠ NO VOLVER A CORRERLO en producción: ya se aplicó su primera mitad y el
--- BLOQUE 1 fallaría con «geo.zonas_lote does not exist». El archivo quedó
--- corregido (se le agregó el DROP que faltaba) para una base nueva y para el
--- historial. Lo que falta se termina con el _fix de arriba.
--- Descripción original:
--- "Lote" significaba dos cosas: la SUBIDA versionada del SIG (geo.zonas_lote) y
--- el PEDAZO DE TIERRA donde se siembra. Con la nucleación entrando, las dos
--- acepciones iban a convivir en la misma pantalla. La subida pasa a llamarse
--- CARGA y "lote" queda libre para el lote de siembra.
---   geo.zonas_lote → geo.zonas_carga · abrir_lote → abrir_carga ·
---   cerrar_lote → cerrar_carga · zonas.lote_id → carga_id ·
---   reemplazada_por_lote → reemplazada_por_carga ·
---   conflicto_con_lote → conflicto_con_carga · crear_zona(p_lote_id → p_carga_id)
--- Se recrean revisar_zona, zonas_historial y v_zonas_conflicto porque nombran
--- esas columnas por dentro: Postgres guarda el cuerpo como TEXTO y el ALTER no
--- lo actualiza. Todo va en UNA transacción.
---
--- ⚠ CORRER LA MIGRACIÓN Y DESPLEGAR LA INTRANET JUNTOS. En el intervalo, subir
--- un shapefile falla (la intranet manda p_carga_id a una función que todavía
--- espera p_lote_id, o al revés). No se corrompe nada: la subida se cae entera y
--- lo anterior queda intacto, que es como está diseñado el versionado.
---
--- Riesgo verificado antes de escribirlo: app_campo NO menciona "lote" en
--- ninguna parte ni llama crear_zona (usa revisar_zona, cuya FIRMA no cambia);
--- GeoAE tampoco; y v_zonas_conflicto/zonas_historial no los consume ningún
--- código todavía. El único que pasa p_lote_id es la intranet, en 2 líneas.
-
--- ── 2026-09-20  migration_nucleacion.sql — lotes de siembra + nucleación ────
--- NUEVO, sin correr. El paso que seguía después de que campo verifica:
---   · geo.confirmar_lotes / geo.deshacer_lotes → la zona que el SIG da por
---     buena pasa a estado 'definitiva' y ESO es un lote de siembra. El estado
---     ya existía en el CHECK desde migration_geo.sql y nadie lo usaba.
---   · geo.nucleos + geo.nucleos_carga → los núcleos dentro de cada lote, con
---     geometría GENÉRICA (sirve puntos o polígonos) y versionado por carga.
---   · geo.crear_nucleo asigna solo el lote por contención espacial; el núcleo
---     que cae fuera de todo lote se guarda con zona_id NULL y la intranet lo
---     reporta en vez de perderlo en silencio.
---   · Lecturas: geo.lotes_de_predio, geo.nucleos_de_predio.
---
--- ⚠ DOS COSAS DISTINTAS SE LLAMAN "LOTE": geo.zonas_lote es el lote de SUBIDA
---   (el versionado, "backup 1, 2…"); el lote de SIEMBRA es la zona definitiva.
---   No se renombró nada para no tocar producción.
---
--- SEGURO PARA app_campo (verificado en su código antes de escribirlo):
---   src/lib/core.ts descarta solo estado='descartada' → una zona 'definitiva'
---   se sigue bajando al celular; y src/lib/actualizarSig.ts compara geometría
---   y área, no el estado → confirmar lotes no le genera aviso a nadie en campo.
---
--- Hasta que se corra, la pestaña «Nucleación» del predio dice exactamente
--- "falta correr esta migración" (no finge que el predio no tiene zonas).
-
 -- ── 2026-09-19  migration_predio_grupos_v2.sql — endurecer los RPC ──────────
--- NUEVO, sin correr. Dos REVOKE: Postgres concede EXECUTE a PUBLIC en cada
--- función nueva, así que con la key `anon` los RPC core.fusionar_predios y
--- core.disolver_grupo SE EJECUTAN (verificado por REST el 2026-09-19: responden
--- P0001, el RAISE de la propia función).
+-- Dos REVOKE. Postgres concede EXECUTE a PUBLIC en cada función nueva, así que
+-- con la key anon los RPC core.fusionar_predios y core.disolver_grupo SE
+-- EJECUTAN (verificado por REST: responden P0001, el RAISE de la función).
 -- NO es un hueco abierto: la función no es SECURITY DEFINER, por dentro corre
 -- como anon y la RLS de core.predios le devuelve 0 filas → la validación aborta
 -- siempre; y anon no tiene INSERT/UPDATE en las tablas (42501). Se cierra
 -- porque es la barrera que no depende de que nadie se equivoque después.
 -- Lo único expuesto mientras tanto: el mensaje de error dice si un uuid de
--- predio existe. Sin prisa, pero conviene correrlo.
+-- predio existe. Sin prisa.
 
 -- ── 2026-09-01  merge_aliados_duplicados.sql — BLOQUE 2, opcional ───────────
 -- El BLOQUE 1 (fusión de "Álvaro Marlés Artunduaga" + "… 2") YA SE CORRIÓ:
@@ -115,7 +38,47 @@
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-09-17  migration_predio_grupos.sql ──────────────────────────────────
+
+-- ── 2026-09-20  migration_nucleacion_v2.sql ─────────────────────────────────
+--             Un lote sale de lo que campo verificó. confirmar_lotes solo toma
+--             zonas en 'validada' (una 'potencial' es una propuesta de la
+--             oficina que nadie fue a mirar) y guarda el estado anterior en
+--             propiedades; deshacer_lotes lo restituye en vez de dejar todo en
+--             'validada', que le atribuía una verificación inexistente.
+--             Verificado por REST el 2026-09-20 sobre «Los Andes» (predio sin
+--             trabajo de campo, restaurado al terminar): potencial → devuelve 0
+--             y no toca la zona · validada → definitiva guardando quién, cuándo
+--             y de dónde venía · deshacer vuelve a validada y limpia SOLO sus
+--             tres claves (los atributos del .dbf quedan intactos) · la key anon
+--             sigue sin poder ejecutar ninguno de los dos (42501).
+
+-- ── 2026-09-20  migration_nucleacion.sql ────────────────────────────────────
+--             Lotes de siembra (geo.zonas.estado='definitiva') + geo.nucleos y
+--             geo.nucleos_carga + crear_nucleo/abrir_carga_nucleos/
+--             cerrar_carga_nucleos + lotes_de_predio/nucleos_de_predio.
+--             Verificado por REST el 2026-09-20, prueba de humo completa sobre
+--             «Los Andes» (creada y borrada, base como estaba): la ASIGNACIÓN
+--             ESPACIAL funciona — el núcleo dentro del lote se engancha solo y
+--             el que cae fuera queda con zona_id NULL y se cuenta aparte · el
+--             candado que impide deshacer un lote con nucleación responde · la
+--             key anon no lee las tablas ni ejecuta los RPC (42501).
+
+-- ── 2026-09-20  migration_renombrar_carga.sql + _fix.sql ────────────────────
+--             «Lote» dejaba de significar dos cosas: la subida versionada del
+--             SIG pasó a llamarse CARGA (geo.zonas_carga, abrir_carga,
+--             cerrar_carga, zonas.carga_id, reemplazada_por_carga,
+--             conflicto_con_carga, crear_zona(p_carga_id)).
+--             ⚠ El primer archivo MURIÓ A MITAD con 42P13 (faltaba el DROP de
+--             zonas_historial, cuya columna de SALIDA cambia de nombre) y el
+--             BEGIN/COMMIT NO protegió: el editor SQL de Supabase ejecuta las
+--             sentencias por separado. El _fix.sql terminó la otra mitad.
+--             LECCIÓN, para las próximas: escribir cada sentencia de modo que
+--             pueda correrse sola y de nuevo, sin contar con la transacción.
+--             Verificado por REST el 2026-09-20: zonas_carga existe, zonas_lote
+--             no, zonas_historial responde, v_zonas_conflicto trae
+--             conflicto_con_carga, y abrir_lote/cerrar_lote ya no están.
+
+-- ── 2026-09-17  migration_predio_grupos.sql ─────────────────────────────────
 --             Unidades de siembra: varios predios que comparten UN polígono.
 --             core.predio_grupos + core.predio_grupo_miembros (con índice único
 --             PARCIAL sobre predio_id WHERE activo) + core.v_predio_grupos + los
@@ -142,8 +105,9 @@
 --             (Florencia 35 · Morelia 72 · Por definir 3 · Solano 1),
 --             zona_ae 5 → **4**, vereda 47 → **42**; CERO pares que solo se
 --             diferencien en mayúsculas o tildes en los tres campos; los 111
---             predios siguen ahí y ninguno quedó con municipio vacío ni vereda
---             en blanco. Volver a pasar la función canónica sobre la base no
+--             predios de entonces siguen ahí y ninguno quedó con municipio vacío
+--             ni vereda en blanco (hoy son 110: el 2026-09-20 se borró un predio
+--             de prueba, el único que había en Solano). Volver a pasar la función canónica sobre la base no
 --             cambia nada (es idempotente).
 --             Se mantiene limpio porque las rutas que escriben core.predios
 --             normalizan en el SERVIDOR (lib/veredas-caqueta.ts).
