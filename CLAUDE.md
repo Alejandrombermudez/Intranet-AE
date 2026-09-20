@@ -49,7 +49,7 @@ papel y tinta, verde bosque como color firma, filetes finos en vez de cajas de c
 | `/intranet/sig` | Tablero por **fase cartográfica** (sin cartografía / falta zonificar / listo para campo / en campo) — las tarjetas son los filtros. Lo alimenta `/api/sig/worklist`. **Fusionar predios** arma *unidades de siembra* (varios predios, un solo polígono) vía `/api/sig/grupos`: agrupa, no funde — cada predio conserva matrícula, dueño y expediente, y el polígono total lo lleva el predio principal | `geo`, `core` |
 | `/intranet/sig/[predioId]` | Ingesta de shapefile (por **lotes versionados**, no destructiva) + pestaña **"Resultados de campo"** (mapa antes/después, bitácora, formularios) vía `/api/sig/campo` + pestaña **"Nucleación"**: confirmar lotes de siembra y subir los núcleos (`/api/sig/lotes`, `/api/sig/nucleacion`). Descarga a `.shp` con `lib/exportar-zonas.ts` | `geo`, `siembra` |
 | `/intranet/expedientes` | Tablero "¿en qué etapa va cada predio?" | `core.expedientes` |
-| `/intranet/siembra` | Encuesta/evaluación de campo (legado `siembra.*`). **Se mudó de `/intranet/ras/siembra` el 2026-09-20**: no es Conservación, lee `siembra.*`. Lo abren los departamentos `Siembra` y `RAS` (`lib/departamentos.ts`). ⚠ **El listado está roto**: pide columnas que `migration_campo_core.sql` eliminó — lo dice en pantalla | `siembra` |
+| *(no hay módulo «Siembra», y es correcto)* | Siembra es el **proceso** —jurídica → SIG → campo → SIG II—, no una pantalla. Existía una lista de encuestas heredada en `/intranet/ras/siembra`: rota desde el rediseño del 2026-07-07 (pedía columnas que se movieron a `core`) y redundante. **Se borró el 2026-09-20** junto con `/intranet/ras/nueva` y las rutas `/api/ras/familias/*`, que pese al nombre escribían en `siembra.*`. La encuesta se ve en la pestaña «Resultados de campo» del predio y completa en el Reporte; el departamento `Siembra` entra por el **Reporte**. **La tabla `siembra.familias` NO se tocó**: ahí están las encuestas reales de terreno | — |
 | `/intranet/ras`, `/intranet/ras/conservacion` | Conservación / Red de Árboles Semilleros | `ras` |
 | `/intranet/catalogo` | Catálogo de especies | `catalogo` |
 | `/intranet/reporte`, `/intranet/reporte/[predioId]` | **Módulo Reporte**: expediente completo del predio en un solo documento (predial, jurídica, cartografía, correcciones de terreno, evaluación biofísica, encuesta). Se arma solo desde `/api/reporte/expediente`; diseñado sobre el Manual de Identidad de Marca 2024 (Josefin Sans + Poppins, paleta hueso/verde bosque) y pensado para imprimir | `core`, `juridica`, `geo`, `siembra` |
@@ -71,10 +71,11 @@ pantalla: la palabra del negocio gana y la maquinaria cede. **Si ves `zonas_lote
 
 Queda pendiente la misma cirugía con **"RAS"**, que todavía significa tres cosas: el schema `ras.*`
 (Conservación), el equipo RAS en los diagramas del proceso, y el departamento/rutas `/intranet/ras/*`. El
-daño concreto: `/intranet/ras/siembra` sirve datos de `siembra.*` y está protegido por
-`department === 'RAS'`, así que el departamento `Siembra` —que existe en la lista— no llega a su módulo.
-Plan acordado: `ras` → `conservacion`, con vistas de compatibilidad porque **GeoAE también lee `ras.*`** y
-está desplegado.
+El daño más visible ya se atendió: `/intranet/ras/siembra` servía datos de `siembra.*` protegido por
+`department === 'RAS'`, y se borró con el resto de ese módulo el 2026-09-20 — igual que las rutas
+`/api/ras/familias/*`, que se llamaban «ras» y escribían en `siembra.*`. Queda el schema, el departamento y
+las rutas. Plan acordado: `ras` → `conservacion`, con vistas de compatibilidad porque **GeoAE también lee
+`ras.*`** y está desplegado.
 
 ## El terreno tiene la última palabra (regla de negocio del SIG ↔ Campo)
 

@@ -118,10 +118,14 @@ const DEPARTMENTS = ['Financiero', 'Ejecutivo', 'RAS', 'Siembra', 'Tecnología',
 // sola tabla evita que agregar un módulo se olvide en uno de los dos sitios.
 const RUTA_MODULO: Record<string, string> = {
   RAS:       '/intranet/ras',
-  // Siembra vivía en /intranet/ras/siembra, sin entrada en esta tabla y sin un
-  // solo enlace que llevara hasta allá: a quien tuviera ese departamento la
-  // intranet le decía "módulo en construcción" aunque el módulo estaba hecho.
-  Siembra:   '/intranet/siembra',
+  // Siembra no tiene módulo propio, y es correcto: es el PROCESO completo
+  // (jurídica → SIG → campo → SIG II), no una pantalla. Lo que antes vivía en
+  // /intranet/ras/siembra era una lista de encuestas heredada del diseño
+  // anterior, rota desde el rediseño de julio de 2026 y redundante — esa misma
+  // encuesta se ve en la pestaña «Resultados de campo» del predio y completa en
+  // el Reporte. Por eso este departamento entra por el Reporte: el expediente
+  // del predio de punta a punta, que es su materia de trabajo.
+  Siembra:   '/intranet/reporte',
   SIG:       '/intranet/sig',
   Juridica:  '/intranet/juridica',
   Ejecutivo: '/intranet/ejecutivo',
