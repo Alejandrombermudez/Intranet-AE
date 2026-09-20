@@ -1,25 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { listCasos, findOrCreateAliado, subirDocumento, placeholderDocumento, SIN_PROPIETARIO, SIN_MUNICIPIO } from '@/lib/juridica-core'
-
-async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
-  const { data: profile, error } = await supabase
-    .schema('people').from('user_profiles')
-    .select('is_admin, department')
-    .eq('email', email)
-    .single()
-  if (error || (!profile?.is_admin && profile?.department !== 'Juridica')) return false
-  return true
-}
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
+import { normalizarMunicipio, normalizarVereda, normalizarZonaAe } from '@/lib/veredas-caqueta'
 
 // GET /api/juridica/aliados — lista de casos (persona+predio+DD, plano para la UI)
 export async function GET(req: NextRequest) {
   const supabase = createServerSupabaseClient()
-  const email = req.nextUrl.searchParams.get('email')
-  if (!email) return NextResponse.json({ error: 'Email requerido' }, { status: 400 })
-
-  const ok = await authorize(supabase, email)
-  if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  const sesion = await exigirSesion(req, supabase, PUEDE.juridica)
+  if (!sesion.ok) return sesion.respuesta
 
   try {
     const casos = await listCasos(supabase)
@@ -35,23 +24,29 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const supabase = createServerSupabaseClient()
+    const sesion = await exigirSesion(req, supabase, PUEDE.juridica)
+    if (!sesion.ok) return sesion.respuesta
+    // Autor de lo que se crea = quien tiene la sesión (no lo que diga el cuerpo).
+    const email = sesion.perfil.email
+
     const formData = await req.formData()
     const raw = formData.get('data')
     if (!raw || typeof raw !== 'string') {
       return NextResponse.json({ error: 'Datos requeridos' }, { status: 400 })
     }
     const data = JSON.parse(raw)
-    const email: string | null = data.created_by ?? null
-    if (!email) return NextResponse.json({ error: 'Email requerido' }, { status: 400 })
-
-    const ok = await authorize(supabase, email)
-    if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
     // Datos mínimos: solo el nombre del predio es obligatorio. Los campos que la BD
     // exige NOT NULL se rellenan con marcadores si llegan vacíos (se completan luego).
     const nombreCompleto  = String(data.nombre_completo ?? '').trim() || SIN_PROPIETARIO
     const numeroDocumento = String(data.numero_documento ?? '').trim() || placeholderDocumento()
-    const municipio       = String(data.municipio ?? '').trim() || SIN_MUNICIPIO
+    // Ubicación siempre en la escritura canónica: si se guarda como llegue, los
+    // filtros del tablero SIG acaban con "MORELIA" y "Morelia" separados.
+    // Lo que no es municipio del Caquetá (el marcador "Por definir") se respeta.
+    const municipioCrudo  = String(data.municipio ?? '').trim()
+    const municipio       = normalizarMunicipio(municipioCrudo) || municipioCrudo || SIN_MUNICIPIO
+    const vereda          = normalizarVereda(municipio, data.vereda) || null
+    const zonaAe          = normalizarZonaAe(data.zona_ae) || null
 
     // 1) Persona: reusar si ya existe ese documento, si no crearla.
     //    (Con documento vacío se generó un placeholder único → siempre crea una nueva.)
@@ -82,8 +77,8 @@ export async function POST(req: NextRequest) {
         nombre_predio:          data.nombre_predio || null,
         departamento:           data.departamento || null,
         municipio:              municipio,
-        vereda:                 data.vereda || null,
-        zona_ae:                data.zona_ae || null,
+        vereda:                 vereda,
+        zona_ae:                zonaAe,
         // Clasificación del predio (códigos de catalogo.proyectos /
         // catalogo.fuentes_informacion). Vacío = todavía sin clasificar.
         tipo_proyecto:          data.tipo_proyecto || null,

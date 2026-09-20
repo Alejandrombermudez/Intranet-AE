@@ -1,34 +1,108 @@
+/**
+ * Ubicación del predio — una sola forma de escribir cada lugar.
+ *
+ * Hasta el 2026-09-17 el municipio se guardaba como viniera: los filtros del
+ * tablero SIG mostraban "MORELIA" y "Morelia" como si fueran dos municipios
+ * distintos (63 predios en uno, 9 en el otro), y lo mismo pasaba con la vereda
+ * ("ROCHELA ALTA" / "Rochela alta") y con la zona AE ("BUENOS AIRES" /
+ * "Buenos Aires"). La forma canónica es **Tipo Título en español** — es como
+ * está escrita la mayoría de los datos y es la que se imprime en el Reporte.
+ *
+ * Las listas oficiales (DANE) vienen en mayúscula sostenida; se conservan
+ * crudas en `VEREDAS_CRUDO` y se exponen ya normalizadas. Quien escriba en
+ * `core.predios` debe pasar por `normalizarMunicipio` / `normalizarVereda` /
+ * `normalizarZonaAe` — las rutas de jurídica lo hacen en el servidor, así no
+ * depende de que la UI mande el valor limpio.
+ */
+
 export const MUNICIPIOS_CAQUETA = [
-  "ALBANIA",
-  "BELÉN DE LOS ANDAQUÍES",
-  "CARTAGENA DEL CHAIRÁ",
-  "CURILLO",
-  "EL DONCELLO",
-  "EL PAUJÍL",
-  "FLORENCIA",
-  "LA MONTAÑITA",
-  "MILÁN",
-  "MORELIA",
-  "PUERTO RICO",
-  "SAN JOSÉ DEL FRAGUA",
-  "SAN VICENTE DEL CAGUÁN",
-  "SOLANO",
-  "SOLITA",
-  "VALPARAÍSO",
+  "Albania",
+  "Belén de los Andaquíes",
+  "Cartagena del Chairá",
+  "Curillo",
+  "El Doncello",
+  "El Paujíl",
+  "Florencia",
+  "La Montañita",
+  "Milán",
+  "Morelia",
+  "Puerto Rico",
+  "San José del Fragua",
+  "San Vicente del Caguán",
+  "Solano",
+  "Solita",
+  "Valparaíso",
 ] as const
 
 export type MunicipioCaqueta = typeof MUNICIPIOS_CAQUETA[number]
 
-// Datos existentes en BD pueden traer el municipio en otra capitalización
-// (p. ej. "Morelia" en vez de "MORELIA"). Normaliza contra la lista oficial
-// para que el selector de vereda no reciba una clave que no existe.
-export function normalizarMunicipio(valor?: string | null): MunicipioCaqueta | '' {
-  if (!valor) return ''
-  const encontrado = MUNICIPIOS_CAQUETA.find((m) => m.localeCompare(valor, 'es', { sensitivity: 'base' }) === 0)
-  return encontrado ?? ''
+/** Palabras que en español no se capitalizan dentro de un nombre propio. */
+const MINUSCULAS = new Set(['de', 'del', 'la', 'las', 'lo', 'los', 'el', 'y', 'e', 'en', 'al', 'a'])
+
+/** Compara ignorando mayúsculas y tildes ("ROCHELA ALTA" = "Rochela alta"). */
+const igual = (a: string, b: string) => a.localeCompare(b, 'es', { sensitivity: 'base' }) === 0
+
+/**
+ * Tipo Título en español: "ROCHELA ALTA" → "Rochela Alta",
+ * "BELÉN DE LOS ANDAQUÍES" → "Belén de los Andaquíes".
+ * Respeta los separadores de los valores compuestos que ya hay en la base
+ * ("Bodoquero/Lagunilla", "Campo Alegre, Carnicerías").
+ */
+export function tituloCase(valor: string): string {
+  const trozos = valor.toLocaleLowerCase('es').split(/(\s+|\/|,|-|\(|\))/)
+  // Tras coma, barra o guion empieza otro nombre: ahí "El"/"La" sí van en alta
+  // ("La Primavera, El Reflejo"), a diferencia de en medio ("Bajo las Delicias").
+  let arranque = true
+  return trozos
+    .map((parte) => {
+      if (!/\p{L}/u.test(parte)) {
+        if (parte.trim()) arranque = true                   // separador fuerte: , / - ( )
+        return parte
+      }
+      const mayuscula = arranque || !MINUSCULAS.has(parte)
+      arranque = false
+      return mayuscula ? parte.charAt(0).toLocaleUpperCase('es') + parte.slice(1) : parte
+    })
+    .join('')
 }
 
-export const VEREDAS_POR_MUNICIPIO: Record<MunicipioCaqueta, string[]> = {
+/** Espacios de sobra, espacio antes de coma y punto final sueltos. */
+const limpiar = (valor: string) =>
+  valor.replace(/\s+/g, ' ').replace(/\s+([,/])/g, '$1').trim().replace(/\.$/, '').trim()
+
+/**
+ * Municipio contra la lista oficial, sin importar cómo venga escrito
+ * ("MORELIA", "morelia", "Morelia" → "Morelia"). Devuelve '' si no es un
+ * municipio del Caquetá — incluido el marcador `SIN_MUNICIPIO` ("Por definir").
+ */
+export function normalizarMunicipio(valor?: string | null): MunicipioCaqueta | '' {
+  if (!valor) return ''
+  const v = limpiar(valor)
+  return MUNICIPIOS_CAQUETA.find((m) => igual(m, v)) ?? ''
+}
+
+/**
+ * Vereda en su forma canónica. Si coincide con una vereda oficial del
+ * municipio se usa esa escritura; si no (hay veredas compuestas capturadas a
+ * mano, "Rochela alta/Santa Rosa"), se deja en Tipo Título.
+ */
+export function normalizarVereda(municipio?: string | null, valor?: string | null): string {
+  if (!valor) return ''
+  const v = limpiar(valor)
+  if (!v) return ''
+  const mun = normalizarMunicipio(municipio)
+  const oficiales = mun ? VEREDAS_POR_MUNICIPIO[mun] : []
+  return oficiales.find((x) => igual(x, v)) ?? tituloCase(v)
+}
+
+/** Zona AE (texto libre del equipo): misma escritura para el mismo grupo. */
+export function normalizarZonaAe(valor?: string | null): string {
+  if (!valor) return ''
+  const v = limpiar(valor)
+  return v ? tituloCase(v) : ''
+}
+
+const VEREDAS_CRUDO: Record<string, string[]> = {
   "ALBANIA": ["ALBANIA", "ALTO CASTAÑAL", "ARANZASU", "BETANIA", "BUENOS AIRES", "CARMEN BALATA", "EL DORADO", "EL RECREO", "FLORIDA BLANCA", "FRAGUA RECREO", "LA CAÑADA", "LA FRGUA FORTUNA", "LA RAYA", "LA SARDINA", "LA UNION", "SAMARIA", "SAN PEDRO", "SANTA CRUZ"],
   "BELÉN DE LOS ANDAQUÍES": ["AGUA AZUL", "AGUA DULCE", "ALTAMIRA", "ALTO MASAYA", "ALTO PUEBLITOS", "ALTO SAN JUAN", "AZABACHE", "BAJO PUEBLITOS", "BELLA VISTA", "BOCANA LAS VERDES", "BRUSELAS", "BUENAVISTA", "BUENOS AIRES", "CHAPINERO", "EL CARBON", "EL CHOCHO", "EL DIAMANTE", "EL MESON", "EL MIRADOR", "EL PORVENIR", "EL PRADO", "EL SALADO", "FRAGUA DELICIAS", "GALÁN", "LA CHOCHO ALTO", "LA CRISTALINA", "LA ESTRELLA", "LA ONDINA", "LA PRADERA", "LA REFORMA", "LA UNION", "LAS COLONIAS", "LAS DELICIAS", "LAS MINAS", "LAS PLATAS", "LOS ALETONES", "LOS ÁNGELES", "MASAYA BAJA", "MASAYA MEDIA", "MONO ALTA", "PARQUE BOSQUE LA RESACA", "PNN ALTO FRAGUA INDI WASI", "PRIMAVERA", "PUERTO LONDOÑO", "PUERTO TORRES", "QUISAYA", "RESERVA FORESTAL", "RESGUARDO INDÍGENA CERINDA DE LOS ANGELES", "RESGUARDO INDÍGENA LA ESPERANZA", "SAN ANTONIO", "SAN ISIDRO ALTO", "SAN LUIS", "SANCHEZ", "SANTA HELENA", "SANTA ROSA", "SANTA TERESA", "SARABANDO ALTO", "SARABANDO MEDIO", "SINAI", "SOLEDAD", "TORTUGA ESTRELLA", "VENADITO", "VENTANAS PARTE ALTA", "VENTANAS PARTE BAJA"],
   "CARTAGENA DEL CHAIRÁ": ["12 DE OCTUBRE", "AGUA LINDA", "AGUAS CLARAS", "ALTO BONITO", "ALTO CRISTALES", "ALTO SARDINATA", "ANDAKI", "ANGELES ALTOS", "ANIMAS ALTAS", "ANIMAS BAJAS", "ARENOSO", "BANDERAS", "BARCELONA", "BELLAVISTA", "BERLIN", "BILLAR", "BOCANA CAMICAYA", "BOCANA DEL ANAYA", "BRASILIA BAJO CAGUÁN", "BUENA VISTA", "CAMICAYA", "CAMICAYA ALTO", "CAMICAYA MEDIO", "CAMPO ALEGRE", "CASERIO ARENOSO", "CAÑO NEGRO", "CAÑO PERDIDO", "CAÑO SANTO DOMINGO", "CAÑO SUCIO", "COMUNEROS", "CRISTALES", "CUBA", "CUMARALES", "DOS QUEBRADAS", "EL AGUILA", "EL BARRO", "EL BOLIVAR", "EL BRILLANTE", "EL CAFE", "EL CAIRO", "EL CARACOL", "EL CASTILLO", "EL CONVENIO", "EL DANUBIO", "EL DIAMANTE", "EL EDEN", "EL GUAMO", "EL JARDIN", "EL JORDAN", "EL MANANTIAL", "EL PARAISO", "EL PENEYA", "EL PRADO", "EL RECREO", "EL REMANSO", "EL RETIRO", "EL RUBI", "EL TRIUNFO", "EL VENADO", "EL VERGEL", "ESPEJOS", "FLANDES", "FUNDACIÓN", "HIGUERON", "HOLANDA", "ISLA REDONDA", "JARDIN CAMELIAS", "LA ARGENTINA", "LA CEIBA", "LA CRISTALINA", "LA ESMERALDA", "LA EXPENSA", "LA FLORIDA 1", "LA GRANJA", "LA GUADALOSA", "LA INDEPENDENCIA", "LA LAGUNA DEL CHAIRA", "LA LIBERTAD", "LA MAGDALENA", "LA MIRANDA", "LA NUEVA ESPERANZA", "LA NUEVA FLORESTA", "LA NUEVA ILUSIÓN", "LA ORQUIDEA", "LA PAZ 1", "LA PAZ 2", "LA PAZ 3", "LA PLAYA", "LA PRIMAVERA", "LA REFORMA", "LA SARDINATA BAJA", "LA TEBAIDA", "LA TIGRERA", "LA TIGRERA BAJA", "LA URIBE", "LAGUNA DE CARTAGENA", "LAGUNA VERDE", "LAS  MERCEDES", "LAS DELICIAS", "LAS MARIMBAS", "LAS PALMAS", "LAS PALMERAS DEL SUNCILLAS", "LAS QUILLAS", "LLANITOS", "LOS ANDES", "LOS CAUCHOS", "LOS PAUJILES", "LOS ÁNGELES", "MACARENA", "MIRAFLORES DE SUNCILLA", "MONSERRATE", "MONTE ADENTRO", "MONTERREY", "NARANJALES", "NUEVA LOMA LARGA", "NUEVO HORIZONTE", "NUPIAS", "PALMICHALES", "PANAMA 1", "PANAMA 2", "PATIO BONITO", "PEÑAS BLANCAS", "PEÑAS COLORADAS", "PILONES", "PLAYA VERDE", "PORES", "PORVENIR 1", "PRIMAVERA BAJO CAGUAN", "PUERTO CAMELIA", "PUERTO NAPOLES", "RECREO ALTO", "REMOLINOS DEL CAGUÁN", "RENACER DE ARMERO", "RIO CLARO", "RISARALDA", "ROBLES", "SABALETA ALTA", "SAN ISIDRO", "SAN JOSÉ DE RISARALDA", "SANTA ELENA", "SANTA RITA", "SANTO DOMINGO", "SIN INFORMACION", "SUNCIYA MEDIO", "TEUSAQUILLO", "TOKIO", "TRIUNFO ALTO", "VILLA COLOMBIA", "VILLA LUZ", "VILLA NIDIA", "VILLA NUEVA", "VILLA ZELANDA", "VISTA HERMOSA", "YAICOGE BAJO", "ZABALETA", "ZABALETA ALTA"],
@@ -46,3 +120,16 @@ export const VEREDAS_POR_MUNICIPIO: Record<MunicipioCaqueta, string[]> = {
   "SOLITA": ["ATANQUEZ", "BAJO BERLÍN", "BOCANA CHONTILLOSA", "CHONTILLOSA MEDIA", "CORRENTOSO", "CRISTALINA", "CUSUBRE", "EL AMPARO", "EL CASTILLO", "EL JAVO", "EL PROGRESO", "EL RECREO", "EL TERORO", "EL VENADO", "ESPAÑOLA", "LA LIBERTAD", "LA PAZ", "LA SAMARIA", "LA UNIÓN SINCELEJO", "LAS BRISAS", "LAS FLORES", "LAS PALMERAS", "MARCELA", "NUEVO RETIRO", "SINAÍ", "VILLA GERMANIA"],
   "VALPARAÍSO": ["ALTO BERLÍN", "ALTO VERGEL", "ANDALUCIA", "ARGELIA", "ARGENTINA", "ARGENTINA BAJA", "BAJO BERLÍN", "BELLO HORIZONTE", "BUENAVISTA", "BUENOS AIRES", "COSTA RICA", "DELICIAS", "EL AGUILA", "EL CEDRAL", "EL CEDRAL", "EL ENCANTO", "EL JAVO", "EL PALMITO", "EL PORVENIR", "EL PROGRESO", "EL ROSAL", "EL TERORO", "EL TOPACIO BAJO", "EL VATICANO", "EL VERGEL", "GALILEA", "GUADUAL CENTRAL", "LA CURVINATA", "LA ESMERALDA", "LA ESPAÑOLA", "LA ESTRELLA", "LA FLORIDA", "LA LEONA", "LA LIBERIA", "LA MACARENA", "LA MUÑOZ", "LA PAUJITA", "LA PRIMAVERA", "LA REFORMA", "LA RICO", "LA SEVILLA ALTA", "LA TIGRA", "LA UNION", "LA VICENTA", "LAS ACACIAS", "LAS FLORES", "LAS MERCEDES", "LAS NIEVES", "LAS NIEVES ARRIBA", "LAS PALMERAS", "LOS ANDES", "LOS CEDROS", "LOS LAURELES", "LOS ÁNGELES", "LUSITANIA", "MANAURE", "MATICURU", "MIRAVALLE ALTO", "MIRAVALLE BAJO", "NUEVA GRANADA", "PALESTINA", "PLAYA RICA", "PRADERA NUEVA", "SABALO ALTO", "SABALO BAJO", "SAN ANDRESITO", "SAN PEDRO", "SAN PEDRO MEDIO", "SANTA ELENA BAJA", "SANTA FÉ  TROCHA DIEZ", "SANTA RITA", "SANTIAGO DE LA SELVA", "TOPACIO ALTO"],
 }
+
+/**
+ * Veredas oficiales por municipio, ya en la escritura canónica y ordenadas.
+ * Se deriva de la lista cruda (DANE, en mayúscula sostenida): así el selector
+ * de la ficha jurídica ofrece exactamente los valores que se guardan.
+ */
+export const VEREDAS_POR_MUNICIPIO: Record<MunicipioCaqueta, string[]> = Object.fromEntries(
+  MUNICIPIOS_CAQUETA.map((mun) => {
+    const crudo = Object.entries(VEREDAS_CRUDO).find(([k]) => igual(k, mun))?.[1] ?? []
+    const unicas = [...new Set(crudo.map(tituloCase))]          // la lista cruda trae repetidas
+    return [mun, unicas.sort((a, b) => a.localeCompare(b, 'es'))]
+  }),
+) as Record<MunicipioCaqueta, string[]>

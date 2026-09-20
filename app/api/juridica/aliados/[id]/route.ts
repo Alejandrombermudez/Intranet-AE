@@ -1,26 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getCaso, subirDocumento } from '@/lib/juridica-core'
-
-async function authorize(supabase: ReturnType<typeof createServerSupabaseClient>, email: string) {
-  const { data: profile, error } = await supabase
-    .schema('people').from('user_profiles')
-    .select('is_admin, department')
-    .eq('email', email)
-    .single()
-  if (error || (!profile?.is_admin && profile?.department !== 'Juridica')) return false
-  return true
-}
+import { exigirSesion, PUEDE } from '@/lib/auth-api'
+import { normalizarMunicipio, normalizarVereda, normalizarZonaAe } from '@/lib/veredas-caqueta'
 
 // GET /api/juridica/aliados/[id]   ([id] = predio_id)
+//
+// LECTURA para los tres equipos que tocan el predio (`procesoPredio`), no solo
+// jurídica: la ficha de SIG (`/intranet/sig/[predioId]`) llama aquí para saber
+// de qué predio se trata y en qué etapa va. Con la regla `juridica`, un usuario
+// con departamento SIG que no fuera admin recibía 403 y la página se quedaba sin
+// nombre de predio y sin el botón de enviar a Campo — aunque las rutas de
+// enviar/cancelar campo SÍ lo autorizan (`procesoPredio`). Hoy no se notaba
+// porque la única persona con departamento SIG es además admin.
+// Escribir (PATCH) sigue siendo exclusivo de jurídica.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createServerSupabaseClient()
-  const email = req.nextUrl.searchParams.get('email')
-  if (!email) return NextResponse.json({ error: 'Email requerido' }, { status: 400 })
-
-  const ok = await authorize(supabase, email)
-  if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  const sesion = await exigirSesion(req, supabase, PUEDE.procesoPredio)
+  if (!sesion.ok) return sesion.respuesta
 
   const caso = await getCaso(supabase, id)
   if (!caso) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 })
@@ -32,21 +30,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id: predioId } = await params
     const supabase = createServerSupabaseClient()
+    const sesion = await exigirSesion(req, supabase, PUEDE.juridica)
+    if (!sesion.ok) return sesion.respuesta
+
     const formData = await req.formData()
     const raw = formData.get('data')
     if (!raw || typeof raw !== 'string') {
       return NextResponse.json({ error: 'Datos requeridos' }, { status: 400 })
     }
     const data = JSON.parse(raw)
-    const email: string | null = data.updated_by ?? null
-    if (!email) return NextResponse.json({ error: 'Email requerido' }, { status: 400 })
-
-    const ok = await authorize(supabase, email)
-    if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
     // Localizar el predio y su persona
     const { data: predio, error: pSelErr } = await supabase
-      .schema('core').from('predios').select('id, aliado_id').eq('id', predioId).single()
+      .schema('core').from('predios').select('id, aliado_id, municipio').eq('id', predioId).single()
     if (pSelErr || !predio) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 })
 
     // 1) Persona (core.aliados). nombre_completo y numero_documento son NOT NULL:
@@ -77,11 +73,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       : (data.matricula_inmobiliaria ? [String(data.matricula_inmobiliaria).trim()] : [])
 
     // 2) Predio (core.predios). municipio es NOT NULL: si viene vacío se conserva el actual.
+    //    Municipio, vereda y zona AE se guardan en la escritura canónica
+    //    (lib/veredas-caqueta.ts) para que los filtros no vuelvan a partirse en
+    //    "MORELIA" y "Morelia". La vereda se normaliza contra el municipio que
+    //    queda, no contra el que había.
+    const municipioEdit  = String(data.municipio ?? '').trim()
+    const municipioFinal = municipioEdit
+      ? (normalizarMunicipio(municipioEdit) || municipioEdit)
+      : (predio.municipio as string | null)
     const predioUpdate: Record<string, unknown> = {
       nombre_predio:          data.nombre_predio || null,
       departamento:           data.departamento || null,
-      vereda:                 data.vereda || null,
-      zona_ae:                data.zona_ae || null,
+      vereda:                 normalizarVereda(municipioFinal, data.vereda) || null,
+      zona_ae:                normalizarZonaAe(data.zona_ae) || null,
       // Se envían siempre (null si el desplegable quedó en «Sin definir»), para
       // que también se pueda QUITAR la clasificación de un predio, no solo ponerla.
       tipo_proyecto:          data.tipo_proyecto || null,
@@ -91,8 +95,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       codigo_catastral:       data.codigo_catastral || null,
       area_registral:         data.area_registral || null,
     }
-    const municipioEdit = String(data.municipio ?? '').trim()
-    if (municipioEdit) predioUpdate.municipio = municipioEdit
+    if (municipioEdit) predioUpdate.municipio = municipioFinal
     const { error: pErr } = await supabase.schema('core').from('predios')
       .update(predioUpdate)
       .eq('id', predioId)
