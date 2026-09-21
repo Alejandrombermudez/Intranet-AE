@@ -14,14 +14,16 @@ import { supabase } from '@/lib/supabase'
 import type { Pulso } from '@/app/api/sistema/pulso/route'
 import { Boton, Cabecera, Cargando, Pestanas } from '@/app/components/marca'
 import { MapaSistema, type Vista } from './mapa-vista'
-import { BookOpen, Crosshair, LayoutGrid, RotateCcw } from 'lucide-react'
+import { BookOpen, Crosshair, LayoutGrid, RotateCcw, Sparkles } from 'lucide-react'
 
 export default function SistemaPage() {
   const router = useRouter()
   const [autorizado, setAutorizado] = useState(false)
   const [pulso, setPulso] = useState<Pulso | null>(null)
   const [errorPulso, setErrorPulso] = useState<string | null>(null)
-  const [vista, setVista] = useState<Vista>('explorar')
+  // Se entra por el Resumen: responde «qué hay» antes que «cómo se conecta»,
+  // que es lo que pregunta quien abre esta página por primera vez.
+  const [vista, setVista] = useState<Vista>('resumen')
 
   const medir = useCallback(async () => {
     try {
@@ -53,15 +55,23 @@ export default function SistemaPage() {
     : null
 
   return (
-    <div className={`min-h-screen ${vista === 'explorar' ? 'bg-tinta' : 'bg-papel'}`}>
+    <div className={`min-h-screen ${vista === 'comparar' ? 'bg-papel' : 'bg-tinta'}`}>
       <Cabecera
         ancho="completo"
         compacta
         volver={{ href: '/intranet', label: 'Intranet' }}
         modulo="Tecnología"
         titulo="El sistema"
-        descripcion="Cada tarjeta es una parte del sistema. Explora una a la vez o compara varias para ver qué comparten."
+        descripcion={
+          vista === 'resumen'
+            ? 'Qué hay en el sistema: las aplicaciones, los módulos, las etapas del proceso y lo que comparten.'
+            : 'Cada tarjeta es una parte del sistema. Explora una a la vez o compara varias para ver qué comparten.'
+        }
         pie={<Pestanas tono="oscuro" items={[
+          {
+            id: 'resumen', label: 'Resumen', icono: <Sparkles size={13} />,
+            activa: vista === 'resumen', onClick: () => setVista('resumen'),
+          },
           {
             id: 'explorar', label: 'Explorar', icono: <Crosshair size={13} />,
             activa: vista === 'explorar', onClick: () => setVista('explorar'),
@@ -87,7 +97,7 @@ export default function SistemaPage() {
       />
 
       <main>
-        <MapaSistema pulso={pulso} vista={vista} />
+        <MapaSistema pulso={pulso} vista={vista} onVista={setVista} />
       </main>
     </div>
   )

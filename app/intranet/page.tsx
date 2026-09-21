@@ -9,6 +9,7 @@ import type { User } from '@supabase/supabase-js'
 import { MisSesiones } from '@/app/components/MisSesiones'
 import { Cabecera, Cargando, Pestanas, Seccion, type Pestana } from '@/app/components/marca'
 import { VEHICLES } from '@/lib/vehicles'
+import { NOMBRES_DEPARTAMENTO, RUTA_MODULO } from '@/lib/departamentos'
 import {
   ShieldCheck, Shield, Pencil, Check, X,
   Users, Loader2, AlertCircle, AlertTriangle, BarChart2, ImageOff, Construction,
@@ -111,28 +112,6 @@ function hasIssues(insp: InspectionStat): boolean {
   )
 }
 
-const DEPARTMENTS = ['Financiero', 'Ejecutivo', 'RAS', 'Siembra', 'Tecnología', 'Juridica', 'SIG', 'Reporte']
-
-// Módulos con página propia: tanto el redirect de un no-admin como el tab de
-// admin navegan a su ruta en vez de renderizar algo inline. Tenerlos en una
-// sola tabla evita que agregar un módulo se olvide en uno de los dos sitios.
-const RUTA_MODULO: Record<string, string> = {
-  RAS:       '/intranet/ras',
-  // Siembra no tiene módulo propio, y es correcto: es el PROCESO completo
-  // (jurídica → SIG → campo → SIG II), no una pantalla. Lo que antes vivía en
-  // /intranet/ras/siembra era una lista de encuestas heredada del diseño
-  // anterior, rota desde el rediseño de julio de 2026 y redundante — esa misma
-  // encuesta se ve en la pestaña «Resultados de campo» del predio y completa en
-  // el Reporte. Por eso este departamento entra por el Reporte: el expediente
-  // del predio de punta a punta, que es su materia de trabajo.
-  Siembra:   '/intranet/reporte',
-  SIG:       '/intranet/sig',
-  Juridica:  '/intranet/juridica',
-  Ejecutivo: '/intranet/ejecutivo',
-  Reporte:   '/intranet/reporte',
-  // Tecnología es el mapa del sistema: el proceso, las aplicaciones y la bitácora.
-  Tecnología: '/intranet/sistema',
-}
 
 // ─── EditRow (tabla usuarios) ─────────────────────────────────────────────────
 
@@ -170,7 +149,7 @@ function EditRow({ profile, onSave, onCancel }: EditRowProps) {
         <select value={department} onChange={(e) => setDepartment(e.target.value)}
           className="w-full px-2 py-1.5 text-sm border-2 border-primary/40 rounded-lg focus:outline-none focus:border-primary bg-white">
           <option value="">— Sin departamento —</option>
-          {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+          {NOMBRES_DEPARTAMENTO.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
       </td>
       <td className="px-4 py-3">

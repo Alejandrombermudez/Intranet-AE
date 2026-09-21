@@ -127,6 +127,13 @@ export interface Aplicacion {
   para: string
   /** Funciona sin señal. Importante en Caquetá: en el predio casi nunca hay. */
   offline?: boolean
+  /**
+   * Dónde se abre de verdad. Es lo único de este archivo que apunta fuera del
+   * sistema, así que se verifica antes de escribirlo: una app sin despliegue
+   * confirmado se deja sin `url` y el resumen no ofrece el enlace, que es mejor
+   * que mandar al equipo a un 404.
+   */
+  url?: string
   /** Carpeta del ecosistema, para quien vaya a tocar el código. */
   carpeta: string
   /** Nota técnica — se muestra plegada, no en primer plano. */
@@ -144,6 +151,7 @@ export const APLICACIONES: Aplicacion[] = [
     para:
       'Es la mesa de trabajo de la oficina: jurídica, cartografía, expedientes, el catálogo de especies, ' +
       'conservación y los informes.',
+    url: '/intranet',
     carpeta: 'Intranet-AE/',
     tecnica: 'Next.js 16 · Supabase con service role en las rutas de API · acceso por people.user_profiles.',
   },
@@ -158,6 +166,7 @@ export const APLICACIONES: Aplicacion[] = [
     para:
       'Todo lo que se hace parado en el predio: la evaluación del terreno, la encuesta a la familia y ' +
       'la corrección de las zonas sobre el mapa satelital. Guarda en el celular y sube cuando hay señal.',
+    url: 'https://app-campo-gz5f.vercel.app/',
     carpeta: 'app_campo/',
     tecnica: 'PWA con Vite · Leaflet + leaflet-geoman para editar vértices · cola de sincronización local.',
   },
@@ -173,6 +182,7 @@ export const APLICACIONES: Aplicacion[] = [
     para:
       'Registrar lo que se hizo y con qué: actividades y rendimientos por lote y núcleo, insumos ' +
       'consumidos, movimientos entre bodegas y el monitoreo de lo ya sembrado.',
+    url: 'https://actividades-monitoreo-campo.vercel.app',
     carpeta: 'actividades_monitoreo_campo/',
     tecnica:
       'HTML estático desplegado en Vercel. Guarda en localStorage del teléfono: todavía NO escribe en ' +
@@ -187,6 +197,7 @@ export const APLICACIONES: Aplicacion[] = [
     donde: 'En el celular, desde el navegador.',
     dondeCorto: 'Celular, sin señal',
     para: 'Monitoreo fenológico de los árboles semilleros: quién está floreciendo, quién está en fruto.',
+    url: 'https://insumos-aves.vercel.app/semilleros/',
     carpeta: 'insumos_aves/semilleros/',
     tecnica: 'HTML estático en Vercel, junto con la app de aves. Pendiente de conectar a ras.',
   },
@@ -199,6 +210,7 @@ export const APLICACIONES: Aplicacion[] = [
     donde: 'En el celular, desde el navegador.',
     dondeCorto: 'Celular, sin señal',
     para: 'Avistamiento de aves con GPS y curva de acumulación de especies, como indicador de biodiversidad.',
+    url: 'https://insumos-aves.vercel.app/aves/',
     carpeta: 'insumos_aves/aves/',
     tecnica: 'HTML estático en Vercel. Pendiente de conectar a la base.',
   },
@@ -210,6 +222,7 @@ export const APLICACIONES: Aplicacion[] = [
     donde: 'Abierto en internet, sin contraseña.',
     dondeCorto: 'Internet, sin clave',
     para: 'Mostrar hacia afuera dónde están las fincas, los árboles y las proyecciones de siembra.',
+    url: 'https://geovisor-ae.vercel.app',
     carpeta: 'GeoAE/',
     tecnica: 'Next.js · lee core/geo/ras. Al ser público, define qué información es publicable.',
   },
