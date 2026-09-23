@@ -57,6 +57,36 @@ export interface Entrada {
 export const BITACORA: Entrada[] = [
   // ══ Septiembre 2026 ═══════════════════════════════════════════════════════
   {
+    id: 'sig-ultima-palabra',
+    fecha: '2026-09-23',
+    tipo: 'decision',
+    titulo: 'Después de campo, el SIG tiene la última palabra sobre cada zona',
+    porque:
+      'La regla era que el terreno tenía la última palabra: el técnico confirmaba, corregía, dibujaba o ' +
+      'descartaba y la oficina solo podía mirar. Revisar lo que devolvió campo era difícil (había que ' +
+      'buscar cada cambio en la bitácora, debajo del mapa) y el SIG no tenía cómo corregir un límite ' +
+      'mal tomado ni sostener una zona que campo descartó.',
+    quedo:
+      'En «Resultados de campo», cada resultado (confirmada, límite corregido, zona nueva, descartada) ' +
+      'es un filtro que muestra esas zonas en el mapa. El SIG marca zonas en el mapa o en la lista y ' +
+      'decide: confirmar (queda como lote de siembra), editar el límite sobre el satelital o desde un ' +
+      '.zip (queda como lote), o eliminar (sale de los sitios de siembra y de la app de campo). Nada se ' +
+      'borra: lo de campo sigue en su historial y cada decisión del SIG guarda cómo estaba la zona antes.',
+    etapas: ['campo'],
+    apps: ['intranet'],
+    piezas: ['geo'],
+    detalle:
+      'Las decisiones van en geo.zona_decision, aparte de geo.zona_revision, para que la revisión siga ' +
+      'siendo solo lo que hizo el terreno. La única puerta de escritura es geo.decidir_zonas, que solo ' +
+      'ejecuta la API de la intranet. Si campo vuelve a revisar una zona después de la decisión, esa ' +
+      'revisión se aplica como siempre y la zona vuelve a quedar pendiente: geo.revisar_zona no cambió. ' +
+      'No se deja editar ni eliminar un lote con núcleos cargados. El editor usa leaflet-geoman con las ' +
+      'mismas opciones que la app de campo. La misma migración blinda las geometrías (se guardan en 2D y ' +
+      'solo con su parte poligonal, para que un shapefile con Z o un polígono con una espiga no fallen) y ' +
+      'le quita a la llave anónima las funciones que escriben zonas, cargas y grupos de predios.',
+    doc: 'docs/sql/migration_decision_sig.sql',
+  },
+  {
     id: 'mapa-tarjetas',
     fecha: '2026-09-11',
     tipo: 'cambio',

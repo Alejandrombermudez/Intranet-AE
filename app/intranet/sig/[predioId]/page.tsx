@@ -209,6 +209,7 @@ export default function SigPredioPage() {
   const fincaZonas = useMemo(() => zonas.filter((z) => z.tipo === 'finca'), [zonas])
   const siembraZonas = useMemo(() => zonas.filter((z) => z.tipo === 'restauracion'), [zonas])
   const fincaFeatures = useMemo(() => fincaZonas.map(zonaToFeature), [fincaZonas])
+  const fincaGeoms = useMemo(() => fincaZonas.map(z => JSON.parse(z.geojson) as Geometry), [fincaZonas])
 
   async function leerShp(file: File, set: (p: ShapefileParseado) => void, setErr: (e: string | null) => void, setP: (b: boolean) => void, setSel: (s: Set<number>) => void) {
     setErr(null); setP(true)
@@ -222,12 +223,12 @@ export default function SigPredioPage() {
   }
 
   // Cada subida crea una versión (backup) y no borra la anterior. Si alguna
-  // zona ya la había trabajado Campo, esa NO se retira — el terreno tiene la
-  // última palabra — y queda marcada para resolverla aquí en la oficina.
+  // zona ya la había trabajado Campo, esa NO se retira con la subida: queda
+  // vigente y la decide el SIG en «Resultados de campo».
   function avisoConflicto(body: { retiradas?: number; en_conflicto?: number }): string {
     const partes: string[] = []
     if (body.retiradas) partes.push(`${body.retiradas} versión(es) anterior(es) guardada(s) como respaldo`)
-    if (body.en_conflicto) partes.push(`${body.en_conflicto} zona(s) que Campo ya verificó siguen vigentes — revisar en terreno antes de reemplazarlas`)
+    if (body.en_conflicto) partes.push(`${body.en_conflicto} zona(s) que Campo ya verificó siguen vigentes — decídelas en «Resultados de campo»`)
     return partes.length ? ` · ${partes.join(' · ')}` : ''
   }
 
@@ -485,8 +486,9 @@ export default function SigPredioPage() {
         {tab === 'campo' && userEmail && (
           <ResultadosCampo
             predioId={predioId}
-            fincaGeoms={fincaZonas.map(z => JSON.parse(z.geojson) as Geometry)}
+            fincaGeoms={fincaGeoms}
             nombrePredio={caso?.nombre_predio ?? 'predio'}
+            onCambio={cargarZonas}
           />
         )}
 
@@ -494,7 +496,7 @@ export default function SigPredioPage() {
         {tab === 'nucleacion' && userEmail && (
           <Nucleacion
             predioId={predioId}
-            fincaGeoms={fincaZonas.map(z => JSON.parse(z.geojson) as Geometry)}
+            fincaGeoms={fincaGeoms}
           />
         )}
 
@@ -606,8 +608,8 @@ export default function SigPredioPage() {
                       queda como versión nueva y la anterior se conserva como respaldo. Sin marcar, los sitios nuevos
                       se <em>suman</em> a los que ya están.
                       <span className="block mt-1 text-amber-700">
-                        Los sitios que Campo ya verificó en terreno no se retiran: siguen vigentes y quedan marcados
-                        para que los revises — quien está parado en el predio tiene la última palabra.
+                        Los sitios que Campo ya verificó en terreno no se retiran con una subida: siguen vigentes y
+                        se confirman, editan o eliminan en «Resultados de campo», donde el SIG tiene la última palabra.
                       </span>
                     </span>
                   </label>

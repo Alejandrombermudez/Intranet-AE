@@ -1,6 +1,9 @@
 -- ============================================================
 --  MIGRACIÓN: predio_grupos v2 — quitar el EXECUTE que Postgres da a PUBLIC
 --  Archivo: docs/sql/migration_predio_grupos_v2.sql
+--
+--  ⚠ YA VA INCLUIDO en migration_decision_sig.sql (PARTE 3, 2026-09-23):
+--    no hace falta correr este archivo aparte. Se deja por su explicación.
 --  Fecha  : 2026-09-19
 --  Requiere: migration_predio_grupos.sql ejecutado (2026-09-17).
 --

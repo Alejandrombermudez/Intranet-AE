@@ -87,6 +87,7 @@ const DEFINICIONES: Def[] = [
   },
   { id: 'zonas_carga', schema: 'geo', tabla: 'zonas_carga', etiqueta: 'subidas versionadas del SIG' },
   { id: 'revisiones_zona', schema: 'geo', tabla: 'zona_revision', etiqueta: 'zonas revisadas en terreno' },
+  { id: 'decisiones_sig', schema: 'geo', tabla: 'zona_decision', etiqueta: 'decisiones del SIG sobre zonas de campo' },
 
   // ── Campo ─────────────────────────────────────────────────────────────────
   { id: 'evaluaciones', schema: 'siembra', tabla: 'evaluaciones_campo', etiqueta: 'evaluaciones levantadas' },

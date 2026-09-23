@@ -11,25 +11,23 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-09-23  migration_geo_force2d.sql — subir shapefiles PolygonZ ────────
--- Recrea geo.crear_zona, geo.crear_zona_union y geo.revisar_zona (definiciones
--- vigentes, sin otro cambio) envolviendo la geometría en ST_Force2D. Algunos
--- shapefiles exportados con "Z habilitada" son PolygonZ sin elevación real y el
--- INSERT fallaba: geo.zonas.geom es 2D estricto. La intranet ya descarta la Z
--- al parsear; esto cubre a app_campo y a cualquier llamada directa al RPC.
--- Verificar: select proname, prosrc like '%ST_Force2D%' from pg_proc
---            where proname in ('crear_zona','crear_zona_union','revisar_zona');
-
--- ── 2026-09-19  migration_predio_grupos_v2.sql — endurecer los RPC ──────────
--- Dos REVOKE. Postgres concede EXECUTE a PUBLIC en cada función nueva, así que
--- con la key anon los RPC core.fusionar_predios y core.disolver_grupo SE
--- EJECUTAN (verificado por REST: responden P0001, el RAISE de la función).
--- NO es un hueco abierto: la función no es SECURITY DEFINER, por dentro corre
--- como anon y la RLS de core.predios le devuelve 0 filas → la validación aborta
--- siempre; y anon no tiene INSERT/UPDATE en las tablas (42501). Se cierra
--- porque es la barrera que no depende de que nadie se equivoque después.
--- Lo único expuesto mientras tanto: el mensaje de error dice si un uuid de
--- predio existe. Sin prisa.
+-- ── 2026-09-23  migration_decision_sig.sql — TODO EN UN ARCHIVO ─────────────
+-- Un solo archivo con todo lo pendiente de esquema; se pega entero en el SQL
+-- Editor y se corre una vez (todas las sentencias son repetibles):
+--   PARTE 1 — geo.crear_zona, geo.crear_zona_union, geo.revisar_zona y
+--     geo.crear_nucleo con ST_Force2D, y las de zonas con ST_CollectionExtract
+--     (solo la parte poligonal). Sin esto, subir un shapefile PolygonZ falla
+--     ("Geometry has Z dimension but column does not"), aunque el geovisor lo
+--     muestre bien, y un polígono con una "espiga" falla con un error de tipos.
+--   PARTE 2 — tabla geo.zona_decision + RPC geo.decidir_zonas (solo
+--     service_role). Sin esto, «Resultados de campo» muestra todo pero los
+--     botones Confirmar / Editar / Eliminar quedan bloqueados con un aviso.
+--   PARTE 3 — les quita EXECUTE a PUBLIC/anon a las funciones que escriben:
+--     las de fusión de predios (lo que era migration_predio_grupos_v2.sql, que
+--     ya NO hay que correr aparte) y las de subida de zonas del SIG.
+-- La app de campo no se entera: revisar_zona y zonas_de_predio siguen abiertas
+-- a anon y revisar_zona conserva firma y comportamiento.
+-- Verificar: las consultas del final del archivo.
 
 -- ── 2026-09-01  merge_aliados_duplicados.sql — BLOQUE 2, opcional ───────────
 -- El BLOQUE 1 (fusión de "Álvaro Marlés Artunduaga" + "… 2") YA SE CORRIÓ:

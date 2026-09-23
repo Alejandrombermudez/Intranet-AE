@@ -145,8 +145,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Activar la carga. Con 'sobreescribir' retira lo anterior (soft), salvo
-    // las zonas que campo ya trabajó: esas sobreviven marcadas en conflicto,
-    // porque quien está parado en el predio tiene la última palabra.
+    // las zonas que campo ya trabajó: esas sobreviven marcadas en conflicto y
+    // las decide el SIG en «Resultados de campo», no una subida a ciegas.
     const { data: cierre, error: cerrarErr } = await supabase.schema('geo').rpc('cerrar_carga', {
       p_carga_id: cargaId as string,
       p_reemplazar: modo === 'sobreescribir',

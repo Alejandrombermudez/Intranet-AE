@@ -24,3 +24,6 @@ export const COLOR_CAMPO: Record<TipoCapaCampo, string> = {
   nueva:      '#14b8a6',
   descartada: '#ef4444',
 }
+
+/** Amarillo de selección: sobre el satelital se lee más que cualquier color de estado. */
+export const COLOR_SELECCION = '#facc15'

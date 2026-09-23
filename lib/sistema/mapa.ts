@@ -408,14 +408,15 @@ export const ETAPAS: Etapa[] = [
       titulo: 'Área en firme',
       explicacion:
         'Hasta que el terreno no confirma las zonas no hay hectáreas reales, y sin hectáreas reales no ' +
-        'se puede calcular cuántas plántulas pedir. Lo que decide el área es lo que se caminó, no lo ' +
-        'que se dibujó en la oficina.',
+        'se puede calcular cuántas plántulas pedir. Lo que decide el área es lo que se caminó y el SIG ' +
+        'dio por bueno después, no lo que se dibujó en la oficina antes de ir.',
       bloquea: false,
     },
     datos: [
       { nombre: 'siembra.familias', que: 'El vínculo del predio con el proceso de siembra.' },
       { nombre: 'siembra.evaluaciones_campo', que: 'La evaluación biofísica y la encuesta.' },
       { nombre: 'geo.zona_revision', que: 'Qué hizo el terreno con cada zona y con qué geometría.' },
+      { nombre: 'geo.zona_decision', que: 'Qué decidió el SIG después sobre cada zona: confirmarla, corregirla o eliminarla.' },
     ],
     pulso: ['etapa_campo', 'evaluaciones', 'revisiones_zona'],
   },
@@ -634,12 +635,13 @@ export const ENLACES: Enlace[] = [
  * una regla del proyecto, no un detalle de implementación.
  */
 export const REGLA_DEL_TERRENO = {
-  titulo: 'El terreno tiene la última palabra',
+  titulo: 'El terreno verifica, el SIG decide',
   cuerpo:
-    'La oficina propone las zonas y la persona parada en el predio dispone. Pero ninguna de las dos ' +
-    'versiones se destruye: cada subida del SIG entra como una carga con versión y lo que se reemplaza ' +
-    'queda consultable. Esto no es una preferencia de diseño — se perdieron correcciones reales de ' +
-    'campo una vez por no tenerlo así.',
+    'La oficina propone las zonas, la persona parada en el predio las verifica y el SIG, con eso a la ' +
+    'vista, tiene la última palabra: confirma, corrige o elimina cada zona. Ninguna versión se destruye: ' +
+    'cada subida del SIG entra como una carga con versión, lo que hizo campo queda en su historial y ' +
+    'cada decisión del SIG guarda cómo estaba la zona antes. Esto no es una preferencia de diseño — se ' +
+    'perdieron correcciones reales de campo una vez por no tenerlo así.',
 }
 
 // ─── Lo transversal ───────────────────────────────────────────────────────────
@@ -678,7 +680,8 @@ export const PIEZAS: Pieza[] = [
     datos: [
       { nombre: 'geo.zonas', que: 'Fincas y sitios de siembra.', etiqueta: 'Zonas', pulso: 'zonas_vigentes' },
       { nombre: 'geo.zonas_carga', que: 'Cada subida, versionada.', etiqueta: 'Subidas del SIG', pulso: 'zonas_carga' },
-      { nombre: 'geo.zona_revision', que: 'Lo que el terreno decidió sobre cada zona.', etiqueta: 'Revisiones de campo', pulso: 'revisiones_zona' },
+      { nombre: 'geo.zona_revision', que: 'Lo que el terreno hizo con cada zona.', etiqueta: 'Revisiones de campo', pulso: 'revisiones_zona' },
+      { nombre: 'geo.zona_decision', que: 'Lo que el SIG decidió después de campo.', etiqueta: 'Decisiones del SIG', pulso: 'decisiones_sig' },
     ],
     pulso: ['zonas_vigentes', 'revisiones_zona'],
   },
