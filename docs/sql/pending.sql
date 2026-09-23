@@ -11,6 +11,15 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
+-- ── 2026-09-23  migration_geo_force2d.sql — subir shapefiles PolygonZ ────────
+-- Recrea geo.crear_zona, geo.crear_zona_union y geo.revisar_zona (definiciones
+-- vigentes, sin otro cambio) envolviendo la geometría en ST_Force2D. Algunos
+-- shapefiles exportados con "Z habilitada" son PolygonZ sin elevación real y el
+-- INSERT fallaba: geo.zonas.geom es 2D estricto. La intranet ya descarta la Z
+-- al parsear; esto cubre a app_campo y a cualquier llamada directa al RPC.
+-- Verificar: select proname, prosrc like '%ST_Force2D%' from pg_proc
+--            where proname in ('crear_zona','crear_zona_union','revisar_zona');
+
 -- ── 2026-09-19  migration_predio_grupos_v2.sql — endurecer los RPC ──────────
 -- Dos REVOKE. Postgres concede EXECUTE a PUBLIC en cada función nueva, así que
 -- con la key anon los RPC core.fusionar_predios y core.disolver_grupo SE

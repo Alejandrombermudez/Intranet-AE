@@ -40,6 +40,12 @@ function mapCoords(geom: Geometry, fn: (p: Position) => Position): Geometry {
   return { ...geom, coordinates: transformDeep((geom as { coordinates: unknown }).coordinates, fn) } as Geometry
 }
 
+// descarta la Z (algunos shapefiles son PolygonZ sin datos reales de elevación) —
+// geo.zonas.geom es 2D estricto y Postgres rechaza el insert si llega Z
+function quitarZ(geom: Geometry): Geometry {
+  return mapCoords(geom, (p) => (p.length > 2 ? [p[0], p[1]] : p))
+}
+
 function primeraCoord(geom: Geometry): Position | null {
   if (geom.type === 'GeometryCollection') return geom.geometries[0] ? primeraCoord(geom.geometries[0]) : null
   let c: unknown = (geom as { coordinates: unknown }).coordinates
@@ -88,6 +94,7 @@ async function parsearBuffer(buf: ArrayBuffer): Promise<ShapefileParseado> {
   for (const fc of fcs) features = features.concat((fc.features ?? []) as Feature[])
   features = features.filter((f) => f && f.geometry)
   if (features.length === 0) throw new Error('El shapefile no contiene geometrías válidas.')
+  features = features.map((f) => ({ ...f, geometry: quitarZ(f.geometry) }))
 
   // .prj (para reproyectar si hace falta)
   let srcPrj: string | null = null
@@ -105,10 +112,7 @@ async function parsearBuffer(buf: ArrayBuffer): Promise<ShapefileParseado> {
     const conv = proj4(srcPrj, 'WGS84')
     features = features.map((f) => ({
       ...f,
-      geometry: mapCoords(f.geometry, (p) => {
-        const [lon, lat] = conv.forward([p[0], p[1]])
-        return p.length > 2 ? [lon, lat, p[2]] : [lon, lat]
-      }),
+      geometry: mapCoords(f.geometry, (p) => conv.forward([p[0], p[1]]) as Position),
     }))
     reproyectado = true
   }
