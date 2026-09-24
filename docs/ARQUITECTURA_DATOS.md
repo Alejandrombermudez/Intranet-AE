@@ -207,6 +207,28 @@ municipios/propietarios toca). Se arma desde `/intranet/sig` con **Fusionar pred
 | fecha | date | | |
 | sync_origin | text | | `pwa` |
 
+**`geo.zona_decision`** — lo que el SIG decide sobre cada zona DESPUÉS de campo. 🟢 en producción (`migration_decision_sig.sql`, corrida 2026-09-23)
+| Parámetro | Tipo | Llave | Notas |
+|---|---|---|---|
+| id | uuid | PK | |
+| zona_id | uuid | FK→ geo.zonas | `ON DELETE SET NULL`: la decisión sobrevive a la zona |
+| predio_id | uuid | FK→ core.predios | |
+| decision | text CHECK | | `confirmada` \| `editada` \| `eliminada` |
+| estado_previo / vigente_previo | text / bool | | cómo estaba la zona justo ANTES |
+| geom_previa | geometry(MultiPolygon,4326) | | la geometría de antes, para deshacer o auditar |
+| geom_nueva | geometry(MultiPolygon,4326) | | solo en `editada`; en las otras la geometría no cambia |
+| area_ha | numeric | | área con la que quedó |
+| nota / decidido_por | text | | el correo sale del token de sesión, nunca del cliente |
+| created_at | timestamptz | | |
+
+> **Es una tabla aparte de `geo.zona_revision` a propósito.** `zona_revision` es SOLO lo que hizo el
+> terreno, y así la leen el informe, el tablero y el pulso; mezclar ahí las decisiones de oficina le
+> atribuiría al técnico cosas que no hizo. La regla completa está en la nota de `geo.zona_revision`, arriba.
+> Verificado por REST el 2026-09-23: `geo.decidir_zonas` responde su propio `P0001` con `service_role` y
+> `42501 permission denied` con la llave anónima —igual que `crear_zona`, `fusionar_predios` y
+> `disolver_grupo`, que la PARTE 3 de la migración cerró—, mientras que `revisar_zona` con la llave anónima
+> sigue entrando, que es lo que necesita la app de campo.
+
 > **Única puerta de escritura para la PWA (anon): RPC `geo.revisar_zona`** (SECURITY DEFINER, 10 argumentos) — valida, aplica el cambio a `geo.zonas` y deja la auditoría; la app no tiene UPDATE/INSERT directo. La app de campo (módulo SIG) muestra finca + zonas sobre satelital, geolocaliza al técnico (dentro de / distancia y rumbo a la zona) y edita por vértices con leaflet-geoman, todo offline-first (Dexie `revisiones`).
 >
 > **Regla de negocio (desde 2026-09-23): el terreno verifica, el SIG decide.** Hasta esa fecha la regla era «el terreno tiene la última palabra»; ahora, después de campo, el SIG revisa cada zona en «Resultados de campo» y la **confirma** (queda como lote, `estado='definitiva'`), la **edita** (límite nuevo, también lote) o la **elimina** (`vigente=false`, `estado='descartada'`). Las decisiones van en `geo.zona_decision` (decisión, estado y geometría previos, nota, quién) por el RPC `geo.decidir_zonas`, que solo ejecuta la API de la intranet (`service_role`); `geo.zona_revision` sigue siendo solo lo que hizo el terreno. Si campo vuelve a revisar una zona después de la decisión, la revisión se aplica como siempre y la zona queda pendiente otra vez. No se edita ni elimina un lote con núcleos cargados. Migración: `sql/migration_decision_sig.sql`.

@@ -12,6 +12,45 @@ Hoy toda la geometría se guarda como un `.zip` (shapefile) en Storage y el geov
 
 ---
 
+## El terreno verifica, el SIG decide (2026-09-23)
+
+Hasta aquí la regla era corta: **el terreno tiene la última palabra**. Sigue siendo cierta en lo que
+importaba — nada de lo que hizo el técnico se pierde ni se reescribe — pero le faltaba el final del
+recorrido. Lo que vuelve de campo no entra solo al plan de siembra: alguien de la oficina lo mira y
+responde si va o no va. Eso es lo que faltaba nombrar.
+
+En «Resultados de campo», cada resultado (confirmada, límite corregido, zona nueva, descartada) es un
+filtro que muestra esas zonas en el mapa; el SIG las marca ahí o en la lista y decide:
+
+| decisión | qué le pasa a la zona |
+|---|---|
+| **confirmar** | queda como lote de siembra (`estado='definitiva'`), sea cual sea lo que dijo campo — incluso una que el técnico descartó |
+| **editar** | el SIG corrige el límite —vértices sobre el satelital con leaflet-geoman, como en la app de campo, o un `.zip` cargado— y la zona queda como lote con esa geometría (`origen='sig'`, `version+1`) |
+| **eliminar** | sale del juego: `vigente=false`, `'descartada'`. **No se borra** — sigue en la base y en el historial |
+
+**Por qué no contradice la regla del terreno.** La zona del técnico no se pisa: lo que él hizo queda entero
+en `geo.zona_revision`, con su geometría y su acción, y lo siguen leyendo el informe, el tablero y el pulso
+del sistema. Lo que el SIG decide va en una tabla aparte, `geo.zona_decision`, que guarda **el estado y la
+geometría de ANTES** de cada decisión. Si el SIG se equivoca, el camino de vuelta está escrito. Y si campo
+vuelve a trabajar esa zona DESPUÉS, `geo.revisar_zona` se aplica como siempre y vuelve a quedar pendiente
+de decisión: el terreno no queda bloqueado por una decisión de oficina.
+
+**Dos frenos, a propósito:**
+- Una zona que nadie fue a ver no se decide aquí. Si no tiene fila en `geo.zona_revision`, la función se
+  niega — una propuesta de oficina sin visita no es materia de esta pantalla.
+- Un lote con núcleos cargados no se edita ni se elimina: dejaría los núcleos por fuera de su lote. Primero
+  se retira o se reemplaza la nucleación.
+
+Es lo mismo que ya hacía el paso 1 de Nucleación (confirmar lotes) con dos diferencias: vale para cualquier
+resultado de campo, y deja rastro de quién decidió qué y cuándo.
+
+**Dónde está:** pestaña «Resultados de campo» en `/intranet/sig/[predioId]` (`ResultadosCampo.tsx` +
+`EditorZona.tsx`), contra `/api/sig/campo`. El RPC es **solo `service_role`**, así que tiene que pasar por
+la API: `anon` y `authenticated` reciben 42501. La bitácora de la pestaña muestra campo y SIG juntos, en
+orden, para leer la historia completa de cada zona.
+
+---
+
 ## Lotes de siembra y nucleación — lo que sigue después de campo (2026-09-20)
 
 El ciclo SIG → Campo → SIG II cerraba en "ver lo que devolvió el técnico" y ahí se acababa. El proceso real

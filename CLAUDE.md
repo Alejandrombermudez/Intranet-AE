@@ -47,13 +47,13 @@ papel y tinta, verde bosque como color firma, filetes finos en vez de cajas de c
 |---|---|---|
 | `/intranet/juridica` | Debida diligencia, antecedentes, análisis jurídico | `juridica` sobre `core` |
 | `/intranet/sig` | Tablero por **fase cartográfica** (sin cartografía / falta zonificar / listo para campo / en campo) — las tarjetas son los filtros. Lo alimenta `/api/sig/worklist`. **Fusionar predios** arma *unidades de siembra* (varios predios, un solo polígono) vía `/api/sig/grupos`: agrupa, no funde — cada predio conserva matrícula, dueño y expediente, y el polígono total lo lleva el predio principal | `geo`, `core` |
-| `/intranet/sig/[predioId]` | Ingesta de shapefile (por **lotes versionados**, no destructiva) + pestaña **"Resultados de campo"** (mapa antes/después, bitácora, formularios) vía `/api/sig/campo` + pestaña **"Nucleación"**: confirmar lotes de siembra y subir los núcleos (`/api/sig/lotes`, `/api/sig/nucleacion`). Descarga a `.shp` con `lib/exportar-zonas.ts` | `geo`, `siembra` |
+| `/intranet/sig/[predioId]` | Ingesta de shapefile (por **lotes versionados**, no destructiva) + pestaña **"Resultados de campo"** (mapa antes/después, bitácora, formularios) vía `/api/sig/campo` —y, desde 2026-09-23, donde el SIG **decide** sobre cada zona: confirmar, editar (vértices sobre el satelital con leaflet-geoman, o límite cargado de un `.zip`) o eliminar, vía `geo.decidir_zonas`— + pestaña **"Nucleación"**: confirmar lotes de siembra y subir los núcleos (`/api/sig/lotes`, `/api/sig/nucleacion`). Descarga a `.shp` con `lib/exportar-zonas.ts` | `geo`, `siembra` |
 | `/intranet/expedientes` | Tablero "¿en qué etapa va cada predio?" | `core.expedientes` |
 | *(no hay módulo «Siembra», y es correcto)* | Siembra es el **proceso** —jurídica → SIG → campo → SIG II—, no una pantalla. Existía una lista de encuestas heredada en `/intranet/ras/siembra`: rota desde el rediseño del 2026-07-07 (pedía columnas que se movieron a `core`) y redundante. **Se borró el 2026-09-20** junto con `/intranet/ras/nueva` y las rutas `/api/ras/familias/*`, que pese al nombre escribían en `siembra.*`. La encuesta se ve en la pestaña «Resultados de campo» del predio y completa en el Reporte; el departamento `Siembra` entra por el **Reporte**. **La tabla `siembra.familias` NO se tocó**: ahí están las encuestas reales de terreno | — |
 | `/intranet/ras`, `/intranet/ras/conservacion` | Conservación / Red de Árboles Semilleros | `ras` |
 | `/intranet/catalogo` | Catálogo de especies | `catalogo` |
 | `/intranet/reporte`, `/intranet/reporte/[predioId]` | **Módulo Reporte**: expediente completo del predio en un solo documento (predial, jurídica, cartografía, correcciones de terreno, evaluación biofísica, encuesta). Se arma solo desde `/api/reporte/expediente`; diseñado sobre el Manual de Identidad de Marca 2024 (Josefin Sans + Poppins, paleta hueso/verde bosque) y pensado para imprimir | `core`, `juridica`, `geo`, `siembra` |
-| `/intranet/sistema`, `/intranet/sistema/documentacion` | **Mapa del sistema**: el ecosistema completo (Siembra + Conservación + núcleo + soporte) como diagrama de tarjetas al estilo entidad-relación, con tres vistas: **Resumen** (la de entrada — cinco navcards con un conteo cada una: aplicaciones, módulos, **Siembra** y **Conservación** por separado —no una sola tarjeta de «etapas»: son dos dominios que no comparten tablas ni flujo, y un conteo común insinuaría lo contrario— y piezas del núcleo. Al tocar una, esa tarjeta pasa al centro y lo que contiene se abre en cuadros de colores; cada cuadro lleva a donde vive esa cosa: la app a su despliegue real, el módulo a su pantalla, y la etapa o la pieza al centro de Explorar — `resumen.tsx`), **Explorar** (una tarjeta pasa al centro con lo que la toca alrededor, animado con transiciones de CSS, y se recorre de una en una — `escena.tsx`) y **Comparar** (se eligen varias y el panel dice cómo se comunican y qué comparten — `lienzo.tsx` + `panel.tsx`), y la **bitácora** (decisiones, cambios, frentes abiertos) con lector de los `docs/*.md`. El grafo vive en `lib/sistema/mapa.ts`; las líneas y el análisis de varias tarjetas se deducen de él en `lib/sistema/relaciones.ts` (no se escriben a mano); la posición de cada tarjeta está en `app/intranet/sistema/disposicion.ts` — **una etapa, app o pieza nueva necesita ahí su lugar o no se dibuja**; las cifras **no se escriben a mano** — salen de `/api/sistema/pulso`, que las cuenta en Supabase al abrir la página, y los conteos de las navcards del Resumen se derivan de las listas del mapa (`.length`), no se escriben; la dirección de despliegue de cada app está en `APLICACIONES[].url` de `lib/sistema/mapa.ts` y **se verifica antes de escribirla** —una app sin despliegue confirmado se deja sin `url` y el Resumen no ofrece el enlace—; los departamentos y su módulo viven en `lib/departamentos.ts`, que comparten el hub y el Resumen. Reemplaza a `docs/flujo-trabajo.html`/`.pdf`, que se desactualizó en tres semanas por llevar los números dentro del SVG. Se entra por el tab **Tecnología** del hub: lo ve todo admin (transversal, como Reporte) y quien tenga ese departamento llega directo | lee `core`, `geo`, `catalogo`, `siembra`, `ras`, `people` — solo conteos |
+| `/intranet/sistema`, `/intranet/sistema/documentacion` | **Mapa del sistema**: el ecosistema completo (Siembra + Conservación + núcleo + soporte) como diagrama de tarjetas al estilo entidad-relación, con tres vistas: **Resumen** (la de entrada — cinco navcards con un conteo cada una: aplicaciones, módulos, **Siembra** y **Conservación** por separado —no una sola tarjeta de «etapas»: son dos dominios que no comparten tablas ni flujo, y un conteo común insinuaría lo contrario— y piezas del núcleo. Al tocar una, esa tarjeta pasa al centro y lo que contiene se abre en cuadros de colores; cada cuadro abre esa cosa: la app en su dirección, el módulo en su pantalla, y la etapa o la pieza en el centro de Explorar — `resumen.tsx`), **Explorar** (una tarjeta pasa al centro con lo que la toca alrededor, animado con transiciones de CSS, y se recorre de una en una — `escena.tsx`) y **Comparar** (se eligen varias y el panel dice cómo se comunican y qué comparten — `lienzo.tsx` + `panel.tsx`), y la **bitácora** (decisiones, cambios, frentes abiertos) con lector de los `docs/*.md`. El grafo vive en `lib/sistema/mapa.ts`; las líneas y el análisis de varias tarjetas se deducen de él en `lib/sistema/relaciones.ts` (no se escriben a mano); la posición de cada tarjeta está en `app/intranet/sistema/disposicion.ts` — **una etapa, app o pieza nueva necesita ahí su lugar o no se dibuja**; las cifras **no se escriben a mano** — salen de `/api/sistema/pulso`, que las cuenta en Supabase al abrir la página, y los conteos de las navcards del Resumen se derivan de las listas del mapa (`.length`), no se escriben; la dirección de despliegue de cada app está en `APLICACIONES[].url` de `lib/sistema/mapa.ts` y **se verifica antes de escribirla** —una app sin despliegue confirmado se deja sin `url` y el Resumen no ofrece el enlace—; los departamentos y su módulo viven en `lib/departamentos.ts`, que comparten el hub y el Resumen. Reemplaza a `docs/flujo-trabajo.html`/`.pdf`, que se desactualizó en tres semanas por llevar los números dentro del SVG. Se entra por el tab **Tecnología** del hub: lo ve todo admin (transversal, como Reporte) y quien tenga ese departamento llega directo | lee `core`, `geo`, `catalogo`, `siembra`, `ras`, `people` — solo conteos |
 | `/intranet/ejecutivo` | Sesiones/indicaciones ejecutivas | `ejecutivo` |
 | `app/api/juridica/aliados/[id]/crear-en-siembra` | Paso SIG→Campo: valida SIG I obligatorio, crea `siembra.familias`, avanza expediente | `core`, `geo`, `siembra` |
 
@@ -77,14 +77,26 @@ El daño más visible ya se atendió: `/intranet/ras/siembra` servía datos de `
 las rutas. Plan acordado: `ras` → `conservacion`, con vistas de compatibilidad porque **GeoAE también lee
 `ras.*`** y está desplegado.
 
-## El terreno tiene la última palabra (regla de negocio del SIG ↔ Campo)
+## El terreno verifica, el SIG decide (regla de negocio del SIG ↔ Campo)
 
-La oficina propone zonas, la persona parada en el predio dispone, y **ninguna de las dos versiones se
-destruye**. Traducido a datos: cada subida del SIG es un **lote versionado** (`geo.zonas_lote`), lo
-reemplazado queda `vigente=false` y consultable; `geo.revisar_zona` **nunca falla** porque el SIG haya
-cambiado algo (revive la zona retirada, o la recrea con la copia que manda el celular); y `cerrar_lote`
-no retira zonas que campo ya trabajó — las marca en `geo.v_zonas_conflicto` para resolverlas mirando las
-dos. Detalle en `docs/ARQUITECTURA_DATOS.md` §2.2 y `docs/CONTEXTO_MODULO_SIG.md`.
+Hasta el 2026-09-23 la regla era «el terreno tiene la última palabra». Lo que la cambió no fue un cambio de
+criterio sino el final del recorrido, que faltaba: lo que vuelve de campo no entra solo al plan de siembra:
+el SIG lo mira y responde si va. En «Resultados de campo» **confirma** cada zona (queda como lote,
+`estado='definitiva'`, aunque campo la haya descartado), la **edita** (límite nuevo, también lote) o la
+**elimina** (`vigente=false`, `'descartada'` — no se borra).
+
+**Lo que no cambió: ninguna versión se destruye.** Cada subida del SIG es una **carga versionada**
+(`geo.zonas_carga`) y lo reemplazado queda consultable; `geo.revisar_zona` **nunca falla** porque el SIG
+haya cambiado algo (revive la zona retirada, o la recrea con la copia que manda el celular); `cerrar_carga`
+no retira zonas que campo ya trabajó — las marca en `geo.v_zonas_conflicto`; y lo que hizo el técnico se
+queda entero en `geo.zona_revision`, que es lo que leen el informe, el tablero y el pulso. La decisión de
+oficina va aparte, en `geo.zona_decision`, guardando el estado y la geometría de ANTES. Si campo vuelve a
+esa zona después, su revisión se aplica como siempre y vuelve a quedar pendiente de decisión.
+
+El RPC es `geo.decidir_zonas`, **solo `service_role`** — pasa por `/api/sig/campo`, que exige sesión y saca
+el correo del token. Se niega si la zona no tiene revisión de campo (una propuesta que nadie visitó no se
+decide ahí) y si el lote ya tiene núcleos cargados. Detalle en `docs/ARQUITECTURA_DATOS.md` §2.2 y
+`docs/CONTEXTO_MODULO_SIG.md`.
 
 ## Estado vivo — no lo memorices, verifícalo
 
@@ -95,5 +107,6 @@ mano: en septiembre de 2026, `ARQUITECTURA_DATOS.md` §4.2 daba `ras.arboles_sem
 fecha o no lo pongas.
 
 `docs/sql/pending.sql` lleva la lista de migraciones que **aún no se han corrido** en producción.
-Verificado por REST el **2026-08-12: no queda ninguna pendiente** — todas las escritas están aplicadas.
+Verificado por REST el **2026-09-23: no queda ninguna de esquema pendiente** — la última en correr fue
+`migration_decision_sig.sql`, que además cerró lo que quedaba de `migration_predio_grupos_v2.sql`.
 Antes de asumir que una tabla/columna existe, verifica por REST en vez de confiar en un doc que puede estar desactualizado.
