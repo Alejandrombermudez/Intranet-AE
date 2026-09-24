@@ -1,12 +1,12 @@
 'use client'
 
 /**
- * RESUMEN — la puerta de entrada al mapa del sistema
- * ──────────────────────────────────────────────────
+ * RESUMEN — qué hay en el sistema
+ * ───────────────────────────────
  * Explorar y Comparar responden «cómo se conecta esto». Resumen responde algo
  * anterior: «¿qué hay?». Cinco tarjetas con un número grande cada una; al tocar
  * una, esa tarjeta pasa al centro y lo que contiene se abre en cuadros de
- * colores. Tocar un cuadro lleva a donde vive esa cosa.
+ * colores. Tocar un cuadro abre esa cosa.
  *
  * A dónde se va depende de qué sea: una aplicación abre su despliegue real, un
  * módulo abre su pantalla de la intranet, y una etapa o una pieza del núcleo
@@ -24,12 +24,12 @@
  * Sobre el aspecto: es la única pantalla de la intranet que se sale del papel y
  * la tinta, a propósito — es una portada, no una mesa de trabajo. Pero los
  * resplandores salen de la paleta de la marca (`var(--color-ambar)`, `cielo`,
- * `salvia`, `musgo`), no de neones de fantasía, así que sigue siendo la misma
- * casa. Todo el CSS del efecto vive en este archivo, con prefijo `res-`, para
- * no tocar `globals.css` ni arriesgar la caché de Turbopack.
+ * `salvia`, `musgo`), no de colores inventados. Todo el CSS del efecto vive en
+ * este archivo, con prefijo `res-`, para no tocar `globals.css` ni arriesgar la
+ * caché de Turbopack.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   APLICACIONES,
@@ -106,7 +106,7 @@ function grupos(): Grupo[] {
       id: 'apps',
       titulo: 'Aplicaciones',
       unidad: 'aplicaciones',
-      que: 'Todo lo que el equipo abre para trabajar, en la oficina y en el predio.',
+      que: 'Lo que el equipo abre para trabajar, en la oficina y en el predio.',
       color: 'var(--color-ambar)',
       icono: <Smartphone size={15} />,
       elementos: APLICACIONES.map((a) => ({
@@ -145,7 +145,7 @@ function grupos(): Grupo[] {
     {
       id: 'siembra',
       titulo: 'Siembra',
-      unidad: 'etapas del proceso',
+      unidad: 'etapas',
       que: 'Por dónde pasa un predio, de la revisión jurídica al árbol sembrado.',
       color: 'var(--color-primary-light)',
       icono: <Crosshair size={15} />,
@@ -154,8 +154,8 @@ function grupos(): Grupo[] {
     {
       id: 'conservacion',
       titulo: 'Conservación',
-      unidad: 'frentes de la RAS',
-      que: 'Familias que conservan bosque y la red de árboles semilleros. Aquí la entidad central es el árbol, no el predio.',
+      unidad: 'líneas de trabajo',
+      que: 'Familias que conservan bosque y la red de árboles semilleros. Aquí se cuenta el árbol, no el predio.',
       color: 'var(--color-musgo)',
       icono: <Trees size={15} />,
       elementos: etapasDe('conservacion').map(etapaAElemento),
@@ -163,8 +163,8 @@ function grupos(): Grupo[] {
     {
       id: 'nucleo',
       titulo: 'Piezas compartidas',
-      unidad: 'piezas del núcleo',
-      que: 'Lo que los dos dominios usan sin duplicar: persona, predio, mapa y especies.',
+      unidad: 'piezas',
+      que: 'Lo que Siembra y Conservación usan sin repetir: persona, predio, mapa y especies.',
       color: 'var(--color-celeste)',
       icono: <Boxes size={15} />,
       elementos: PIEZAS.map((p) => ({
@@ -189,7 +189,7 @@ function etapaAElemento(e: ReturnType<typeof etapasDe>[number]): Elemento {
   }
 }
 
-/** Las cifras vivas que valen para una portada: las que cuentan trabajo real. */
+/** Los conteos de la franja de abajo: los que miden trabajo hecho. */
 const CIFRAS_PORTADA = [
   'predios_total',
   'aliados_total',
@@ -266,17 +266,15 @@ export function Resumen({
 function VistaPortada({ grupos: gs, onAbrir }: { grupos: Grupo[]; onAbrir: (id: string) => void }) {
   return (
     <>
-      <p className="text-[10px] uppercase tracking-[.28em] text-taupe">De un vistazo</p>
-      <h2 className="mt-2 max-w-2xl font-display text-[clamp(1.75rem,3.4vw,2.6rem)] font-thin leading-[1.1] text-white">
-        El sistema completo, <span className="font-bold">de un vistazo</span>
-      </h2>
-      <p className="mt-3 max-w-xl text-[13px] font-light leading-relaxed text-hueso/60">
-        Toca una tarjeta y pasa al centro con lo que contiene. Desde ahí se va directo: las
-        aplicaciones abren donde están publicadas, los módulos abren su pantalla, y las etapas pasan
-        al centro del mapa.
+      {/* Sin título propio: la cabecera de la página ya dice qué es esto, y
+          repetirlo aquí solo gasta la pantalla. Queda la línea que hace falta —
+          cómo se usa— y enseguida las tarjetas. */}
+      <p className="max-w-xl text-[13px] font-light leading-relaxed text-hueso/60">
+        Toca una tarjeta para ver qué tiene dentro. Las aplicaciones abren en su dirección, los
+        módulos en su pantalla y las etapas en Explorar.
       </p>
 
-      <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {gs.map((g, i) => (
           <Navcard key={g.id} grupo={g} orden={i} onClick={() => onAbrir(g.id)} />
         ))}
@@ -300,13 +298,25 @@ function VistaAbierta({
   onCambiar: (id: string) => void
   onIrATarjeta: (id: string) => void
 }) {
-  // Los chips de «ver también» están al final, así que al saltar de categoría
-  // el centro queda arriba, fuera de la pantalla, y parece que no pasó nada.
-  // Cada vez que cambia el grupo se vuelve al principio.
+  // Los chips para saltar de categoría están al final, así que cambiar de una a
+  // otra dejaba el centro arriba, fuera de la pantalla, y parecía que no había
+  // pasado nada. Volver al principio cuesta tres cosas, y las tres hicieron
+  // falta —medido, sin ellas el scroll se quedaba en 19 px de los 600—:
+  //
+  //   · Destino calculado, no `scrollIntoView`: el tope está ARRIBA de lo que
+  //     cambia, así que su posición absoluta sirve igual antes y después.
+  //   · `blur()`: el chip se queda con el foco al tocarlo y el navegador lo
+  //     mantiene a la vista, deshaciendo el desplazamiento.
+  //   · Salto instantáneo y en el tick siguiente: el suave lo cancela el
+  //     navegador en cuanto el documento cambia de alto, y la categoría nueva
+  //     casi siempre trae otra cantidad de cuadros.
   const tope = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    tope.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [grupo.id])
+  const cambiarYSubir = (id: string, chip: HTMLButtonElement) => {
+    const y = tope.current ? tope.current.getBoundingClientRect().top + window.scrollY - 24 : 0
+    onCambiar(id)
+    chip.blur()
+    setTimeout(() => window.scrollTo({ top: Math.max(0, y) }), 0)
+  }
 
   return (
     <div ref={tope} className="scroll-mt-6" style={{ '--tono': grupo.color } as React.CSSProperties}>
@@ -340,12 +350,12 @@ function VistaAbierta({
 
       {/* Saltar a otra categoría sin volver atrás. */}
       <div className="mt-10 flex flex-wrap items-center gap-2.5 border-t border-hueso/10 pt-6">
-        <span className="mr-1 text-[10px] uppercase tracking-[.2em] text-taupe">Ver también</span>
+        <span className="mr-1 text-[10px] uppercase tracking-[.2em] text-taupe">Ir a</span>
         {otros.map((o) => (
           <button
             key={o.id}
             type="button"
-            onClick={() => onCambiar(o.id)}
+            onClick={(e) => cambiarYSubir(o.id, e.currentTarget)}
             className="res-chip flex items-center gap-2 border border-hueso/15 px-3 py-1.5 text-[11px] text-hueso/65 transition-colors"
             style={{ '--tono': o.color } as React.CSSProperties}
           >

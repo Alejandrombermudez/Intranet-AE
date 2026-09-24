@@ -74,7 +74,7 @@ export const DEPARTAMENTOS: Departamento[] = [
     id: 'Tecnología',
     nombre: 'Tecnología',
     ruta: '/intranet/sistema',
-    que: 'El mapa del sistema: el proceso, las aplicaciones, las cifras vivas y la bitácora.',
+    que: 'El mapa del sistema: el proceso, las aplicaciones, los conteos y la bitácora.',
   },
   {
     id: 'Financiero',

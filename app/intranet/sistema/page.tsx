@@ -64,7 +64,7 @@ export default function SistemaPage() {
         titulo="El sistema"
         descripcion={
           vista === 'resumen'
-            ? 'Qué hay en el sistema: las aplicaciones, los módulos, las etapas del proceso y lo que comparten.'
+            ? 'Qué hay en el sistema: las aplicaciones, los módulos, las etapas y las piezas compartidas.'
             : 'Cada tarjeta es una parte del sistema. Explora una a la vez o compara varias para ver qué comparten.'
         }
         pie={<Pestanas tono="oscuro" items={[
