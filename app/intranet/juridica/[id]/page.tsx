@@ -9,9 +9,11 @@ import {
   ESTADO_CONFIG, SEMAFORO_CONFIG, hoja3Habilitada,
 } from '@/lib/juridica-schema'
 import {
-  Pencil, ChevronRight, CheckCircle2, XCircle, Lock, ExternalLink, AlertCircle, Plus,
+  Pencil, ChevronRight, CheckCircle2, XCircle, Lock, ExternalLink, AlertCircle, Plus, FileDown, Loader2,
 } from 'lucide-react'
-import { Cabecera, Cargando } from '@/app/components/marca'
+import { Aviso, Boton, Cabecera, Cargando } from '@/app/components/marca'
+import { descargarReportes, type ModoReporte } from '@/lib/reporte-juridico'
+import ModalReporte from '@/app/components/ModalReporte'
 import { fetchParametrosHoja1, nombreParametro, type Parametro } from '@/lib/parametros'
 
 function label(v: unknown) {
@@ -120,6 +122,9 @@ export default function AliadoDetailPage() {
   const [loading, setLoading]     = useState(true)
   const [proyectos, setProyectos] = useState<Parametro[]>([])
   const [fuentes, setFuentes]     = useState<Parametro[]>([])
+  const [generando, setGenerando]         = useState(false)
+  const [preguntando, setPreguntando]     = useState(false)
+  const [avisoReporte, setAvisoReporte]   = useState<string | null>(null)
 
   // En el predio se guarda el código; los catálogos traen el nombre que se lee.
   useEffect(() => {
@@ -160,6 +165,21 @@ export default function AliadoDetailPage() {
 
   if (!aliado) return null
 
+  async function descargarReporte(modo: ModoReporte) {
+    if (!aliado) return
+    setPreguntando(false); setGenerando(true); setAvisoReporte(null)
+    try {
+      const omitidos = await descargarReportes([aliado], modo)
+      if (omitidos.length) {
+        setAvisoReporte(`${omitidos.some((o) => o.titulo === 'Sin documentos') ? 'No se descargó nada' : 'El reporte se descargó, pero hay documentos que no entraron'}: ${omitidos.map((o) => `${o.titulo} (${o.motivo})`).join('; ')}.`)
+      }
+    } catch {
+      setAvisoReporte('No se pudo armar el reporte. Revisa la conexión e intenta de nuevo.')
+    } finally {
+      setGenerando(false)
+    }
+  }
+
   const estadoCfg = ESTADO_CONFIG[aliado.estado as EstadoAliado]
   const semaforo  = aliado.analisis_juridico?.semaforo as Semaforo | null
   const semCfg    = semaforo ? SEMAFORO_CONFIG[semaforo] : null
@@ -173,6 +193,10 @@ export default function AliadoDetailPage() {
         modulo="Aliado · debida diligencia"
         titulo={aliado.nombre_completo}
         acciones={<>
+          <Boton variante="claro" onClick={() => setPreguntando(true)} disabled={generando}
+            icono={generando ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}>
+            {generando ? 'Armando…' : 'Reporte jurídico'}
+          </Boton>
           <span className={`px-2.5 py-1 text-[10px] font-medium uppercase tracking-[.14em] ${estadoCfg.bg} ${estadoCfg.text}`}>
             {estadoCfg.label}
           </span>
@@ -189,6 +213,9 @@ export default function AliadoDetailPage() {
         <div className="border border-stone-200 bg-white px-5 py-4">
           <Stepper aliado={aliado} />
         </div>
+
+        {avisoReporte && <Aviso tono="ambar" titulo="Reporte jurídico">{avisoReporte}</Aviso>}
+        {preguntando && <ModalReporte cantidad={1} onElegir={descargarReporte} onCerrar={() => setPreguntando(false)} />}
 
         {/* Alertas de estado */}
         {aliado.estado === 'rechazado' && (

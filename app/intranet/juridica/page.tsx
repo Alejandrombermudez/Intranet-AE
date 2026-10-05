@@ -4,14 +4,16 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { fetchConSesion } from '@/lib/fetch-sesion'
-import { Boton, Cabecera, Cargando } from '@/app/components/marca'
+import { Aviso, Boton, Cabecera, Cargando } from '@/app/components/marca'
 import {
   type Aliado, type EstadoAliado, type Semaforo,
   ESTADO_CONFIG, ESTADOS_FLUJO, SEMAFORO_CONFIG, H1_CAMPOS_CLAVE, hoja3Habilitada,
 } from '@/lib/juridica-schema'
 import {
-  Plus, Search, Filter, ChevronRight, Loader2, Shield, LayoutGrid,
+  Plus, Search, Filter, ChevronRight, Loader2, Shield, LayoutGrid, FileDown,
 } from 'lucide-react'
+import { descargarReportes, type ModoReporte } from '@/lib/reporte-juridico'
+import ModalReporte from '@/app/components/ModalReporte'
 import { fetchParametros, nombreParametro, type Parametro } from '@/lib/parametros'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -81,11 +83,13 @@ function MiniStepper({ aliado }: { aliado: Aliado }) {
 // `prediosDelPropietario` = cuántos casos tiene esa misma persona en el listado.
 // Un aliado con varios predios genera una tarjeta por predio; sin el nombre del
 // predio a la vista las tarjetas se leen como propietarios duplicados.
-function AliadoCard({ aliado, prediosDelPropietario, proyecto }: {
+function AliadoCard({ aliado, prediosDelPropietario, proyecto, seleccion }: {
   aliado: Aliado
   prediosDelPropietario: number
   /** Nombre legible del proyecto, o null si el predio todavía no está clasificado. */
   proyecto: string | null
+  /** Solo en modo selección (reporte jurídico): marca la tarjeta y la alterna al tocarla. */
+  seleccion?: { marcada: boolean; alternar: () => void }
 }) {
   const estadoCfg  = ESTADO_CONFIG[aliado.estado]
   const semaforo   = aliado.analisis_juridico?.semaforo as Semaforo | null
@@ -98,9 +102,19 @@ function AliadoCard({ aliado, prediosDelPropietario, proyecto }: {
     : `${aliado.tipo_documento} ${aliado.numero_documento}`
 
   return (
-    <div className="bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition-shadow p-4">
+    <div
+      onClick={seleccion?.alternar}
+      className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow p-4 ${
+        seleccion ? 'cursor-pointer' : ''
+      } ${seleccion?.marcada ? 'border-bosque ring-1 ring-bosque' : 'border-stone-100'}`}
+    >
       <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="min-w-0">
+        {seleccion && (
+          <input type="checkbox" checked={seleccion.marcada} readOnly
+            aria-label={`Seleccionar ${aliado.nombre_predio || 'predio'}`}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-bosque pointer-events-none" />
+        )}
+        <div className="min-w-0 flex-1">
           <p className="font-bold text-stone-900 text-sm truncate">
             {aliado.nombre_predio || 'Predio sin nombre'}
           </p>
@@ -153,6 +167,7 @@ function AliadoCard({ aliado, prediosDelPropietario, proyecto }: {
         <MiniStepper aliado={aliado} />
         <Link
           href={`/intranet/juridica/${aliado.id}`}
+          onClick={(e) => { if (seleccion) e.preventDefault() }}
           className="flex items-center gap-0.5 text-[11px] font-bold text-stone-500 hover:text-stone-800 transition-colors"
         >
           Ver <ChevronRight size={12} />
@@ -177,6 +192,12 @@ export default function JuridicaPage() {
   // 'todos' | 'sin_proyecto' | código de catalogo.proyectos
   const [filtroProyecto, setFiltroProyecto] = useState<string>('todos')
   const [proyectos, setProyectos] = useState<Parametro[]>([])
+  // Reporte jurídico en lote: se activa el modo selección y se marcan tarjetas.
+  const [seleccionando, setSeleccionando] = useState(false)
+  const [marcados, setMarcados] = useState<Set<string>>(new Set())
+  const [progreso, setProgreso] = useState<string | null>(null)
+  const [preguntando, setPreguntando] = useState(false)
+  const [avisoReporte, setAvisoReporte] = useState<string | null>(null)
 
   useEffect(() => { fetchParametros('proyectos').then(setProyectos) }, [])
 
@@ -259,6 +280,40 @@ export default function JuridicaPage() {
     rechazados: aliados.filter((a) => a.estado === 'rechazado').length,
   }), [aliados])
 
+  function alternar(id: string) {
+    setMarcados((prev) => {
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id); else n.add(id)
+      return n
+    })
+  }
+
+  function salirDeSeleccion() { setSeleccionando(false); setMarcados(new Set()) }
+
+  // «Todos» se refiere a lo que se ve con el filtro puesto, no a toda la base.
+  const todosVisiblesMarcados = visibles.length > 0 && visibles.every((a) => marcados.has(a.id))
+  function marcarVisibles() {
+    setMarcados(todosVisiblesMarcados ? new Set() : new Set(visibles.map((a) => a.id)))
+  }
+
+  async function descargarSeleccion(modo: ModoReporte) {
+    // Solo los marcados que siguen existiendo; el orden es el del listado.
+    const casos = aliados.filter((a) => marcados.has(a.id))
+    setPreguntando(false)
+    if (casos.length === 0) return
+    setAvisoReporte(null); setProgreso('Preparando…')
+    try {
+      const omitidos = await descargarReportes(casos, modo, setProgreso)
+      if (omitidos.length) {
+        setAvisoReporte(`Descarga lista, pero ${omitidos.length === 1 ? 'un documento no entró' : `${omitidos.length} documentos no entraron`}: ${omitidos.map((o) => `${o.predio} — ${o.titulo} (${o.motivo})`).join('; ')}.`)
+      }
+    } catch {
+      setAvisoReporte('No se pudo armar el reporte. Revisa la conexión e intenta de nuevo.')
+    } finally {
+      setProgreso(null)
+    }
+  }
+
   if (!authReady) return <Cargando texto="Cargando el módulo jurídico…" />
 
   return (
@@ -275,12 +330,41 @@ export default function JuridicaPage() {
           { n: stats.rechazados, l: 'Rechazados' },
         ]}
         acciones={<>
+          <Boton variante="claro" onClick={() => (seleccionando ? salirDeSeleccion() : setSeleccionando(true))}
+            icono={<FileDown size={14} />}>
+            {seleccionando ? 'Cancelar selección' : 'Reporte jurídico'}
+          </Boton>
           <Boton variante="claro" href="/intranet/expedientes" icono={<LayoutGrid size={14} />}>Tablero</Boton>
           <Boton variante="luz" href="/intranet/juridica/nuevo" icono={<Plus size={14} />}>Nuevo aliado</Boton>
         </>}
       />
 
       <div className="max-w-5xl mx-auto px-6 sm:px-10 py-10 space-y-6">
+        {avisoReporte && <Aviso tono="ambar" titulo="Reporte jurídico">{avisoReporte}</Aviso>}
+        {preguntando && <ModalReporte cantidad={marcados.size} onElegir={descargarSeleccion} onCerrar={() => setPreguntando(false)} />}
+
+        {/* Barra del modo selección: queda fija para no perderla al bajar por la lista. */}
+        {seleccionando && (
+          <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border border-bosque bg-papel px-4 py-3">
+            <p className="text-[12.5px] text-tinta">
+              {progreso
+                ? progreso
+                : marcados.size === 0
+                  ? 'Marca los predios de los que quieres el reporte.'
+                  : `${marcados.size} ${marcados.size === 1 ? 'predio marcado' : 'predios marcados'}${marcados.size > 1 ? ' — se descarga un .zip con un PDF por predio' : ''}`}
+            </p>
+            <div className="ml-auto flex items-center gap-2">
+              <Boton variante="secundario" onClick={marcarVisibles} disabled={!!progreso || visibles.length === 0}>
+                {todosVisiblesMarcados ? 'Quitar todos' : `Marcar los ${visibles.length} visibles`}
+              </Boton>
+              <Boton onClick={() => setPreguntando(true)} disabled={!!progreso || marcados.size === 0}
+                icono={progreso ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}>
+                {progreso ? 'Armando…' : 'Descargar'}
+              </Boton>
+            </div>
+          </div>
+        )}
+
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -351,7 +435,8 @@ export default function JuridicaPage() {
             {visibles.map((a) => (
               <AliadoCard key={a.id} aliado={a}
                 prediosDelPropietario={prediosPorPropietario.get(a.aliado_id ?? a.numero_documento) ?? 1}
-                proyecto={nombreParametro(proyectos, a.tipo_proyecto)} />
+                proyecto={nombreParametro(proyectos, a.tipo_proyecto)}
+                seleccion={seleccionando ? { marcada: marcados.has(a.id), alternar: () => { if (!progreso) alternar(a.id) } } : undefined} />
             ))}
           </div>
         )}
