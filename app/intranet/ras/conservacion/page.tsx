@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
   Plus, Loader2, ShieldCheck, MapPin, Eye, CalendarDays, Trash2, AlertTriangle, Trees, Pencil,
-  ImageOff, TreePine,
+  ImageOff, TreePine, FileSpreadsheet,
 } from 'lucide-react'
+import ModalFormatosRas from '@/app/components/ModalFormatosRas'
 import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 import { fetchEspecies, fotoAleatoriaCatalogo } from '@/lib/catalogo'
 import { fetchIndicadoresDeFamilias, type IndicadoresPredio } from '@/lib/ras-arboles'
@@ -43,6 +44,7 @@ export default function ConservacionListPage() {
   // Familias con cesión de derechos de imagen firmada (para el filtro / badge)
   const [conCesion, setConCesion] = useState<Set<string>>(new Set())
   const [filtroCesion, setFiltroCesion] = useState<'todas' | 'con' | 'sin'>('todas')
+  const [exportando, setExportando] = useState(false)
 
   const handleDelete = async (id: string) => {
     setDeletingId(id)
@@ -162,10 +164,26 @@ export default function ConservacionListPage() {
         volver={{ href: '/intranet/ras', label: 'Módulo RAS' }}
         modulo="Conservación · Red de Árboles Semilleros"
         titulo="Familias en conservación"
-        acciones={
+        acciones={<>
+          <Boton variante="claro" onClick={() => setExportando(true)} icono={<FileSpreadsheet size={14} />}>Exportar formatos</Boton>
           <Boton variante="luz" href="/intranet/ras/conservacion/nueva" icono={<Plus size={14} />}>Nueva familia</Boton>
-        }
+        </>}
       />
+
+      {/* Formatos de Corpoamazonia (F-LAR-071 y F-LAR-072), llenos con lo que hay en la base. */}
+      {exportando && (
+        <ModalFormatosRas
+          onCerrar={() => setExportando(false)}
+          predios={[...familias]
+            .sort((a, b) => (a.nombre_finca ?? a.nombre_propietario).localeCompare(b.nombre_finca ?? b.nombre_propietario, 'es'))
+            .map((f) => ({
+              id: f.id,
+              nombre: f.nombre_finca ?? f.nombre_propietario,
+              municipio: f.municipio,
+              arboles: indicadores[f.id]?.arboles_semilleros ?? null,
+            }))}
+        />
+      )}
 
       {/* ── Main ── */}
       <main className="max-w-7xl mx-auto px-6 sm:px-10 py-10">
