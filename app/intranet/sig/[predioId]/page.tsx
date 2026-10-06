@@ -144,7 +144,7 @@ export default function SigPredioPage() {
   const [guardando, setGuardando] = useState(false)
   const [overlap, setOverlap] = useState<{ ids: string[]; lista: { nombre: string | null; area: number | null }[] } | null>(null)
   const [toast, setToast] = useState<{ tipo: 'ok' | 'error'; msg: string } | null>(null)
-  const showToast = (tipo: 'ok' | 'error', msg: string) => { setToast({ tipo, msg }); setTimeout(() => setToast(null), 3500) }
+  const showToast = (tipo: 'ok' | 'error', msg: string) => { setToast({ tipo, msg }); setTimeout(() => setToast(null), tipo === 'error' ? 15000 : 3500) }
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {

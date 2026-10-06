@@ -60,6 +60,15 @@ async function persistirExtras(
   console.warn('No se guardaron propiedades/perímetro (¿falta migration_geo_v2?):', error.message)
 }
 
+// Escribe en `geo.zonas_carga.nota` por qué una subida no terminó. Es solo
+// rastro: si esto mismo falla no se hace nada más, el error real ya va al cliente.
+async function marcarFallida(supabase: SB, cargaId: string, motivo: string) {
+  const { error } = await supabase.schema('geo').from('zonas_carga')
+    .update({ nota: motivo.slice(0, 500) })
+    .eq('id', cargaId)
+  if (error) console.warn('No se pudo anotar el motivo de la carga fallida:', error.message)
+}
+
 // POST /api/sig/ingesta — guarda zonas en geo.zonas
 //   tipo:  'finca' (polígono del predio) | 'restauracion' (sitios de siembra) | 'conservacion'
 //   modo:  'insertar' (agrega) | 'sobreescribir' (reemplaza las de ese tipo) | 'unir' (fusiona con unir_ids)
@@ -138,6 +147,10 @@ export async function POST(req: NextRequest) {
       if (error) {
         // La carga queda abierta (zonas en borrador, invisibles) y lo anterior
         // sigue vigente: se puede reintentar la subida sin haber roto nada.
+        // Se deja escrita la razón en la propia carga: el 2026-09-16 una finca
+        // falló seis veces seguidas, sin zonas y sin rastro de por qué, y a la
+        // séptima «se arregló sola» — nadie supo qué había fallado.
+        await marcarFallida(supabase, cargaId as string, `Falló al guardar la geometría ${creadas + 1} de ${features.length}: ${error.message}`)
         return NextResponse.json({ error: 'Error guardando geometría: ' + error.message, creadas }, { status: 500 })
       }
       creadas++
@@ -152,6 +165,7 @@ export async function POST(req: NextRequest) {
       p_reemplazar: modo === 'sobreescribir',
     })
     if (cerrarErr) {
+      await marcarFallida(supabase, cargaId as string, `Las zonas se guardaron pero no se activó la carga: ${cerrarErr.message}`)
       return NextResponse.json({ error: 'Zonas guardadas pero no se activó la carga: ' + cerrarErr.message, creadas }, { status: 500 })
     }
 
