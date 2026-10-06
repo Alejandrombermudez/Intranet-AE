@@ -110,7 +110,7 @@ export default function ReportePage() {
             Expediente del predio
           </h1>
           <p className="text-sm font-light max-w-2xl" style={{ color: MARCA.hueso }}>
-            Todo lo que el ecosistema sabe de una familia, reunido en un solo documento:
+            Todo lo que hay guardado de un predio, en un solo documento:
             identificación y propietario, situación jurídica, cartografía con las zonas de siembra,
             lo que el terreno corrigió, la evaluación biofísica y la encuesta socioeconómica.
             Se arma solo y se puede imprimir o guardar en PDF.

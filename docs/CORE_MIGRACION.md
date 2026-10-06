@@ -2,7 +2,7 @@
 
 > **Fecha:** 2026-06-18 · **SQL:** [`sql/migration_core.sql`](sql/migration_core.sql) · **Arquitectura:** [`ARQUITECTURA_ECOSISTEMA.md`](ARQUITECTURA_ECOSISTEMA.md) §4 (D1/D2)
 >
-> Entregable de la Semana 1 del cronograma: el modelo central (aliados, predios, expedientes) y el mapeo desde las tablas actuales. **Jurídica es la puerta de entrada**: crea la persona, el predio y abre el expediente.
+> Entregable de la Semana 1 del cronograma: el modelo central (aliados, predios, expedientes) y el mapeo desde las tablas actuales. **Jurídica es el primer paso**: crea la persona, el predio y abre el expediente.
 
 ---
 
@@ -85,15 +85,15 @@ Datos de prueba — no se reestructuran ahora. Solo se dejan los enganches listo
 
 ---
 
-## 5. Runbook del cutover
+## 5. Pasos de la migración
 
 1. **SQL Editor**: ejecutar [`sql/migration_core.sql`](sql/migration_core.sql) completo. Revisar el BLOQUE 14 (verificación).
 2. **Supabase Dashboard → Settings → API → Exposed schemas**: agregar `core` (después de correr el SQL; dispara la recarga de PostgREST). Sin esto la app da "schema must be one of…".
-3. **App (ya reescrita en este cutover):** las rutas de `/api/juridica/*` escriben a `core.*` + `juridica.debida_diligencia`. Las 6 páginas no cambiaron (consumen el caso plano). Probar el flujo: crear aliado+predio → antecedentes → análisis → aprobar.
+3. **App (ya reescrita en esta migración):** las rutas de `/api/juridica/*` escriben a `core.*` + `juridica.debida_diligencia`. Las 6 páginas no cambiaron (consumen el caso plano). Probar el flujo: crear aliado+predio → antecedentes → análisis → aprobar.
 4. **Verificar** que `crear-en-siembra` enlaza al expediente y avanza la etapa a `campo`.
-5. Eliminar el archivo viejo: correr [`sql/cleanup_legacy.sql`](sql/cleanup_legacy.sql) (`DROP TABLE juridica.aliados_legacy`). ✅ hecho.
+5. Eliminar el archivo viejo: correr [`sql/cleanup_legacy.sql`](sql/cleanup_legacy.sql) (`DROP TABLE juridica.aliados_legacy`). hecho.
 
-**Estado (2026-06-19): COMPLETO.** SQL corrido, `core` expuesto, `juridica.aliados_legacy` borrada, y la columna `analisis_juridico.acto_adquisicion_actual` eliminada. **Verificado con un caso real** (persona Arnulfo Silva → predio Los Andes → expediente → DD aprobada con 4 documentos → antecedentes → análisis verde). Reglas de negocio probadas: documento único (1 persona por documento), matrícula única (no duplica predios), `crear-en-siembra` enlaza al expediente. Extras añadidos después del cutover: subida de **imagen/Word** además de PDF, y eliminación del campo "acto de adquisición actual".
+**Estado (2026-06-19): COMPLETO.** SQL corrido, `core` expuesto, `juridica.aliados_legacy` borrada, y la columna `analisis_juridico.acto_adquisicion_actual` eliminada. **Verificado con un caso real** (persona Arnulfo Silva → predio Los Andes → expediente → DD aprobada con 4 documentos → antecedentes → análisis verde). Reglas de negocio probadas: documento único (1 persona por documento), matrícula única (no duplica predios), `crear-en-siembra` enlaza al expediente. Extras añadidos después del paso a `core`: subida de **imagen/Word** además de PDF, y eliminación del campo "acto de adquisición actual".
 
 **Cómo está hecho (código):**
 - `lib/juridica-core.ts` — `getCaso` / `listCasos` (reensamblan el "caso plano" desde `core`), `findOrCreateAliado` (reusa persona por documento → modelo 1—N), `subirDocumento` (PDF/imagen/Word).
@@ -106,7 +106,7 @@ Datos de prueba — no se reestructuran ahora. Solo se dejan los enganches listo
 
 ## 6. Pendientes que esto cierra / abre
 
-- ✅ Cierra: `cedula_url` (estaba en PENDIENTES de jurídica).
-- ✅ Cierra: separación persona/predio (D2) y expediente (D1) para jurídica.
-- ⏳ Abre: cuando entren datos reales en SIG/campo, enlazar `siembra.familias.expediente_id` y poblar `core.expedientes.etapa` al avanzar el proceso.
-- ⏳ Difiere: copropiedad tiene tabla (`core.predio_propietarios`) pero la UI de jurídica de momento solo captura el dueño principal.
+- Cierra: `cedula_url` (estaba en PENDIENTES de jurídica).
+- Cierra: separación persona/predio (D2) y expediente (D1) para jurídica.
+- Abre: cuando entren datos reales en SIG/campo, enlazar `siembra.familias.expediente_id` y poblar `core.expedientes.etapa` al avanzar el proceso.
+- Difiere: copropiedad tiene tabla (`core.predio_propietarios`) pero la UI de jurídica de momento solo captura el dueño principal.

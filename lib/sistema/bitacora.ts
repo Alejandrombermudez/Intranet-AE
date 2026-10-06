@@ -77,11 +77,11 @@ export const BITACORA: Entrada[] = [
     piezas: ['geo'],
     detalle:
       'Las decisiones van en geo.zona_decision, aparte de geo.zona_revision, para que la revisión siga ' +
-      'siendo solo lo que hizo el terreno. La única puerta de escritura es geo.decidir_zonas, que solo ' +
+      'siendo solo lo que hizo el terreno. Solo se escribe por geo.decidir_zonas, que solo ' +
       'ejecuta la API de la intranet. Si campo vuelve a revisar una zona después de la decisión, esa ' +
       'revisión se aplica como siempre y la zona vuelve a quedar pendiente: geo.revisar_zona no cambió. ' +
       'No se deja editar ni eliminar un lote con núcleos cargados. El editor usa leaflet-geoman con las ' +
-      'mismas opciones que la app de campo. La misma migración blinda las geometrías (se guardan en 2D y ' +
+      'mismas opciones que la app de campo. La misma migración protege las geometrías (se guardan en 2D y ' +
       'solo con su parte poligonal, para que un shapefile con Z o un polígono con una espiga no fallen) y ' +
       'le quita a la llave anónima las funciones que escriben zonas, cargas y grupos de predios.',
     doc: 'docs/sql/migration_decision_sig.sql',
@@ -138,7 +138,7 @@ export const BITACORA: Entrada[] = [
       'contradecirse: uno decía que la red de árboles semilleros estaba por construir cuando en la ' +
       'base ya había más de dos mil árboles cargados.',
     quedo:
-      'Una página dentro de la intranet que dibuja el ecosistema completo —siembra y conservación— y ' +
+      'Una página dentro de la intranet que dibuja todo el sistema —siembra y conservación— y ' +
       'lee las cifras de la base cada vez que se abre. Ya no hay números escritos a mano, así que no ' +
       'se puede quedar vieja por ese lado.',
     detalle:
@@ -469,7 +469,7 @@ export const BITACORA: Entrada[] = [
       'corregirlo en tres lados —o dejarlo mal en dos.',
     quedo:
       'Un núcleo compartido: la persona, el predio y el expediente viven en un solo lugar y los demás ' +
-      'módulos los referencian en vez de copiarlos. Jurídica, que es la puerta de entrada, escribe ahí.',
+      'módulos los referencian en vez de copiarlos. Jurídica, que es el primer paso, escribe ahí.',
     doc: 'CORE_MIGRACION.md',
     detalle:
       'Se pudo hacer de golpe porque los datos existentes eran de prueba. Si un módulo todavía guarda ' +
@@ -480,13 +480,13 @@ export const BITACORA: Entrada[] = [
     fecha: '2026-05-26',
     tipo: 'hito',
     piezas: ['core'],
-    titulo: 'Jurídica se vuelve la puerta de entrada del proceso',
+    titulo: 'Jurídica pasa a ser el primer paso del proceso',
     porque:
       'Los predios entraban al sistema por donde fuera. Sin verificar antes la propiedad, se gastaba ' +
       'cartografía y visitas de campo en predios que después no se podían vincular.',
     quedo:
       'Ningún predio entra al proceso sin pasar por debida diligencia. Es la primera etapa de la ' +
-      'cadena y la única puerta.',
+      'cadena y no hay otra forma de entrar.',
     etapas: ['juridica'],
     apps: ['intranet'],
   },
@@ -516,7 +516,7 @@ export const FRENTES_ABIERTOS: Frente[] = [
     apps: ['app_actividades', 'app_aves', 'app_semilleros'],
     cuerpo:
       'Las apps de actividades y bodega, de aves y de semilleros funcionan y se usan, pero ninguna ' +
-      'escribe en la base. Lo que se registra vive en la memoria del aparato de cada persona.',
+      'escribe en la base. Lo que se registra queda en el teléfono de cada persona.',
     costo:
       'Si se pierde o se formatea un teléfono, se pierde ese trabajo. Y nada de eso se puede ' +
       'consolidar, cruzar con el resto del sistema ni reportar.',

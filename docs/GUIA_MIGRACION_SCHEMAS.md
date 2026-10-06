@@ -53,7 +53,7 @@ Ahora que los schemas ya existen en la BD, aparecen en la lista de la API:
 2. En el selector de schemas, buscar y marcar `people` y `fleet`
 3. Guardar — PostgREST se reinicia en ~30 segundos
 
-> ⚠️ Sin este paso, las queries desde la app retornan error `PGRST106: schema not found`.
+> Atención: sin este paso, las queries desde la app retornan error `PGRST106: schema not found`.
 
 ### Paso 3 — Verificar
 
@@ -87,10 +87,10 @@ npm run build
 ### Patrón anterior (roto tras migración)
 
 ```typescript
-// ❌ Ya no funciona — tabla movida a schema 'people'
+// Ya no funciona — tabla movida a schema 'people'
 const { data } = await supabase.from('user_profiles').select('*')
 
-// ❌ Ya no funciona — tablas movidas a schema 'fleet'
+// Ya no funciona — tablas movidas a schema 'fleet'
 const { data } = await supabase.from('vehicle_reservations').select('*')
 const { data } = await supabase.from('vehicle_inspections').select('*')
 ```
@@ -98,7 +98,7 @@ const { data } = await supabase.from('vehicle_inspections').select('*')
 ### Patrón correcto
 
 ```typescript
-// ✅ Correcto — especificar schema antes de .from()
+// Correcto — especificar schema antes de .from()
 const { data } = await supabase.schema('people').from('user_profiles').select('*')
 const { data } = await supabase.schema('fleet').from('vehicle_reservations').select('*')
 const { data } = await supabase.schema('fleet').from('vehicle_inspections').select('*')
@@ -212,7 +212,7 @@ ras.camaras_trampa              ← 0 filas
 ras.fotos_camara                ← 0 filas
 ras.fotos_predio                ← 0 filas
 
-⏳ PENDIENTE (ver pending.sql + juridica/CONTEXTO_MODULO_JURIDICO.md):
+PENDIENTE (ver pending.sql + juridica/CONTEXTO_MODULO_JURIDICO.md):
 juridica.aliados                ← schema nuevo
 juridica.antecedentes           ← schema nuevo
 juridica.analisis_juridico      ← schema nuevo

@@ -297,7 +297,7 @@ function PhotoGrid({ insp }: { insp: InspectionStat | undefined }) {
           )}
         </div>
       ) : (
-        <p className="text-[10px] text-emerald-600 font-semibold mt-1">✓ Sin problemas reportados</p>
+        <p className="text-[10px] text-emerald-600 font-semibold mt-1">Sin problemas reportados</p>
       )}
     </div>
   )
@@ -990,7 +990,7 @@ function ConsentimientosTab() {
           <Link2 size={20} style={{ color: PRIMARY }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-black text-stone-800 mb-0.5">Link del formulario para usuarios</p>
+          <p className="text-sm font-black text-stone-800 mb-0.5">Enlace del formulario</p>
           <p className="text-xs text-stone-500 mb-2">
             Comparte este enlace para que las personas diligencien el formulario de consentimiento.
           </p>
@@ -1005,7 +1005,7 @@ function ConsentimientosTab() {
               : 'text-white shadow-sm hover:shadow-md border-2 border-transparent'
           }`}
           style={copied ? {} : { backgroundColor: PRIMARY }}>
-          {copied ? <><CheckCheck size={15} /> Copiado</> : <><Copy size={15} /> Copiar link</>}
+          {copied ? <><CheckCheck size={15} /> Copiado</> : <><Copy size={15} /> Copiar enlace</>}
         </button>
       </div>
 
@@ -1092,7 +1092,7 @@ function ConsentimientosTab() {
           <div className="flex flex-col items-center justify-center py-16 text-stone-400 gap-3">
             <ShieldCheck size={36} className="text-stone-300" />
             <p className="text-sm font-bold text-stone-500">Sin registros en este período</p>
-            <p className="text-xs text-stone-400">Comparte el link del formulario para recibir consentimientos.</p>
+            <p className="text-xs text-stone-400">Comparte el enlace del formulario para recibir consentimientos.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

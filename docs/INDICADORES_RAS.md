@@ -76,16 +76,16 @@ Se construyen solo con conteos de individuos por especie.
 
 ### Especies fuera de catálogo (rareza)
 - **Qué mide:** especies no presentes en el catálogo base → posibles hallazgos.
-- **Estado:** ✅ se calcula (cruce con el catálogo).
+- **Estado:** se calcula (cruce con el catálogo).
 
 ### Especies CITES
 - **Qué mide:** especies de comercio regulado (valor de conservación).
-- **Estado:** ⚠️ parcial — el catálogo trae `cites_status` casi vacío; hay que revisarlo.
+- **Estado:** Atención: parcial — el catálogo trae `cites_status` casi vacío; hay que revisarlo.
 
 ### Árboles con epífitas / líquenes
 - **Qué mide:** los **líquenes son bioindicadores de calidad del aire**; las epífitas, de humedad y madurez.
 - **Cómo:** árboles cuya columna "especies asociadas" menciona líquenes/epífitas/orquídeas.
-- **Estado:** ⚠️ hoy solo hay dato en el núcleo Solano.
+- **Estado:** Atención: hoy solo hay dato en el núcleo Solano.
 
 ---
 
@@ -112,17 +112,17 @@ Tenemos las coordenadas de 523 árboles (Piedemonte) y los **polígonos de conse
 
 | Indicador | Estado | Qué falta |
 |---|---|---|
-| Riqueza, Abundancia, Familias, Géneros | ✅ vista SQL | — |
-| Shannon, Simpson, Pielou, Margalef | ✅ vista SQL | — |
-| Área basal, DAP, árboles grandes, altura | ✅ vista SQL | — |
-| Especies fuera de catálogo | ✅ | — |
-| Densidad (árb/ha) | ⚠️ | denominador (`area_bosque_recorrida`) + dar de alta predios sin familia |
-| Epífitas/líquenes | ⚠️ | dato solo en Solano |
-| % rol sucesional (madurez) | ❌ | rol pionera/intermedia/tardía por especie (catálogo) |
-| Especies amenazadas (UICN/Res. 1912) | ❌ | categoría de amenaza por especie (catálogo) |
-| CITES | ⚠️ | completar `cites_status` |
-| IVI completo / Clark-Evans / densidad real | ⚠️ | cargar polígonos + puntos a PostGIS |
-| Carbono | ❌ | ecuaciones alométricas + densidad de madera |
+| Riqueza, Abundancia, Familias, Géneros | vista SQL | — |
+| Shannon, Simpson, Pielou, Margalef | vista SQL | — |
+| Área basal, DAP, árboles grandes, altura | vista SQL | — |
+| Especies fuera de catálogo | Sí | — |
+| Densidad (árb/ha) | Atención: | denominador (`area_bosque_recorrida`) + dar de alta predios sin familia |
+| Epífitas/líquenes | Atención: | dato solo en Solano |
+| % rol sucesional (madurez) | No | rol pionera/intermedia/tardía por especie (catálogo) |
+| Especies amenazadas (UICN/Res. 1912) | No | categoría de amenaza por especie (catálogo) |
+| CITES | Atención: | completar `cites_status` |
+| IVI completo / Clark-Evans / densidad real | Atención: | cargar polígonos + puntos a PostGIS |
+| Carbono | No | ecuaciones alométricas + densidad de madera |
 
 ---
 

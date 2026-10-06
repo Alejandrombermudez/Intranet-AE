@@ -82,7 +82,7 @@ const ESTADO_COLABORADOR_CONFIG: Record<string, { label: string; className: stri
     icon: <Clock size={11} />,
   },
   marcado: {
-    label: 'Realizado ✓',
+    label: 'Realizado',
     className: 'bg-amber-100 text-amber-700',
     icon: <CheckCircle2 size={11} />,
   },
@@ -374,7 +374,7 @@ function IndicacionItemColaborador({
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-violet-600 text-white hover:bg-violet-700 active:scale-95 transition-all whitespace-nowrap"
                 >
                   {saving ? <Loader2 size={10} className="animate-spin" /> : <CheckCheck size={10} />}
-                  Confirmar ✓
+                  Confirmar
                 </button>
                 <button
                   onClick={() => setRejectModal(true)}

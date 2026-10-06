@@ -362,9 +362,9 @@ export default function AntecedentesPage() {
           ))}
         </section>
 
-        {/* Flags reputacionales */}
+        {/* Alertas de reputación */}
         <section className="bg-white rounded-2xl border border-stone-100 p-5 space-y-3">
-          <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Flags reputacionales</h2>
+          <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Alertas de reputación</h2>
           <ListaRow label="PEP — Persona Expuesta Políticamente"
             value={pep} onChange={setPep} sinArchivo />
           <ListaRow label="Prensa negativa"
@@ -393,8 +393,8 @@ export default function AntecedentesPage() {
           </p>
           <div className="flex gap-3">
             {[
-              { v: true,  l: '✅ Aprobado',  cls: aprobado === true  ? 'border-teal-400 bg-teal-50 text-teal-700' : 'border-stone-200 text-stone-500 hover:border-teal-300' },
-              { v: false, l: '❌ Rechazado', cls: aprobado === false ? 'border-red-400 bg-red-50 text-red-700'   : 'border-stone-200 text-stone-500 hover:border-red-300' },
+              { v: true,  l: 'Aprobado',  cls: aprobado === true  ? 'border-teal-400 bg-teal-50 text-teal-700' : 'border-stone-200 text-stone-500 hover:border-teal-300' },
+              { v: false, l: 'Rechazado', cls: aprobado === false ? 'border-red-400 bg-red-50 text-red-700'   : 'border-stone-200 text-stone-500 hover:border-red-300' },
             ].map(({ v, l, cls }) => (
               <button key={String(v)} type="button" onClick={() => setAprobado(v)}
                 className={`flex-1 py-3 rounded-xl text-sm font-bold border-2 transition-colors ${cls}`}>

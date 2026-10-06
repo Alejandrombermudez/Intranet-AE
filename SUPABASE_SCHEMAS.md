@@ -5,7 +5,7 @@
 >
 > **Últimas migraciones ejecutadas:** `migration_proyecto_fuente.sql` (2026-09-08) — `catalogo.proyectos` + `catalogo.fuentes_informacion` y las columnas `core.predios.tipo_proyecto` / `.fuente_informacion`. Antes, `migration_ras_arboles.sql` + `seed_ras_arboles.sql` (2026-07-01) — tabla `ras.arboles_semilleros` normalizada (523 árboles, FK a `catalogo.especies`). Antes, `migration_catalogo.sql` + `seed_catalogo_especies.sql` (2026-06-30) — maestro único `catalogo.especies` (148 especies). Ver secciones **`catalogo`** y **`ras`** abajo.
 >
-> **Modelo actual:** Jurídica es la puerta de entrada y escribe sobre `core` (persona/predio/expediente). `catalogo.especies` es el dato maestro que comparten Conservación (RAS), Vivero y Plan — no se duplica taxonomía en ninguna otra tabla.
+> **Modelo actual:** Jurídica es el primer paso y escribe sobre `core` (persona/predio/expediente). `catalogo.especies` es el dato maestro que comparten Conservación (RAS), Vivero y Plan — no se duplica taxonomía en ninguna otra tabla.
 
 ---
 
@@ -13,18 +13,18 @@
 
 | Schema | Módulo | Estado |
 |--------|--------|--------|
-| `auth` | Autenticación *(Supabase managed)* | ✅ Gestionado por Supabase |
-| `public` | Tablas transversales (`consentimientos`, `proyecciones`) | ✅ En uso |
-| `people` | Gestión de usuarios | ✅ Migrado y en producción |
-| `fleet` | Flota vehicular | ✅ En producción — `vehicle_documents` creada (4 filas) |
-| `ejecutivo` | Módulo ejecutivo | ✅ En producción — columna `nota` y estado `rechazado` activos |
-| `siembra` | Módulo Restauración / Siembra | ✅ Ejecutado en producción |
-| `ras` | Módulo Conservación | ✅ En producción — `familias` (17) + `arboles_semilleros` (523, normalizada vía `catalogo.especies`) |
-| `catalogo` | Maestro único de especies | ✅ En producción — `especies` (148 filas), compartida por `ras`, vivero y plan |
-| `core` | Núcleo canónico (aliados/predios/expedientes) | ✅ En producción — jurídica escribe aquí |
-| `juridica` | Módulo Jurídico (Fase 1) | ✅ En producción — sobre `core`; guarda solo `debida_diligencia` + `antecedentes` + `analisis_juridico` |
-| `geo` | Geoportal / SIG (zonas PostGIS) | ✅ En producción — `zonas` (3 filas) + función unir zonas (`v3`) |
-| `storage` | Buckets *(Supabase managed)* | ✅ Buckets creados |
+| `auth` | Autenticación *(Supabase managed)* | Gestionado por Supabase |
+| `public` | Tablas transversales (`consentimientos`, `proyecciones`) | En uso |
+| `people` | Gestión de usuarios | Migrado y en producción |
+| `fleet` | Flota vehicular | En producción — `vehicle_documents` creada (4 filas) |
+| `ejecutivo` | Módulo ejecutivo | En producción — columna `nota` y estado `rechazado` activos |
+| `siembra` | Módulo Restauración / Siembra | Ejecutado en producción |
+| `ras` | Módulo Conservación | En producción — `familias` (17) + `arboles_semilleros` (523, normalizada vía `catalogo.especies`) |
+| `catalogo` | Maestro único de especies | En producción — `especies` (148 filas), compartida por `ras`, vivero y plan |
+| `core` | Núcleo canónico (aliados/predios/expedientes) | En producción — jurídica escribe aquí |
+| `juridica` | Módulo Jurídico (Fase 1) | En producción — sobre `core`; guarda solo `debida_diligencia` + `antecedentes` + `analisis_juridico` |
+| `geo` | Geoportal / SIG (zonas PostGIS) | En producción — `zonas` (3 filas) + función unir zonas (`v3`) |
+| `storage` | Buckets *(Supabase managed)* | Buckets creados |
 
 ```js
 // _query.mjs (borrar después de usar)
@@ -116,17 +116,17 @@ node _query.mjs
 
 | Email | Nombre | Departamento | Admin |
 |-------|--------|-------------|-------|
-| tecnologia@amazoniaemprende.com | Alejandro Bermudez | Ejecutivo | ✅ |
-| mariafernanda@amazoniaemprende.com | Maria Fernanda Alvarez | Financiero | ✅ |
-| julioandres@amazoniaemprende.com | Julio Andrés Rozo Grisales | Ejecutivo | ✅ |
-| juliehernandez@amazoniaemprende.com | Julie Hernandez | RAS | ✅ |
-| profesional.restauracion@... | Profesional Restauración | RAS | ❌ |
-| logistica@amazoniaemprende.com | Katys Blanquicet | Financiero | ❌ |
-| comunicaciones@amazoniaemprende.com | Comunicaciones AE | — | ❌ |
-| nataliavalderrama@... | Natalia Valderrama | — | ❌ |
-| monicasarmiento@... | Monica Sarmiento | — | ❌ |
-| finanzas@amazoniaemprende.com | Rocío Ruíz | — | ❌ |
-| *(3 cuentas Gmail externas)* | sin perfil | — | ❌ (sin acceso) |
+| tecnologia@amazoniaemprende.com | Alejandro Bermudez | Ejecutivo | Hecho |
+| mariafernanda@amazoniaemprende.com | Maria Fernanda Alvarez | Financiero | Hecho |
+| julioandres@amazoniaemprende.com | Julio Andrés Rozo Grisales | Ejecutivo | Hecho |
+| juliehernandez@amazoniaemprende.com | Julie Hernandez | RAS | Hecho |
+| profesional.restauracion@... | Profesional Restauración | RAS | No |
+| logistica@amazoniaemprende.com | Katys Blanquicet | Financiero | No |
+| comunicaciones@amazoniaemprende.com | Comunicaciones AE | — | No |
+| nataliavalderrama@... | Natalia Valderrama | — | No |
+| monicasarmiento@... | Monica Sarmiento | — | No |
+| finanzas@amazoniaemprende.com | Rocío Ruíz | — | No |
+| *(3 cuentas Gmail externas)* | sin perfil | — | No (sin acceso) |
 
 > Los 3 usuarios con email Gmail (deivyortizvalderrama, jv200769, dussanherediay) no tienen perfil completo ni acceso a la intranet. Se registraron vía OAuth pero no fueron habilitados.
 
@@ -701,7 +701,7 @@ arboles_semilleros (523 filas) — Red de Árboles Semilleros (RAS)
 | `en_catalogo` | boolean | true = tiene ficha de la botánica (descripción/usos/foto) |
 | `en_ras` | boolean | aparece en la Red de Árboles Semilleros |
 | `en_vivero` | boolean | aparece en vivero |
-| `n_arboles_ras` | integer | abundancia en RAS (referencia, no fuente de verdad — ver `ras.v_indicadores_predio`) |
+| `n_arboles_ras` | integer | abundancia en RAS (dato de apoyo; no es el que manda — ver `ras.v_indicadores_predio`) |
 | `slug` | text | usado para `foto_url` en el bucket |
 
 > Muchas especies solo-vivero (`en_catalogo = false`) tienen apenas `nombre_cientifico` + `genero` + `epiteto` + a veces `tipo_semilla`; su ficha completa (descripción/usos/foto) llega cuando la botánica las levanta.
@@ -728,7 +728,7 @@ Se amplían desde la UI (HOJA 1 → botón «+ Agregar» → `POST /api/catalogo
 
 ## Schema `core` — Núcleo canónico (2026-06-19)
 
-Separa **persona**, **predio** y **proceso**. Jurídica es la puerta de entrada: crea las tres. Los demás módulos referencian en vez de recopiar. Mapeo y runbook: `docs/CORE_MIGRACION.md`.
+Separa **persona**, **predio** y **proceso**. Jurídica es el primer paso: crea las tres. Los demás módulos referencian en vez de recopiar. Mapeo y runbook: `docs/CORE_MIGRACION.md`.
 
 ```
 aliados (persona)
@@ -787,7 +787,7 @@ aliados ── juridica.antecedentes (1:1, por persona)
 
 ## Schema `juridica` — Debida diligencia (sobre `core`)
 
-Tras el cutover guarda **solo lo jurídico**; persona/predio viven en `core`. **El `[id]` de la UI de jurídica = `predio_id`.** Código: rutas `/api/juridica/*` reparten/reensamblan vía `lib/juridica-core.ts`.
+Tras la migración guarda **solo lo jurídico**; persona/predio viven en `core`. **El `[id]` de la UI de jurídica = `predio_id`.** Código: rutas `/api/juridica/*` reparten/reensamblan vía `lib/juridica-core.ts`.
 
 ### `juridica.debida_diligencia` — Workflow + soportes (1:1 con el predio)
 | Columna | Tipo | Notas |

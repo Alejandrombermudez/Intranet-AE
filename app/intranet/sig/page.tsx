@@ -274,11 +274,11 @@ export default function SigPage() {
             <ul className="space-y-1.5 leading-relaxed">
               <li>· <strong>Predio</strong> = el polígono de la finca (el .zip del lindero). <strong>Zonas</strong> = los sitios de siembra dentro de ella.</li>
               <li>· Un predio solo puede enviarse a Campo cuando tiene <strong>al menos una zona de siembra</strong>.</li>
-              <li>· <strong>Área medida</strong> es la que calcula PostGIS sobre el shapefile que subiste. Es la real.</li>
+              <li>· <strong>Área medida</strong> es la que se calcula sobre el shapefile que subiste. Es la real.</li>
               <li>· <strong>Área registral</strong> es la que dice la escritura o el certificado de tradición, y la captura Jurídica a mano en el expediente — <em>no</em> sale del shapefile. Por eso hay predios con área registral y sin cartografía, y por eso las dos cifras casi nunca coinciden exactamente.</li>
               <li>· Si las dos difieren mucho, vale revisar: suele ser diferencia entre lo escriturado y lo realmente ocupado.</li>
               <li>· <strong>Unidad de siembra</strong> = varios predios que comparten un mismo polígono. Se arman con <strong>Fusionar predios</strong>: la parte predial sigue separada (cada uno con su matrícula, su dueño y su expediente) y el polígono total se sube una sola vez, en el predio principal.</li>
-              <li>· El <strong>estado jurídico</strong> es el mismo que ve jurídica (la debida diligencia), con el punto del semáforo del análisis del folio. Sirve para no gastar cartografía en un predio que jurídica ya rechazó, o para ver por qué uno todavía no avanza. Se puede filtrar por él, y dentro de cada predio está el botón <strong>Ver caso jurídico</strong> con el expediente completo.</li>
+              <li>· El <strong>estado jurídico</strong> es el mismo que ve jurídica (la debida diligencia), con el punto del semáforo del análisis del folio. Sirve para no trabajar un predio que jurídica ya rechazó. Se puede filtrar por él, y dentro de cada predio está el botón <strong>Ver caso jurídico</strong> con el expediente completo.</li>
             </ul>
           </div>
         )}

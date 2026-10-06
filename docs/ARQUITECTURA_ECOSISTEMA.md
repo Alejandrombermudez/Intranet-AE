@@ -4,16 +4,16 @@
 > **Fecha:** 2026-06-09
 > **Complementa:** [`ECOSISTEMA_PROYECTOS.md`](ECOSISTEMA_PROYECTOS.md) (mapa de proyectos) · [`../SUPABASE_SCHEMAS.md`](../SUPABASE_SCHEMAS.md) (datos actuales) · [`INTRANET_DESCRIPCION.md`](INTRANET_DESCRIPCION.md) (funcional)
 >
-> **Cómo leer el estado:** 🟢 = refleja el proceso/realidad actual · 🟡 = propuesta con **decisiones abiertas** (ver §7).
+> **Cómo leer el estado:** En uso = refleja el proceso/realidad actual · Parcial = propuesta con **decisiones abiertas** (ver §7).
 
 ---
 
 ## 0. Por qué este documento y cómo está organizado
 
-El sistema se construyó **módulo por módulo** (flota, jurídica, RAS, ejecutivo…). El proceso real del negocio, en cambio, es **de extremo a extremo**: un predio avanza por una cadena de etapas con responsables y compuertas. Este documento alinea ambas cosas.
+El sistema se construyó **módulo por módulo** (flota, jurídica, RAS, ejecutivo…). El proceso real del negocio, en cambio, es **de principio a fin**: un predio avanza por una cadena de etapas con responsables y compuertas. Este documento alinea ambas cosas.
 
 > **Dos dominios — no mezclar.**
-> **(1) Siembra (Restauración)** = el proceso completo de extremo a extremo (Jurídica → SIG I → Campo → SIG II → Vivero → Ejecución), descrito en las §1–§7. No es un módulo de "familias". Hoy `siembra.*` y la PWA de campo son **pruebas exitosas, no datos productivos**.
+> **(1) Siembra (Restauración)** = el proceso completo de principio a fin (Jurídica → SIG I → Campo → SIG II → Vivero → Ejecución), descrito en las §1–§7. No es un módulo de "familias". Hoy `siembra.*` y la PWA de campo son **pruebas exitosas, no datos productivos**.
 > **(2) Conservación (RAS = Red de Árboles Semilleros)** = dominio aparte (`ras.*`): familias en conservación que alojan la red de árboles semilleros, donde el **árbol es la entidad principal** (uno por fila). Está en rediseño y **no comparte tablas ni flujo** con Siembra.
 > Ojo con "RAS": en los diagramas del proceso es el **equipo** de algunas etapas; como schema/dominio significa **Conservación**.
 
@@ -28,7 +28,7 @@ El sistema se construyó **módulo por módulo** (flota, jurídica, RAS, ejecuti
 
 ---
 
-## 1. Vista de Proceso — la cadena de valor 🟢
+## 1. Vista de Proceso (en uso)
 
 Un predio interesado recorre esta cadena. Cada etapa produce un **entregable** y termina en una **compuerta** (rombo) que decide si avanza.
 
@@ -63,14 +63,14 @@ flowchart TD
 
 | # | Etapa | Responsable | Entrada | Entregable | App | Compuerta | Estado |
 |---|-------|-------------|---------|-----------|-----|-----------|--------|
-| 1 | Jurídica I · Debida diligencia | Abogada | Manifestación de interés | Aliado y predio con semáforo | Intranet `/juridica` | 🚦 verde/amarillo continúa; rojo se archiva | 🟢 111 predios |
-| 2 | SIG I · Zonas potenciales | Equipo SIG | Predio aprobado | Polígonos candidatos, medidos en PostGIS | Intranet `/sig` | **≥1 zona en `geo.zonas`, si no la API devuelve 422** | 🟢 25 zonas |
-| 3 | Campo · Evaluación | Evaluador (equipo RAS) | Zonas potenciales descargadas al celular | Evaluación biofísica (AE-CAMPO-001) + encuesta socioeconómica | PWA `app_campo` (offline) | Datos completos y validados en terreno | 🟢 2 predios |
-| 4 | SIG II · Corrección en terreno | El mismo evaluador | Las zonas que propuso la oficina | Zonas confirmadas, modificadas o descartadas + área real | `app_campo` · módulo SIG | Área en firme; lo corregido vuelve a la oficina | 🟢 27 revisiones |
-| 5 | Plan de siembra | Restauración | Área en firme + `catalogo.especies` | Modelo florístico + demanda de plántulas | Intranet (módulo nuevo) | Plan aprobado técnicamente | 🔴 por construir |
-| 6 | Vivero | Vivero | Solicitud generada por el plan | Plántulas con costo real por lote | App aparte | Plántulas listas para campo | 🔴 hoy solo Excel |
-| — | Jurídica II · Aval | Abogada + CorpoAmazonia | Zonas definitivas | Aval "áreas de vida" / Ley del árbol | Intranet `/juridica` | Aval otorgado | 🟡 sin formalizar |
-| 7 | Ejecución + Monitoreo | RAS + Vivero | Aval + plántulas | Siembra ejecutada, supervivencia, MRV | Intranet + PWA | (ciclo de monitoreo continuo) | 🔴 por construir |
+| 1 | Jurídica I · Debida diligencia | Abogada | Manifestación de interés | Aliado y predio con semáforo | Intranet `/juridica` | verde/amarillo continúa; rojo se archiva | En uso: 111 predios |
+| 2 | SIG I · Zonas potenciales | Equipo SIG | Predio aprobado | Polígonos candidatos, medidos en PostGIS | Intranet `/sig` | **≥1 zona en `geo.zonas`, si no la API devuelve 422** | En uso: 25 zonas |
+| 3 | Campo · Evaluación | Evaluador (equipo RAS) | Zonas potenciales descargadas al celular | Evaluación biofísica (AE-CAMPO-001) + encuesta socioeconómica | PWA `app_campo` (offline) | Datos completos y validados en terreno | En uso: 2 predios |
+| 4 | SIG II · Corrección en terreno | El mismo evaluador | Las zonas que propuso la oficina | Zonas confirmadas, modificadas o descartadas + área real | `app_campo` · módulo SIG | Área en firme; lo corregido vuelve a la oficina | En uso: 27 revisiones |
+| 5 | Plan de siembra | Restauración | Área en firme + `catalogo.especies` | Modelo florístico + demanda de plántulas | Intranet (módulo nuevo) | Plan aprobado técnicamente | por construir |
+| 6 | Vivero | Vivero | Solicitud generada por el plan | Plántulas con costo real por lote | App aparte | Plántulas listas para campo | hoy solo Excel |
+| — | Jurídica II · Aval | Abogada + CorpoAmazonia | Zonas definitivas | Aval "áreas de vida" / Ley del árbol | Intranet `/juridica` | Aval otorgado | sin formalizar |
+| 7 | Ejecución + Monitoreo | RAS + Vivero | Aval + plántulas | Siembra ejecutada, supervivencia, MRV | Intranet + PWA | (ciclo de monitoreo continuo) | por construir |
 
 **Salidas del proceso (líneas de producto sobre el mismo predio):** Ley del árbol · Bonos de carbono · Conservación (RAS).
 
@@ -80,9 +80,9 @@ flowchart TD
 
 ---
 
-## 2. Vista de Dominios 🟡
+## 2. Vista de Dominios (parcial)
 
-El sistema **no tiene una sola columna vertebral**. Tiene varios **dominios** (territorios con su propia lógica) que se conectan por **interfaces** explícitas. El *expediente* es la columna de **un** dominio (la vinculación del predio), no del sistema entero. El **vivero** es autónomo: produce de forma anticipada y se conecta al pipeline por una interfaz de **demanda/suministro**, no por pertenencia.
+El sistema **no tiene una sola columna vertebral**. Tiene varios **dominios** (territorios con su propia lógica) que se conectan por **interfaces** explícitas. El *expediente* es la columna de **un** dominio (la vinculación del predio), no del sistema entero. El **vivero** es autónomo: produce de forma anticipada y se conecta al proceso por una interfaz de **demanda/suministro**, no por pertenencia.
 
 ```mermaid
 flowchart TB
@@ -126,7 +126,7 @@ flowchart TB
 
 ---
 
-## 3. Vista de Aplicaciones (contenedores) 🟢
+## 3. Vista de Aplicaciones (contenedores) (en uso)
 
 Las apps comparten un único Supabase (`lbxysovesmbgesxooghw`). Cada una atiende uno o varios dominios.
 
@@ -169,7 +169,7 @@ flowchart TB
 
 ---
 
-## 4. Vista de Datos — modelo canónico 🟢 *(implementado para jurídica · 2026-06-19)*
+## 4. Vista de Datos — modelo canónico *(implementado para jurídica · 2026-06-19)*
 
 **Problema actual:** los datos del propietario y del predio se **copian** en `juridica.aliados`, `siembra.familias`, `siembra.predios` y `ras.familias`. Existe un único puente (`siembra.familias.aliado_id`), pero no normalización. Además, `juridica.aliados` **mezcla persona + predio** en una fila.
 
@@ -202,13 +202,13 @@ erDiagram
 | Estado del proceso disperso | `core.expedientes` + `core.transiciones` (máquina de estados) | "¿En qué etapa está el predio X y quién tiene la pelota?" |
 | "Especie" como número suelto | `catalogo.especies` referenciado por todos | Vivero, plan, campo y Ley del árbol hablan el mismo idioma |
 
-> **Hecho (2026-06-19):** el modelo `core` está creado y **jurídica ya escribe sobre él** (cutover completo, verificado con un caso real). `core.aliados` (persona, natural/jurídica) **1—N** `core.predios` + `core.predio_propietarios` (copropiedad N—N) + `core.expedientes` (máquina de estados: juridica→sig→campo→…). Jurídica se descompuso en `juridica.debida_diligencia` (1:1 predio), `antecedentes` (por persona) y `analisis_juridico` (por predio). La tabla vieja se archivó y luego se borró. Cómo está hecho: [`CORE_MIGRACION.md`](CORE_MIGRACION.md).
+> **Hecho (2026-06-19):** el modelo `core` está creado y **jurídica ya escribe sobre él** (migración completa, verificado con un caso real). `core.aliados` (persona, natural/jurídica) **1—N** `core.predios` + `core.predio_propietarios` (copropiedad N—N) + `core.expedientes` (máquina de estados: juridica→sig→campo→…). Jurídica se descompuso en `juridica.debida_diligencia` (1:1 predio), `antecedentes` (por persona) y `analisis_juridico` (por predio). La tabla vieja se archivó y luego se borró. Cómo está hecho: [`CORE_MIGRACION.md`](CORE_MIGRACION.md).
 >
 > **Falta del modelo:** conectar conservación (`ras`) al `core` y construir `catalogo.especies`/vivero. `siembra` y `ras` **se mantienen como dominios separados** (D3 descartada, ver §7). No hay que migrarlo todo de golpe; el destino ya está decidido (ver §7).
 
 ---
 
-## 5. Capa geoespacial — PostGIS (verdad) → PMTiles (entrega) 🟡
+## 5. Capa geoespacial — PostGIS (verdad) → PMTiles (entrega) (parcial)
 
 PMTiles y PostGIS **no compiten**: son capas distintas del mismo pipeline.
 
@@ -222,7 +222,7 @@ flowchart LR
     PG -. GeoJSON en vivo .-> MAP
 ```
 
-- **PostGIS** = fuente de verdad editable: aquí se calculan hectáreas reales, intersecciones y se **versiona** la zona (`potencial → validada → avalada`). Resuelve que hoy los polígonos son `.zip` en Storage y no se pueden medir.
+- **PostGIS** = referencia editable: aquí se calculan hectáreas reales, intersecciones y se **versiona** la zona (`potencial → validada → avalada`). Resuelve que hoy los polígonos son `.zip` en Storage y no se pueden medir.
 - **PMTiles** = entrega serverless: un solo archivo de tiles servido por *range-requests*, sin servidor de tiles, render con MapLibre. Es el "ir al frente" del geoportal.
 - **Puente:** un *build* compila las capas publicables de PostGIS a `.pmtiles`. Las capas en edición se sirven como GeoJSON directo.
 
@@ -235,7 +235,7 @@ flowchart LR
 
 ---
 
-## 6. Parámetros generales por dominio 🟡
+## 6. Parámetros generales por dominio (parcial)
 
 A alto nivel (no exhaustivo — el detalle de cada campo va en la spec de cada módulo).
 
@@ -261,7 +261,7 @@ A alto nivel (no exhaustivo — el detalle de cada campo va en la spec de cada m
 |---|----------|----------|---------|
 | D1 | Alcance del **expediente** | (a) columna solo del dominio de vinculación *(recomendado)* · (b) no usarlo, conectar módulos con FKs sueltas | Define si hay tablero de "¿en qué etapa va cada predio?" |
 | D2 | **Unificar aliado/predio** | (a) refactor del modelo actual · (b) capa canónica nueva que convive y migra gradual *(recomendado para no romper producción)* | Elimina duplicación; afecta jurídica, siembra, ras, PWA |
-| D3 | **Fusionar `siembra`+`ras`** en `intervenciones` | ❌ **DESCARTADA (2026-06-27): se mantienen separados** (dominios distintos) | Claridad de dominios sobre dedup |
+| D3 | **Fusionar `siembra`+`ras`** en `intervenciones` | **DESCARTADA (2026-06-27): se mantienen separados** (dominios distintos) | Claridad de dominios sobre dedup |
 | D4 | **PostGIS + PMTiles** | confirmado: PostGIS como fuente, PMTiles como entrega | Habilita cálculo de área real y geoportal serverless |
 | D5 | **App Vivero** | (a) módulo dentro de Intranet · (b) app aparte que sincroniza | Velocidad vs. separación de responsabilidades |
 
@@ -276,4 +276,4 @@ A alto nivel (no exhaustivo — el detalle de cada campo va en la spec de cada m
    - **Catálogo de especies** (barato y desbloquea vivero y plan).
    - **Expediente** (da el tablero del proceso).
    - **Geoespacial** (PostGIS + PMTiles).
-4. **Mantener este `.md` como fuente de verdad viva** — los diagramas Mermaid se editan como texto y renderizan en GitHub/VSCode.
+4. **Mantener este `.md` como referencia vigente** — los diagramas Mermaid se editan como texto y renderizan en GitHub/VSCode.

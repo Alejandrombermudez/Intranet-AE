@@ -9,7 +9,7 @@ documentos maestros de arquitectura de todo el ecosistema (no solo de esta app).
 1. [`docs/EMPEZAR_AQUI.md`](docs/EMPEZAR_AQUI.md) — punto de entrada, qué leer y en qué orden.
 2. [`docs/ARQUITECTURA_DATOS.md`](docs/ARQUITECTURA_DATOS.md) — ER completo, todas las tablas/PK/FK, estado por entidad. **La base para cualquier cambio de datos.**
 3. [`docs/ARQUITECTURA_ECOSISTEMA.md`](docs/ARQUITECTURA_ECOSISTEMA.md) — las 4 vistas (proceso/dominios/apps/datos) y decisiones D1–D5.
-4. [`docs/PENDIENTES_INTEGRACION.md`](docs/PENDIENTES_INTEGRACION.md) — backlog vivo por módulo.
+4. [`docs/PENDIENTES_INTEGRACION.md`](docs/PENDIENTES_INTEGRACION.md) — lista de pendientes por módulo.
 5. `SUPABASE_SCHEMAS.md` — introspección de producción. **Ojo:** desactualizado para `siembra.familias`/`evaluaciones_campo` tras el rediseño del 2026-07-07 (ver nota en `ARQUITECTURA_DATOS.md` §3.3).
 
 ## Reglas no negociables

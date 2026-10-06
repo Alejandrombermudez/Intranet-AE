@@ -1,20 +1,20 @@
 # Arquitectura de Datos — Amazonía Emprende
 
-> **Documento maestro de entidad-relación y parámetros de TODO el ecosistema.** Consolida en un solo lugar: qué entidades existen, qué parámetros tiene cada una, sus llaves (PK/FK/UNIQUE) y cómo se relacionan. Base para **desarrollar masivamente**.
+> **Documento maestro de entidad-relación y parámetros de TODO el ecosistema.** Consolida en un solo lugar: qué entidades existen, qué parámetros tiene cada una, sus llaves (PK/FK/UNIQUE) y cómo se relacionan. Base para **desarrollar**.
 >
 > **Fecha:** 2026-06-27 · Supabase: `lbxysovesmbgesxooghw`
 > **Fuentes:** introspección real de producción ([`../SUPABASE_SCHEMAS.md`](../SUPABASE_SCHEMAS.md)) + parámetros de diseño de módulos por construir (antes en `parametros_ER.xlsx`, hoy aquí) + decisiones en [`ARQUITECTURA_ECOSISTEMA.md`](ARQUITECTURA_ECOSISTEMA.md).
 >
-> **Reemplaza** al Excel `parametros_ER.xlsx` y a los diagramas `.svg/.html` (eliminados 2026-06-27). Este `.md` es la **fuente de verdad viva**; los diagramas son Mermaid embebidos.
+> **Reemplaza** al Excel `parametros_ER.xlsx` y a los diagramas `.svg/.html` (eliminados 2026-06-27). Este `.md` es la **referencia vigente**; los diagramas son Mermaid embebidos.
 
 ## Cómo leer el estado
 
 | Marca | Significado |
 |---|---|
-| 🟢 | En producción (tabla creada y en uso real) |
-| 🧪 | Existe pero son **datos de prueba**, no productivos (prueba de concepto exitosa) |
-| 🔧 | Diseñado / parcialmente construido — falta completar |
-| 🔴 | Por construir (no existe aún) |
+| En uso | En producción (tabla creada y en uso real) |
+| De prueba | Existe pero son **datos de prueba**, no productivos (prueba de concepto exitosa) |
+| En diseño | Diseñado / parcialmente construido — falta completar |
+| Por construir | Por construir (no existe aún) |
 
 **Llaves:** `PK` primaria · `FK→` foránea (apunta a) · `UQ` única (identificador natural).
 
@@ -72,7 +72,7 @@ flowchart TB
 
 ## 2. Núcleo transversal
 
-### 2.1 `core` — persona / predio / proceso 🟢
+### 2.1 `core` — persona / predio / proceso (en uso)
 
 ```mermaid
 erDiagram
@@ -84,7 +84,7 @@ erDiagram
     predios ||--o{ predio_grupo_miembros : "un polígono, varios predios"
 ```
 
-**`core.aliados`** — persona natural o jurídica. 🟢
+**`core.aliados`** — persona natural o jurídica. (en uso)
 | Parámetro | Tipo | Llave | Notas |
 |---|---|---|---|
 | id | uuid | PK | |
@@ -95,20 +95,20 @@ erDiagram
 | telefono / email | text | | |
 | created_by / created_at / updated_at | — | | auditoría |
 
-**`core.predios`** — predio. 🟢
+**`core.predios`** — predio. (en uso)
 | Parámetro | Tipo | Llave | Notas |
 |---|---|---|---|
 | id | uuid | PK | |
 | aliado_id | uuid | FK→ core.aliados | dueño principal (ON DELETE RESTRICT) |
 | nombre_predio / departamento / municipio / vereda / zona_ae | text | | `zona_ae` ≈ núcleo |
-| tipo_proyecto | text | FK→ catalogo.proyectos(codigo) | bajo qué programa entra (Conexión Biodiversa · Ley del Árbol). NULL = sin clasificar 🟢 |
-| fuente_informacion | text | FK→ catalogo.fuentes_informacion(codigo) | cómo llegó el predio (socialización veredal/comunitaria, Lácteos del Hogar) 🟢 |
+| tipo_proyecto | text | FK→ catalogo.proyectos(codigo) | bajo qué programa entra (Conexión Biodiversa · Ley del Árbol). NULL = sin clasificar (en uso) |
+| fuente_informacion | text | FK→ catalogo.fuentes_informacion(codigo) | cómo llegó el predio (socialización veredal/comunitaria, Lácteos del Hogar) (en uso) |
 | matricula_inmobiliaria | text | UQ parcial | la principal del englobe |
 | matriculas | text[] | | varias matrículas (englobe) |
 | codigo_catastral | text | | |
 | area_registral | numeric(12,4) | | hectáreas del folio |
 
-**`core.predio_propietarios`** — copropiedad N—N. 🟢
+**`core.predio_propietarios`** — copropiedad N—N. (en uso)
 | Parámetro | Tipo | Llave | Notas |
 |---|---|---|---|
 | id | uuid | PK | |
@@ -117,7 +117,7 @@ erDiagram
 | rol | text | | `principal` \| `copropietario` |
 | cuota_pct | numeric(5,2) | | opcional |
 
-**`core.predio_grupos`** + **`core.predio_grupo_miembros`** — unidad de siembra: varios predios, UN polígono. 🔧 escrito, migración pendiente (`sql/migration_predio_grupos.sql`)
+**`core.predio_grupos`** + **`core.predio_grupo_miembros`** — unidad de siembra: varios predios, UN polígono. escrito, migración pendiente (`sql/migration_predio_grupos.sql`)
 
 La parte predial y la cartográfica no van una a una: un polígono de siembra cae sobre varios predios
 (englobes, herencias sin partir, fincas contiguas, vecinos que entran juntos). **Fusionar es agrupar, no
@@ -144,7 +144,7 @@ municipios/propietarios toca). Se arma desde `/intranet/sig` con **Fusionar pred
 > miembros también salgan a Campo con el polígono de la unidad es una decisión aparte, todavía sin tomar:
 > hoy sale a campo el predio principal.**
 
-**`core.expedientes`** — máquina de estados del proceso (1 por predio). 🟢
+**`core.expedientes`** — máquina de estados del proceso (1 por predio). (en uso)
 | Parámetro | Tipo | Llave | Notas |
 |---|---|---|---|
 | id | uuid | PK | |
@@ -155,9 +155,9 @@ municipios/propietarios toca). Se arma desde `/intranet/sig` con **Fusionar pred
 | proyecto_fase / responsable | text | | |
 | fecha_inicio | timestamptz | | |
 
-### 2.2 `geo` — geoespacial (PostGIS) 🟢 productivo (25 zonas, 2 predios en campo)
+### 2.2 `geo` — geoespacial (PostGIS) productivo (25 zonas, 2 predios en campo)
 
-**`geo.zonas`** — geometría editable, fuente de verdad del área. 🟢
+**`geo.zonas`** — geometría editable, referencia del área. (en uso)
 | Parámetro | Tipo | Llave | Notas |
 |---|---|---|---|
 | id | uuid | PK | |
@@ -178,7 +178,7 @@ municipios/propietarios toca). Se arma desde `/intranet/sig` con **Fusionar pred
 | **conflicto_con_lote / conflicto_con_zona** | uuid | | la oficina y el terreno se contradicen aquí — resolver en el SIG |
 | created_at / updated_at | timestamptz | | |
 
-**`geo.zonas_lote`** — cada subida de geometrías del SIG = una versión (backup 1, 2, 3…). 🟢
+**`geo.zonas_lote`** — cada subida de geometrías del SIG = una versión (backup 1, 2, 3…). (en uso)
 | Parámetro | Tipo | Notas |
 |---|---|---|
 | id | uuid PK | |
@@ -191,7 +191,7 @@ municipios/propietarios toca). Se arma desde `/intranet/sig` con **Fusionar pred
 >
 > RPCs: `geo.crear_zona(..., p_lote_id)`, `geo.abrir_lote(...)`, `geo.cerrar_lote(lote, reemplazar)` (activa el lote nuevo y retira el anterior **en una sola transacción**), `geo.crear_zona_union(...)` (ya no borra: retira), `geo.zonas_de_predio(predio_id)` (**solo vigentes**), `geo.zonas_historial(predio_id)` (los backups). Vista `geo.v_zonas_conflicto`.
 
-**`geo.zona_revision`** — corrección de zonas en campo (SIG II). 🟢 en producción (`migration_zona_revision.sql`, corrida 2026-07-28; 27 revisiones reales)
+**`geo.zona_revision`** — corrección de zonas en campo (SIG II). en producción (`migration_zona_revision.sql`, corrida 2026-07-28; 27 revisiones reales)
 | Parámetro | Tipo | Llave | Notas |
 |---|---|---|---|
 | id | uuid | PK | |
@@ -207,7 +207,7 @@ municipios/propietarios toca). Se arma desde `/intranet/sig` con **Fusionar pred
 | fecha | date | | |
 | sync_origin | text | | `pwa` |
 
-**`geo.zona_decision`** — lo que el SIG decide sobre cada zona DESPUÉS de campo. 🟢 en producción (`migration_decision_sig.sql`, corrida 2026-09-23)
+**`geo.zona_decision`** — lo que el SIG decide sobre cada zona DESPUÉS de campo. en producción (`migration_decision_sig.sql`, corrida 2026-09-23)
 | Parámetro | Tipo | Llave | Notas |
 |---|---|---|---|
 | id | uuid | PK | |
@@ -237,13 +237,13 @@ municipios/propietarios toca). Se arma desde `/intranet/sig` con **Fusionar pred
 >
 > **Salida:** la intranet exporta zonas y correcciones a shapefile (`.zip` con `.shp/.shx/.dbf/.prj/.cpg`, EPSG:4326 y atributos en el `.dbf`) desde `lib/shapefile-write.ts` + `lib/exportar-zonas.ts`. Cierra el círculo: lo que campo corrigió vuelve al GIS de escritorio del SIG. Cada corrección exporta dos polígonos (`momento` = `antes`/`despues`) para superponerlos.
 
-#### Lotes de siembra y nucleación 🔧 escrito, migración pendiente (`sql/migration_nucleacion.sql`)
+#### Lotes de siembra y nucleación escrito, migración pendiente (`sql/migration_nucleacion.sql`)
 
 El paso que sigue a la verificación de campo. **Un lote de siembra NO es una tabla**: es una zona de
 `geo.zonas` (tipo `restauracion`) que el SIG dio por buena → `estado = 'definitiva'`, estado que existía en
 el CHECK desde el principio y que nadie usaba. Un predio queda con 0, 1 o n lotes.
 
-> ⚠ `geo.zonas_lote` es el **lote de subida** (versionado). El **lote de siembra** es la zona definitiva.
+> Atención: `geo.zonas_lote` es el **lote de subida** (versionado). El **lote de siembra** es la zona definitiva.
 > Misma palabra, cosas distintas — como "RAS".
 
 **`geo.nucleos`** — los núcleos de siembra dentro de un lote.
@@ -267,7 +267,7 @@ así el SIG sube **un solo archivo por predio** y no parte el shapefile a mano. 
 **Confirmar lotes no afecta a la app de campo** (verificado en su código): `app_campo/src/lib/core.ts`
 filtra solo `descartada`, y su detector de cambios compara geometría y área, no el estado.
 
-### 2.3 `catalogo` — maestro de especies 🔴 por construir
+### 2.3 `catalogo` — maestro de especies por construir
 
 **`catalogo.especies`** — usado por vivero, plan, ras (árboles) y Ley del árbol.
 | Parámetro | Tipo | Llave | Notas |
@@ -284,7 +284,7 @@ filtra solo `descartada`, y su detector de cambios compara geometría y área, n
 | rol_sucesional / habito | text | | para el Plan |
 | aplica_ley_arbol | boolean | | |
 
-**`catalogo.proyectos`** y **`catalogo.fuentes_informacion`** — listas parametrizables que clasifican el predio. 🟢 en producción (`migration_proyecto_fuente.sql`, 2026-09-08).
+**`catalogo.proyectos`** y **`catalogo.fuentes_informacion`** — listas parametrizables que clasifican el predio. en producción (`migration_proyecto_fuente.sql`, 2026-09-08).
 | Parámetro | Tipo | Llave | Notas |
 |---|---|---|---|
 | id | uuid | PK | |
@@ -301,7 +301,7 @@ filtra solo `descartada`, y su detector de cambios compara geometría y área, n
 
 ## 3. Dominio Siembra / Restauración (el PROCESO)
 
-> Cadena de valor end-to-end. **Estado:** `siembra.*` y la PWA de campo son 🧪 **prueba exitosa, no productiva**. El plan/vivero están 🔧/🔴. El detalle columna-a-columna de la encuesta socioeconómica vive en [`../SUPABASE_SCHEMAS.md`](../SUPABASE_SCHEMAS.md) (introspección de producción); aquí va el ER y las secciones.
+> Proceso completo. **Estado:** `siembra.*` y la PWA de campo son **prueba exitosa, no productiva**. El plan y el vivero están en diseño o por construir. El detalle columna-a-columna de la encuesta socioeconómica vive en [`../SUPABASE_SCHEMAS.md`](../SUPABASE_SCHEMAS.md) (introspección de producción); aquí va el ER y las secciones.
 
 ### 3.1 Etapas del proceso
 
@@ -315,7 +315,7 @@ filtra solo `descartada`, y su detector de cambios compara geometría y área, n
 | Plan | demanda de plántulas | Vivero | `siembra.planes` + `modelos_floristicos` + `plan_zonas` |
 | Vivero | plántulas con costo | Ejecución | `vivero.*` |
 
-### 3.2 `juridica` — debida diligencia (sobre `core`) 🟢
+### 3.2 `juridica` — debida diligencia (sobre `core`) (en uso)
 
 **`juridica.debida_diligencia`** — workflow + soportes (1:1 predio).
 | Parámetro | Tipo | Llave | Notas |
@@ -337,7 +337,7 @@ Folios (fmi_matrices/derivados, acto_origen), banderas (falsa_tradicion, proceso
 **`juridica.antecedentes`** — HOJA 3. 14 listas restrictivas + PEP/prensa (1:1 por persona). FK `aliado_id`→`core.aliados`.
 Banderas booleanas con `_url`: rama_judicial, procuraduria, contraloria, policia_nacional, rnmc, onu, ofac, bid, banco_mundial, hm_treasury, fbi, interpol, ue_terroristas, dea. Más: `pep`, `prensa_negativa`, `observaciones`, `aprobado`.
 
-### 3.3 `siembra` — campo (evaluación + encuesta) 🟢 reconectado a core+SIG (2026-07-07)
+### 3.3 `siembra` — campo (evaluación + encuesta) reconectado a core+SIG (2026-07-07)
 
 ```mermaid
 erDiagram
@@ -357,7 +357,7 @@ erDiagram
 
 **`siembra.monitoreos`** (id, familia_id FK, fecha, supervivencia_pct) · **`siembra.camaras_trampa`** (id, familia_id FK, nombre, lat, lon) · **`siembra.fotos_camara`** (id, camara_id FK, url) · **`siembra.fotos_predio`** (id, familia_id FK, categoria, url).
 
-### 3.4 Plan de siembra 🔧 diseñado
+### 3.4 Plan de siembra diseñado
 
 ```
 ÁREA (geo.zonas.area_ha) × RECETA (densidad × %especie) × (1 + reposición) = DEMANDA → vivero
@@ -376,7 +376,7 @@ erDiagram
 
 **`siembra.modelos_floristicos`** (id PK, nombre, densidad_plantulas_ha, arreglo, descripcion) — la receta.
 **`siembra.modelo_especies`** (id PK, modelo_id FK, especie_id FK→catalogo.especies, porcentaje) — composición (suma 100%).
-**`siembra.plan_zonas`** (id PK, plan_id FK, zona_id FK→geo.zonas ⭐ área del cálculo, modelo_id FK) — receta ↔ zona (caso 'por zona', recomendado).
+**`siembra.plan_zonas`** (id PK, plan_id FK, zona_id FK→geo.zonas área del cálculo, modelo_id FK) — receta ↔ zona (caso 'por zona', recomendado).
 
 ---
 
@@ -393,7 +393,7 @@ erDiagram
     predios_core ||..o| familias : "FK objetivo predio_id"
 ```
 
-### 4.1 `ras.familias` — familia/predio anfitrión en conservación 🟢 (17 filas) · 🔧 en rediseño
+### 4.1 `ras.familias` — familia/predio anfitrión en conservación En uso (17 filas) · en rediseño
 
 Identificación: id PK, nombre_propietario, tipo/numero_documento, telefono, nucleo, departamento, municipio, vereda, nombre_finca.
 Predio: ha_potreros/ha_bosque/ha_otras, distancia/tiempo_florencia.
@@ -408,7 +408,7 @@ Auditoría: created_by, created_at, updated_at.
 - Pendiente: `aliado_id` / `expediente_id` opcionales → `core` (conectar conservación al núcleo).
 - Bloque socioeconómico pesado heredado de siembra: **aligerar/colapsar** (decisión pendiente).
 
-### 4.2 `ras.arboles_semilleros` — la red de árboles 🔴 POR CONSTRUIR (entidad central)
+### 4.2 `ras.arboles_semilleros` — la red de árboles POR CONSTRUIR (entidad central)
 
 > Unifica las 3 "tablas" de la profesional: **Botánica** (determinación taxonómica), **Solano/Tablas-RAS** (formulario Kobo: dendrometría + geo + monitoreo dron). Llave natural `(nucleo, predio, codigo_arbol)`.
 
@@ -461,7 +461,7 @@ Misma estructura que sus homólogos en `siembra` (id, familia_id FK, …). Actua
 
 ---
 
-## 5. Dominio Vivero (autónomo, app aparte) 🔴 por construir
+## 5. Dominio Vivero (autónomo, app aparte) por construir
 
 > Producción **bajo demanda (pull)**. Costeo: el costo del lote se mantiene pese a la mortalidad (lo absorben las normales); corte mensual repartido por días-plántula. Spec: `app_vivero/CONTEXTO_MODULO_VIVERO.md`.
 
@@ -480,14 +480,14 @@ erDiagram
 
 **`vivero.recepciones`** (id PK, especie_id FK→catalogo, fecha, origen CHECK, cantidad_kg, proveedor, procedencia, estado CHECK).
 **`vivero.recepcion_costos`** (id PK, recepcion_id FK, tipo CHECK `adquisicion`(volátil)/transporte/operativo/administrativo, monto, fecha).
-**`vivero.lotes`** (id PK, recepcion_id FK, especie_id FK, solicitud_id FK ⭐pull, fecha_siembra, cantidad_kg_usados, semillas_sembradas, estado CHECK, fecha_listo/fecha_fin).
-**`vivero.evaluaciones`** (id PK, lote_id FK, fecha, normales⭐divisor del costo, anomalas/muertas/duras/frescas).
+**`vivero.lotes`** (id PK, recepcion_id FK, especie_id FK, solicitud_id FKpull, fecha_siembra, cantidad_kg_usados, semillas_sembradas, estado CHECK, fecha_listo/fecha_fin).
+**`vivero.evaluaciones`** (id PK, lote_id FK, fecha, normalesdivisor del costo, anomalas/muertas/duras/frescas).
 **`vivero.periodos`** (id PK, nombre ej "2026-06", costo_total_indirecto, estado CHECK) · **`vivero.reparto_periodo`** (id PK, periodo_id FK, lote_id FK, dias_plantula, costo_asignado).
 **`vivero.solicitudes`** (id PK, plan_id FK→siembra.planes, fecha_requerida, estado CHECK) · **`vivero.solicitud_items`** (id PK, solicitud_id FK, especie_id FK, cantidad_requerida/entregada).
 
 ---
 
-## 6. Soporte / Administración 🟢
+## 6. Soporte / Administración (en uso)
 
 - **`people.user_profiles`** (id PK, email UQ, full_name, role, department `RAS`/`Ejecutivo`/`Financiero`, is_admin, can_access_intranet, last_login). Trigger desde `auth.users`. `last_login` = **última vez que abrió la intranet** (desde 2026-09-14), no el último inicio de sesión: la sesión se renueva sola en el navegador y el trigger solo salta al iniciar sesión, así que antes figuraba gente sin entrar desde junio que trabajaba a diario. Lo registra `lib/registro-acceso.ts` (montado en el layout raíz, máximo cada 30 min por persona) vía `POST /api/users/sync-profile`, que toma el correo del token.
 - **`fleet.vehicle_reservations`** · **`fleet.vehicle_inspections`** (reservation_id FK, cat1..6_status/issues/other, fotos) · **`fleet.vehicle_documents`** (soat/tecno_expiry).
@@ -509,54 +509,54 @@ erDiagram
 | juridica.debida_diligencia.predio_id | core.predios.id | 1:1 | siembra |
 | juridica.antecedentes.aliado_id | core.aliados.id | 1:1 | siembra |
 | juridica.analisis_juridico.predio_id | core.predios.id | 1:1 | siembra |
-| siembra.familias.predio_id | core.predios.id | N:1 | siembra 🟢 |
-| siembra.familias.aliado_id | core.aliados.id | N:1 | siembra 🟢 |
-| siembra.familias.expediente_id | core.expedientes.id | N:1 | siembra 🟢 |
-| siembra.evaluaciones_campo.predio_id | core.predios.id | N:1 | siembra 🟢 |
-| siembra.evaluaciones_campo.expediente_id | core.expedientes.id | N:1 | siembra 🟢 |
-| siembra.evaluaciones_campo.zonas_data[].zona_id | geo.zonas.id | N:1 (jsonb) | siembra 🟢 SIG II |
-| siembra.fotos_predio.familia_id | siembra.familias.id | N:1 | siembra 🧪 |
-| siembra.planes.expediente_id | core.expedientes.id | N:1 | siembra 🔧 |
-| siembra.planes.predio_id | core.predios.id | N:1 | siembra 🔧 |
-| siembra.modelo_especies.modelo_id | siembra.modelos_floristicos.id | N:1 | siembra 🔧 |
-| siembra.modelo_especies.especie_id | catalogo.especies.id | N:1 | siembra 🔧 |
-| siembra.plan_zonas.plan_id | siembra.planes.id | N:1 | siembra 🔧 |
-| siembra.plan_zonas.zona_id | geo.zonas.id | N:1 | siembra 🔧 ⭐área |
-| ras.arboles_semilleros.familia_id | ras.familias.id | N:1 | conservación 🔴 |
-| ras.arboles_semilleros.especie_id | catalogo.especies.id | N:1 | conservación 🔴 |
+| siembra.familias.predio_id | core.predios.id | N:1 | siembra (en uso) |
+| siembra.familias.aliado_id | core.aliados.id | N:1 | siembra (en uso) |
+| siembra.familias.expediente_id | core.expedientes.id | N:1 | siembra (en uso) |
+| siembra.evaluaciones_campo.predio_id | core.predios.id | N:1 | siembra (en uso) |
+| siembra.evaluaciones_campo.expediente_id | core.expedientes.id | N:1 | siembra (en uso) |
+| siembra.evaluaciones_campo.zonas_data[].zona_id | geo.zonas.id | N:1 (jsonb) | siembra SIG II |
+| siembra.fotos_predio.familia_id | siembra.familias.id | N:1 | siembra (de prueba) |
+| siembra.planes.expediente_id | core.expedientes.id | N:1 | siembra (en diseño) |
+| siembra.planes.predio_id | core.predios.id | N:1 | siembra (en diseño) |
+| siembra.modelo_especies.modelo_id | siembra.modelos_floristicos.id | N:1 | siembra (en diseño) |
+| siembra.modelo_especies.especie_id | catalogo.especies.id | N:1 | siembra (en diseño) |
+| siembra.plan_zonas.plan_id | siembra.planes.id | N:1 | siembra (en diseño) |
+| siembra.plan_zonas.zona_id | geo.zonas.id | N:1 | siembra En diseñoárea |
+| ras.arboles_semilleros.familia_id | ras.familias.id | N:1 | conservación (por construir) |
+| ras.arboles_semilleros.especie_id | catalogo.especies.id | N:1 | conservación (por construir) |
 | ras.camaras_trampa.familia_id | ras.familias.id | N:1 | conservación |
 | ras.fotos_camara.camara_id | ras.camaras_trampa.id | N:1 | conservación |
-| vivero.recepciones.especie_id | catalogo.especies.id | N:1 | vivero 🔴 |
-| vivero.recepcion_costos.recepcion_id | vivero.recepciones.id | N:1 | vivero 🔴 |
-| vivero.lotes.recepcion_id | vivero.recepciones.id | N:1 | vivero 🔴 |
-| vivero.lotes.solicitud_id | vivero.solicitudes.id | N:1 | vivero 🔴 pull |
-| vivero.lotes.especie_id | catalogo.especies.id | N:1 | vivero 🔴 |
-| vivero.evaluaciones.lote_id | vivero.lotes.id | N:1 | vivero 🔴 |
-| vivero.reparto_periodo.periodo_id | vivero.periodos.id | N:1 | vivero 🔴 |
-| vivero.reparto_periodo.lote_id | vivero.lotes.id | N:1 | vivero 🔴 |
-| vivero.solicitudes.plan_id | siembra.planes.id | N:1 | vivero 🔴 |
-| vivero.solicitud_items.solicitud_id | vivero.solicitudes.id | N:1 | vivero 🔴 |
-| vivero.solicitud_items.especie_id | catalogo.especies.id | N:1 | vivero 🔴 |
+| vivero.recepciones.especie_id | catalogo.especies.id | N:1 | vivero (por construir) |
+| vivero.recepcion_costos.recepcion_id | vivero.recepciones.id | N:1 | vivero (por construir) |
+| vivero.lotes.recepcion_id | vivero.recepciones.id | N:1 | vivero (por construir) |
+| vivero.lotes.solicitud_id | vivero.solicitudes.id | N:1 | vivero pull |
+| vivero.lotes.especie_id | catalogo.especies.id | N:1 | vivero (por construir) |
+| vivero.evaluaciones.lote_id | vivero.lotes.id | N:1 | vivero (por construir) |
+| vivero.reparto_periodo.periodo_id | vivero.periodos.id | N:1 | vivero (por construir) |
+| vivero.reparto_periodo.lote_id | vivero.lotes.id | N:1 | vivero (por construir) |
+| vivero.solicitudes.plan_id | siembra.planes.id | N:1 | vivero (por construir) |
+| vivero.solicitud_items.solicitud_id | vivero.solicitudes.id | N:1 | vivero (por construir) |
+| vivero.solicitud_items.especie_id | catalogo.especies.id | N:1 | vivero (por construir) |
 
 ---
 
-## 8. Estado por entidad y orden para desarrollar masivamente
+## 8. Estado por entidad y orden para desarrollar
 
 | Schema / tabla | Estado | Acción |
 |---|---|---|
-| core.* (aliados/predios/propietarios/expedientes) | 🟢 | — |
-| juridica.* (debida_diligencia/antecedentes/analisis_juridico) | 🟢 | — |
-| people / fleet / ejecutivo / public | 🟢 | — |
-| geo.zonas (+ RPCs) | 🟢 vacío | probar con shapefile real |
-| geo.zona_revision + RPC revisar_zona | 🔧 construido | correr `migration_zona_revision.sql` |
-| **catalogo.especies** | 🔴 | **fundación — desbloquea plan, vivero, ras-árboles** |
-| siembra.familias / evaluaciones_campo | 🟢 reconectado a core+geo (2026-07-07) | probar con un predio real en etapa `campo` |
-| siembra.predios | ❌ eliminada (2026-07-07) | subsumida por core.predios+aliados+expedientes |
-| siembra.planes / modelos / modelo_especies / plan_zonas | 🔧 | construir tras geo + catálogo |
-| vivero.* (8 tablas) | 🔴 | app aparte; tras catálogo + plan |
-| ras.familias | 🟢/🔧 | rediseñar formulario (aligerar + derivar conteos) |
-| **ras.arboles_semilleros** | 🔴 | **construir: tabla + carga CSV/Kobo + geovisor** |
-| ras.camaras_trampa / fotos_* / monitoreos | 🟢 vacío | — |
+| core.* (aliados/predios/propietarios/expedientes) | En uso | — |
+| juridica.* (debida_diligencia/antecedentes/analisis_juridico) | En uso | — |
+| people / fleet / ejecutivo / public | En uso | — |
+| geo.zonas (+ RPCs) | vacío | probar con shapefile real |
+| geo.zona_revision + RPC revisar_zona | construido | correr `migration_zona_revision.sql` |
+| **catalogo.especies** | Por construir | **fundación — desbloquea plan, vivero, ras-árboles** |
+| siembra.familias / evaluaciones_campo | reconectado a core+geo (2026-07-07) | probar con un predio real en etapa `campo` |
+| siembra.predios | eliminada (2026-07-07) | subsumida por core.predios+aliados+expedientes |
+| siembra.planes / modelos / modelo_especies / plan_zonas | En diseño | construir tras geo + catálogo |
+| vivero.* (8 tablas) | Por construir | app aparte; tras catálogo + plan |
+| ras.familias | En uso/En diseño | rediseñar formulario (aligerar + derivar conteos) |
+| **ras.arboles_semilleros** | Por construir | **construir: tabla + carga CSV/Kobo + geovisor** |
+| ras.camaras_trampa / fotos_* / monitoreos | vacío | — |
 
 **Secuencia recomendada para construir en bloque:**
 1. **`catalogo.especies`** — maestro que comparten conservación (árboles), plan y vivero. Es la fundación.

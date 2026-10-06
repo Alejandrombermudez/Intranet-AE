@@ -10,11 +10,11 @@ Ecosistema tecnológico de Amazonía Emprende: intranet, geoportal, vivero, app 
 
 El sistema tiene **dos dominios distintos** que no comparten tablas ni flujo:
 
-1. **Siembra (Restauración) = un proceso completo de extremo a extremo**, no un módulo de "familias". Es la cadena de valor de la restauración:
+1. **Siembra (Restauración) = un proceso completo de principio a fin**, no un módulo de "familias". Es el proceso de la restauración:
    **Jurídica → SIG I → Campo → SIG II → Vivero → Ejecución.**
-   > **Estado real (2026-08-12): el tramo Jurídica → SIG I → Campo → SIG II corre CON DATOS REALES.** La app de campo productiva es **`app_campo/`** (`familias-res/` fue la prueba de concepto): lee `core.v_predios_campo`, sus zonas vienen de `geo.zonas`, y su **módulo SIG** (mapa satelital + GPS + corrección de zonas) es el SIG II. Hoy hay 2 predios en campo (**Versalles** y **La Dalia**), 27 revisiones de zonas sincronizadas y evaluadores reales. La intranet ya muestra y descarga lo que devuelve campo. Contexto completo: `../../app_campo/CONTEXTO_APP_CAMPO.md` y [`CONTEXTO_MODULO_SIG.md`](CONTEXTO_MODULO_SIG.md).
+   > **Estado (2026-08-12): el tramo Jurídica → SIG I → Campo → SIG II ya corre con datos reales.** La app de campo productiva es **`app_campo/`** (`familias-res/` fue la prueba de concepto): lee `core.v_predios_campo`, sus zonas vienen de `geo.zonas`, y su **módulo SIG** (mapa satelital + GPS + corrección de zonas) es el SIG II. Hoy hay 2 predios en campo (**Versalles** y **La Dalia**), 27 revisiones de zonas sincronizadas y evaluadores reales. La intranet ya muestra y descarga lo que devuelve campo. Contexto completo: `../../app_campo/CONTEXTO_APP_CAMPO.md` y [`CONTEXTO_MODULO_SIG.md`](CONTEXTO_MODULO_SIG.md).
    >
-   > **Regla de negocio que atraviesa todo el tramo SIG ↔ Campo: el terreno verifica, el SIG decide.** La oficina propone zonas, la persona parada en el predio las verifica y, después, el SIG tiene la última palabra (confirma, edita o elimina cada zona desde «Resultados de campo»). Ninguna versión se destruye (el SIG versiona en cargas, lo reemplazado queda consultable, y cada decisión guarda cómo estaba la zona). Hasta el 2026-09-23 la regla era «el terreno tiene la última palabra». Ver `ARQUITECTURA_DATOS.md` §2.2.
+   > **Regla de negocio de todo el tramo SIG ↔ Campo: el terreno verifica, el SIG decide.** La oficina propone zonas, la persona parada en el predio las verifica y, después, el SIG tiene la última palabra (confirma, edita o elimina cada zona desde «Resultados de campo»). Ninguna versión se destruye (el SIG versiona en cargas, lo reemplazado queda consultable, y cada decisión guarda cómo estaba la zona). Hasta el 2026-09-23 la regla era «el terreno tiene la última palabra». Ver `ARQUITECTURA_DATOS.md` §2.2.
 
 2. **Conservación (RAS = Red de Árboles Semilleros) = dominio aparte.** Familias en conservación que **alojan** la red de árboles semilleros. El **árbol semillero es el objeto principal** (uno por fila, colgado del predio), no un conteo. Vive en `ras.*` y está **en rediseño** (parámetros del formulario + carga de árboles + conexión al geovisor).
 
@@ -26,24 +26,24 @@ Diseño conceptual **completo**. En producción y con datos reales:
 
 | Etapa | Estado |
 |---|---|
-| **Jurídica** (`core` + `juridica`) | 🟢 productivo desde 2026-06-19 — 111 predios cargados. Ver [`CORE_MIGRACION.md`](CORE_MIGRACION.md) |
-| **SIG I** (ingesta de shapefile → `geo.zonas`) | 🟢 productivo, con **versionado por lotes** (nada se borra al resubir) |
-| **Campo** (`app_campo`, PWA offline) | 🟢 **en uso con gente real**: 2 predios, evaluación + encuesta diligenciadas |
-| **SIG II** (corrección de zonas en terreno) | 🟢 27 revisiones sincronizadas vía `geo.revisar_zona` |
-| **Devolución a la oficina** | 🟢 la intranet muestra el mapa antes/después, la bitácora y los formularios, y **exporta a shapefile** |
-| **Plan de siembra / Vivero / Ejecución** | 🔴 por construir — es el siguiente tramo del proceso |
+| **Jurídica** (`core` + `juridica`) | productivo desde 2026-06-19 — 111 predios cargados. Ver [`CORE_MIGRACION.md`](CORE_MIGRACION.md) |
+| **SIG I** (ingesta de shapefile → `geo.zonas`) | productivo, con **versionado por lotes** (nada se borra al resubir) |
+| **Campo** (`app_campo`, PWA offline) | **en uso con gente real**: 2 predios, evaluación + encuesta diligenciadas |
+| **SIG II** (corrección de zonas en terreno) | En uso: 27 revisiones sincronizadas vía `geo.revisar_zona` |
+| **Devolución a la oficina** | la intranet muestra el mapa antes/después, la bitácora y los formularios, y **exporta a shapefile** |
+| **Plan de siembra / Vivero / Ejecución** | por construir — es el siguiente tramo del proceso |
 
 **Migraciones SQL: ninguna pendiente** (verificado por REST el 2026-08-12). Ver [`sql/pending.sql`](sql/pending.sql).
 
 ## Orden de lectura
 
-1. **`ARTICULACION_Y_PROYECCION.md`** — leer primero. Flujo end-to-end, las "costuras" (claves foráneas), qué falta desarrollar, el roadmap por dependencias, todas las decisiones, y el mapa de dónde está cada artefacto.
+1. **`ARTICULACION_Y_PROYECCION.md`** — leer primero. Flujo completo, las claves foráneas, qué falta desarrollar, el plan por dependencias, todas las decisiones, y el mapa de dónde está cada artefacto.
 2. **`CRONOGRAMA.md`** — plan de 20 semanas, en el orden del proceso.
-3. **`ARQUITECTURA_DATOS.md`** — documento maestro de **entidad-relación y parámetros** de todo el ecosistema (todas las tablas, llaves PK/FK, estado y orden para desarrollar). **Base para desarrollar masivamente.**
+3. **`ARQUITECTURA_DATOS.md`** — documento maestro de **entidad-relación y parámetros** de todo el ecosistema (todas las tablas, llaves PK/FK, estado y orden para desarrollar). **Es la base para desarrollar.**
 4. **Specs de módulo:** `../../app_vivero/CONTEXTO_MODULO_VIVERO.md`, `CONTEXTO_MODULO_SIG.md`, `../../juridica/CONTEXTO_MODULO_JURIDICO.md`, **`../../app_campo/CONTEXTO_APP_CAMPO.md` (app de campo: qué se hizo, qué falta, cómo retomar)**.
-5. **`PENDIENTES_INTEGRACION.md`** — backlog vivo (incluye la cédula en PDF de jurídica, etc.).
+5. **`PENDIENTES_INTEGRACION.md`** — lista de pendientes (incluye la cédula en PDF de jurídica, etc.).
 6. **`ARQUITECTURA_ECOSISTEMA.md`** — el documento maestro (4 vistas + decisiones D1–D5).
-7. **`CORE_MIGRACION.md`** — qué se implementó en la Semana 1 (modelo `core` + cutover de jurídica) y cómo está hecho. **Leer para entender el estado actual del código.**
+7. **`CORE_MIGRACION.md`** — qué se implementó en la Semana 1 (modelo `core` + paso de jurídica a `core`) y cómo está hecho. **Leer para entender el estado actual del código.**
 
 > **Mapa visual del proceso:** [`flujo-trabajo.html`](flujo-trabajo.html) (2026-08-13) — la cadena
 > completa Jurídica → SIG I → Campo → SIG II → Plan → Vivero → Ejecución dibujada con el estado real
@@ -56,7 +56,7 @@ Diseño conceptual **completo**. En producción y con datos reales:
 
 - Varios dominios conectados por interfaces; no una columna única.
 - Modelo canónico `core` (aliados → predios → expedientes) para quitar duplicados.
-- Geo: PostGIS como fuente de verdad; el `.zip` se desglosa a la base; geovisor lee de ahí.
+- Geo: PostGIS como referencia; el `.zip` se desglosa a la base; geovisor lee de ahí.
 - App de campo corrige las zonas (SIG II) antes del plan.
 - Plan de siembra: `área × densidad × %especie × (1+reposición)` → demanda al vivero. Modelo por zona o por predio, composición en %, reposición editable.
 - Vivero: app aparte, producción bajo demanda. Costeo: el costo del lote se mantiene y lo absorben las plántulas normales; el corte mensual se reparte por días-plántula (sembradas × días).
@@ -79,7 +79,7 @@ mapa base offline (PMTiles) para la app de campo, y respaldo del `.zip` en Stora
   ese tipo (ver `app_campo/CONTEXTO_APP_CAMPO.md` §6).
 - **Nunca ejecutar DDL contra Supabase.** Las migraciones son `.sql` en `docs/sql/` que **corre el usuario** en
   el SQL Editor. Verificar por **lectura** REST sí; alterar el esquema no.
-- **Verificar antes de afirmar.** Estos documentos se desactualizan; la BD es la fuente de verdad. Patrón de
+- **Verificar antes de afirmar.** Estos documentos se desactualizan; la BD es la referencia. Patrón de
   consulta REST en `SUPABASE_SCHEMAS.md`.
 
 ## Prompt para el chat nuevo

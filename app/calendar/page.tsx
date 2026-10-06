@@ -306,7 +306,7 @@ export default function CalendarPage() {
                 Sistema de Reserva de Vehículos
               </h2>
               <p className="text-white/70 text-sm leading-relaxed">
-                Consulta la disponibilidad de los vehículos corporativos en tiempo real.
+                Consulta qué vehículos están libres.
                 <span className="font-bold text-white"> Inicia sesión con tu cuenta de Microsoft 365</span> para
                 gestionar y crear nuevas reservas.
               </p>

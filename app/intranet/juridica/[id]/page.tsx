@@ -367,7 +367,7 @@ export default function AliadoDetailPage() {
           </div>
           {aliado.antecedentes ? (
             <div className="space-y-1">
-              <DataRow k="Veredicto final" v={aliado.antecedentes.aprobado === true ? '✅ Aprobado' : aliado.antecedentes.aprobado === false ? '❌ Rechazado' : 'Pendiente'} />
+              <DataRow k="Veredicto final" v={aliado.antecedentes.aprobado === true ? 'Aprobado' : aliado.antecedentes.aprobado === false ? 'Rechazado' : 'Pendiente'} />
               <DataRow k="Observaciones"   v={aliado.antecedentes.observaciones} />
             </div>
           ) : !hoja3Habilitada(semaforo, false) ? (

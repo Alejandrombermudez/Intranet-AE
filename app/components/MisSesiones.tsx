@@ -112,7 +112,7 @@ function IndicacionColaboradorInteractiva({
           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all ${cfg.className} ${clickable ? 'cursor-pointer hover:opacity-80 active:scale-95 shadow-sm' : 'cursor-default'}`}
         >
           {saving ? <Loader2 size={11} className="animate-spin" /> : cfg.icon}
-          {ind.estado === 'pendiente' ? '¡Listo! Marcar ✓'
+          {ind.estado === 'pendiente' ? 'Marcar como hecho'
            : ind.estado === 'rechazado' ? 'Rechazado — Reenviar ↩'
            : cfg.label}
         </button>

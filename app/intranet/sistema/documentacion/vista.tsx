@@ -48,8 +48,8 @@ export function Bitacora() {
     <>
       <section className="pt-9 pb-6">
         <p className="max-w-[74ch] text-[14px] leading-relaxed" style={{ color: '#453f37' }}>
-          Por qué el sistema es como es. Cada entrada dice qué pasaba antes y qué quedó — la primera
-          mitad es la que normalmente se pierde, y es la que evita volver a discutir algo ya cerrado.
+          Decisiones, cambios y problemas del sistema, del más reciente al más antiguo. Cada entrada dice
+          qué pasaba antes y qué quedó.
         </p>
       </section>
 
@@ -269,8 +269,8 @@ export function Documentos() {
     <>
       <section className="pt-9 pb-6">
         <p className="max-w-[74ch] text-[14px] leading-relaxed" style={{ color: '#453f37' }}>
-          Los documentos de fondo del ecosistema. Se leen del repositorio cada vez que se abren, así que
-          esta página no tiene una copia que se pueda quedar vieja: lo que se corrija allá, se corrige aquí.
+          Los documentos técnicos del sistema. Se leen del repositorio cada vez que se abren, así que
+          siempre muestran la última versión.
         </p>
       </section>
 

@@ -25,7 +25,7 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: "Intranet AE",
-  description: "Plataforma de gestion operativa",
+  description: "Intranet de Amazonía Emprende",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

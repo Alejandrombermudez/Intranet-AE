@@ -186,7 +186,7 @@ export const APLICACIONES: Aplicacion[] = [
     carpeta: 'actividades_monitoreo_campo/',
     tecnica:
       'HTML estático desplegado en Vercel. Guarda en localStorage del teléfono: todavía NO escribe en ' +
-      'Supabase, así que lo registrado vive solo en ese aparato.',
+      'Supabase, así que lo registrado queda solo en ese aparato.',
   },
   {
     id: 'app_semilleros',
@@ -366,7 +366,7 @@ export const ETAPAS: Etapa[] = [
       titulo: 'Al menos una zona cargada',
       explicacion:
         'No se puede mandar un predio a campo sin cartografía: el evaluador llegaría sin nada que ' +
-        'verificar. El sistema lo impide de verdad, en dos puntos distintos — al intentar enviarlo y ' +
+        'verificar. El sistema lo impide en dos puntos: al intentar enviarlo y ' +
         'al listar los predios que el celular puede descargar.',
       bloquea: true,
     },
@@ -444,8 +444,8 @@ export const ETAPAS: Etapa[] = [
     datos: [
       { nombre: 'catalogo.especies', que: 'El maestro de especies. Ya existe y está en uso.', estado: 'produccion' },
       { nombre: 'siembra.planes', que: 'El plan por predio.', estado: 'por_construir' },
-      { nombre: 'siembra.modelos_floristicos', que: 'Las recetas: qué especie y en qué proporción.', estado: 'por_construir' },
-      { nombre: 'siembra.plan_zonas', que: 'El cálculo aterrizado a cada zona.', estado: 'por_construir' },
+      { nombre: 'siembra.modelos_floristicos', que: 'Los modelos de siembra: qué especie y en qué proporción.', estado: 'por_construir' },
+      { nombre: 'siembra.plan_zonas', que: 'El cálculo para cada zona.', estado: 'por_construir' },
     ],
     pulso: ['especies'],
     pendiente:
@@ -500,7 +500,7 @@ export const ETAPAS: Etapa[] = [
       { app: 'app_actividades', rol: 'La usan hoy las cuadrillas: actividades, insumos, bodega y monitoreo' },
     ],
     datos: [
-      { nombre: 'Memoria del teléfono', que: 'Hoy todo vive en el aparato de cada quien.', estado: 'en_curso' },
+      { nombre: 'Memoria del teléfono', que: 'Hoy todo queda en el teléfono de cada persona.', estado: 'en_curso' },
       { nombre: 'Supervivencia y MRV', que: 'El indicador que exige un proyecto de carbono. No existe aún.', estado: 'por_construir' },
     ],
     pulso: [],
@@ -523,7 +523,7 @@ export const ETAPAS: Etapa[] = [
       'Anota cuánto hay de bosque, de potrero y de otros usos.',
       'Guarda el acuerdo de conservación firmado y los polígonos de la finca.',
     ],
-    entrega: 'El predio anfitrión donde vive la red de árboles.',
+    entrega: 'El predio donde están los árboles semilleros.',
     apps: [{ app: 'intranet', rol: 'Formulario de conservación, documentos y fotos' }],
     datos: [
       { nombre: 'ras.familias', que: 'La familia y su finca en conservación.' },
@@ -675,7 +675,7 @@ export const PIEZAS: Pieza[] = [
     dominio: 'nucleo',
     nombre: 'Geografía',
     que:
-      'Los polígonos con área medida de verdad, y la memoria de cómo se corrigieron. Lo usan siembra ' +
+      'Los polígonos con su área medida y el historial de sus correcciones. Lo usan siembra ' +
       'y el geoportal.',
     datos: [
       { nombre: 'geo.zonas', que: 'Fincas y sitios de siembra.', etiqueta: 'Zonas', pulso: 'zonas_vigentes' },

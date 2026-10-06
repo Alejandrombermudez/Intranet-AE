@@ -327,10 +327,10 @@ function Lineas({
 // ─── La hoja, sin nada en el centro ───────────────────────────────────────────
 
 const PARA_EMPEZAR: { id: string; nota: string }[] = [
-  { id: 'juridica', nota: 'La puerta de entrada: todo predio empieza aquí.' },
-  { id: 'app_campo', nota: 'La extensión del SIG en el terreno.' },
-  { id: 'ras_arboles', nota: 'El centro de la conservación: el árbol.' },
-  { id: 'catalogo', nota: 'Lo único que tocan Siembra y Conservación.' },
+  { id: 'juridica', nota: 'Todo predio empieza aquí.' },
+  { id: 'app_campo', nota: 'La app con que se verifican las zonas en el predio.' },
+  { id: 'ras_arboles', nota: 'Los árboles semilleros, uno por uno.' },
+  { id: 'catalogo', nota: 'Las especies: lo que comparten Siembra y Conservación.' },
 ]
 
 function Bienvenida({ onIr }: { onIr: (id: string) => void }) {
@@ -339,7 +339,7 @@ function Bienvenida({ onIr }: { onIr: (id: string) => void }) {
       <p className="font-display text-[9.5px] font-semibold uppercase tracking-[.2em] text-tenue">Explorar</p>
       <h2 className="mt-1.5 font-display text-[1.45rem] font-semibold leading-tight text-tinta">Una tarjeta a la vez</h2>
       <p className="mt-4 text-[13px] leading-relaxed text-tinta">
-        Elige cualquier tarjeta: viaja al centro y a su alrededor aparece todo lo que la toca. A la
+        Elige una tarjeta: pasa al centro y alrededor aparece lo que se conecta con ella. A la
         izquierda, lo que le llega; a la derecha, a quién le entrega; arriba, con qué aplicación se hace;
         abajo, dónde guarda. Toca una de alrededor para seguir el recorrido.
       </p>

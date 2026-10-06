@@ -84,9 +84,9 @@ export default function ConsentimientoPage() {
         <div className="w-full max-w-md text-center">
           <CheckCircle2 size={38} strokeWidth={1.5} className="mx-auto mb-5 text-bosque" />
           <Rotulo tono="bosque" className="mb-3">Consentimiento registrado</Rotulo>
-          <h1 className="mb-3 font-display text-3xl font-bold text-stone-900">¡Firma registrada!</h1>
+          <h1 className="mb-3 font-display text-3xl font-bold text-stone-900">Firma registrada</h1>
           <p className="text-sm font-light leading-relaxed text-stone-600">
-            Tu consentimiento de tratamiento de datos ha sido guardado exitosamente.
+            Tu consentimiento de tratamiento de datos quedó guardado.
             Gracias por tu tiempo.
           </p>
           <Firma className="mt-12 justify-center text-stone-500" />

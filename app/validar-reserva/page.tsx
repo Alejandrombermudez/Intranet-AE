@@ -335,7 +335,7 @@ function StepCategory({
 
           {!canAdvance && (
             <p className="text-xs text-amber-700 font-medium">
-              ⚠ Selecciona al menos un problema o describe en &quot;Otro&quot; para continuar.
+              Selecciona al menos un problema o describe en &quot;Otro&quot; para continuar.
             </p>
           )}
         </div>
@@ -626,7 +626,7 @@ function StepConfirmation({
         </div>
         <div className="mt-4 pt-3 border-t border-stone-100">
           {totalIssues === 0 ? (
-            <p className="text-sm font-bold text-emerald-700">Vehículo en buen estado ✓</p>
+            <p className="text-sm font-bold text-emerald-700">Vehículo en buen estado</p>
           ) : (
             <p className="text-sm font-bold text-amber-700">
               Total de novedades reportadas: <span className="text-lg">{totalIssues}</span>

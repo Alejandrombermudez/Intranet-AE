@@ -1,8 +1,8 @@
 # Articulación y Proyección — Amazonía Emprende
 
-> **Para qué este documento:** consolidar, antes de implementar, **cómo se articulan todos los componentes** que hemos diseñado y **qué queremos desarrollar** (la proyección). Es la memoria viva del diseño: si algo se olvida, se recupera aquí.
+> **Para qué este documento:** consolidar, antes de implementar, **cómo se articulan todos los componentes** que hemos diseñado y **qué queremos desarrollar** (la proyección). Sirve de registro del diseño.
 >
-> **Fecha:** 2026-06-14 · **Documento maestro:** [`ARQUITECTURA_ECOSISTEMA.md`](ARQUITECTURA_ECOSISTEMA.md) · **Backlog:** [`PENDIENTES_INTEGRACION.md`](PENDIENTES_INTEGRACION.md)
+> **Fecha:** 2026-06-14 · **Documento maestro:** [`ARQUITECTURA_ECOSISTEMA.md`](ARQUITECTURA_ECOSISTEMA.md) · **Pendientes:** [`PENDIENTES_INTEGRACION.md`](PENDIENTES_INTEGRACION.md)
 
 ---
 
@@ -12,32 +12,32 @@ Este documento describe el dominio de **Siembra (Restauración)**. Hay un segund
 
 | | **Siembra (Restauración)** | **Conservación (RAS = Red de Árboles Semilleros)** |
 |---|---|---|
-| Qué es | El **proceso completo** de extremo a extremo | Familias en conservación que **alojan** la red de árboles semilleros |
+| Qué es | El **proceso completo** de principio a fin | Familias en conservación que **alojan** la red de árboles semilleros |
 | Flujo | Jurídica → SIG I → Campo → SIG II → Vivero → Ejecución | Registro del predio + su red de árboles (uno por árbol) |
 | Objeto central | El **predio** avanzando por el expediente | El **árbol semillero** (uno por fila, colgado del predio) |
 | Schemas | `core`, `geo`, `siembra.*`, `catalogo`, `vivero` | `ras.*` |
 | Estado | La PWA de campo productiva es **`app_campo/`** (reconectada a `core`/`geo` desde 2026-07-08; `familias-res/` fue la prueba de concepto). Los **datos** de `siembra.*` siguen siendo de prueba, NO productivos. Producción real arranca con Jurídica sobre `core`. | En **rediseño**: parámetros del formulario + carga de árboles + conexión al geovisor |
 
-> "Siembra" **no** es un módulo de familias: es la cadena de valor de la restauración completa. Lo que sigue (§1–§6) es ese proceso.
+> "Siembra" **no** es un módulo de familias: es el proceso completo de restauración. Lo que sigue (§1–§6) es ese proceso.
 
 ---
 
-## 1. La articulación — el hilo de datos del predio
+## 1. La articulación — el recorrido de los datos del predio
 
-Un predio recorre el sistema de extremo a extremo. Cada componente **produce** algo que es la **entrada** del siguiente. Esa es la articulación.
+Un predio recorre el sistema de principio a fin. Cada componente **produce** algo que es la **entrada** del siguiente. Esa es la articulación.
 
 > **Versión gráfica, con el estado real de cada etapa:** [`flujo-trabajo.html`](flujo-trabajo.html).
 
 ```mermaid
 flowchart LR
-    J1["Jurídica I 🟢<br/>aliado aprobado<br/>111 predios"] --> S1["SIG I 🟢<br/>zonas potenciales<br/>25 zonas"]
-    S1 --> C["Campo · PWA 🟢<br/>evaluación + encuesta<br/>2 predios"]
-    C --> CS["SIG II 🟢<br/>corrige zonas en terreno<br/>27 revisiones"]
+    J1["Jurídica I (en uso)<br/>aliado aprobado<br/>111 predios"] --> S1["SIG I (en uso)<br/>zonas potenciales<br/>25 zonas"]
+    S1 --> C["Campo · PWA (en uso)<br/>evaluación + encuesta<br/>2 predios"]
+    C --> CS["SIG II (en uso)<br/>corrige zonas en terreno<br/>27 revisiones"]
     CS -->|"zonas en firme + export .shp"| S1
-    CS --> P["Plan de siembra 🔴<br/>receta × área = demanda"]
-    P --> V[("Vivero 🔴<br/>produce bajo demanda")]
-    P --> J2["Jurídica II 🟡<br/>aval CorpoAmazonia"]
-    J2 --> EJ["Ejecución 🔴<br/>siembra + monitoreo"]
+    CS --> P["Plan de siembra (por construir)<br/>receta × área = demanda"]
+    P --> V[("Vivero (por construir)<br/>produce bajo demanda")]
+    P --> J2["Jurídica II (parcial)<br/>aval CorpoAmazonia"]
+    J2 --> EJ["Ejecución (por construir)<br/>siembra + monitoreo"]
     V -.suministro.-> EJ
 ```
 
@@ -57,13 +57,13 @@ flowchart LR
 | Jurídica II | Aval "áreas de vida" | Ejecución |
 | Ejecución | Siembra + monitoreo (supervivencia, MRV) | Productos: Ley del árbol · Carbono · Conservación |
 
-**Las "costuras" (claves foráneas) que cosen todo:**
-- `core.predios.aliado_id` — separa persona de predio. **✅ implementado (2026-06-19)**
-- `core.expedientes.predio_id` — el hilo del proceso colgando del predio. **✅ implementado**
+**Las claves foráneas que unen todo:**
+- `core.predios.aliado_id` — separa persona de predio. **implementado (2026-06-19)**
+- `core.expedientes.predio_id` — el hilo del proceso colgando del predio. **implementado**
 - `geo.zonas.predio_id` — las zonas pertenecen al predio.
-- `plan_zonas.zona_id` → `geo.zonas` — ⭐ **correlación terreno ↔ plan** (de aquí sale el área).
+- `plan_zonas.zona_id` → `geo.zonas` — **correlación terreno ↔ plan** (de aquí sale el área).
 - `modelo_especies.especie_id` → `catalogo.especies` — la receta usa el catálogo.
-- `solicitudes.plan_id` → `siembra.planes` — ⭐ **el plan genera la demanda del vivero** (pull).
+- `solicitudes.plan_id` → `siembra.planes` — **el plan genera la demanda del vivero** (pull).
 
 ---
 
@@ -87,22 +87,22 @@ geo.zonas.area_ha    densidad/ha × composición %       editable por plan      
 
 | Componente | Estado | Qué falta | Depende de |
 |-----------|--------|-----------|-----------|
-| Intranet (flota, ejecutivo) | 🟢 producción | — | — |
-| Jurídica | 🟢 producción | Sobre `core`; subida de PDF/imagen/Word ✅ | `core` |
-| App de campo (encuesta/evaluación) | 🧪 prueba exitosa, **no productiva** | Se rehará conectada al `core.expedientes` cuando arranque la etapa Campo | `core` |
-| Conservación / RAS (familias + Red de Árboles Semilleros) | 🔧 en rediseño | Árbol como entidad propia; carga + geovisor | `ras` (dominio aparte) |
-| **`catalogo.especies`** | 🔴 por construir | Crear schema maestro | — |
-| **`core` (aliados/predios/expedientes)** | 🟢 implementado | Conectar campo/siembra y conservación | — |
-| **PostGIS + `geo.zonas`** | 🔴 por construir | `CREATE EXTENSION` + modelo | — |
-| **Módulo SIG (intranet)** | 🔴 por construir | Ingesta de geometría + PMTiles | PostGIS |
-| **Campo_SIG (corrección de zonas)** | 🔧 en diseño | Edición de polígonos offline | geo.zonas + mapa PMTiles offline |
-| **Plan de siembra** | 🔧 en diseño | El cálculo de demanda | geo.zonas + catálogo |
-| **Vivero** | 🔧 en diseño | Módulo completo (producción + costeo) | catálogo + solicitudes del plan |
-| Jurídica II / Aval + Ejecución/MRV | 🟡 parcial | Formalizar aval y monitoreo | — |
+| Intranet (flota, ejecutivo) | producción | — | — |
+| Jurídica | producción | Sobre `core`; subida de PDF/imagen/Word (hecho) | `core` |
+| App de campo (encuesta/evaluación) | prueba exitosa, **no productiva** | Se rehará conectada al `core.expedientes` cuando arranque la etapa Campo | `core` |
+| Conservación / RAS (familias + Red de Árboles Semilleros) | en rediseño | Árbol como entidad propia; carga + geovisor | `ras` (dominio aparte) |
+| **`catalogo.especies`** | por construir | Crear schema maestro | — |
+| **`core` (aliados/predios/expedientes)** | implementado | Conectar campo/siembra y conservación | — |
+| **PostGIS + `geo.zonas`** | por construir | `CREATE EXTENSION` + modelo | — |
+| **Módulo SIG (intranet)** | por construir | Ingesta de geometría + PMTiles | PostGIS |
+| **Campo_SIG (corrección de zonas)** | en diseño | Edición de polígonos offline | geo.zonas + mapa PMTiles offline |
+| **Plan de siembra** | en diseño | El cálculo de demanda | geo.zonas + catálogo |
+| **Vivero** | en diseño | Módulo completo (producción + costeo) | catálogo + solicitudes del plan |
+| Jurídica II / Aval + Ejecución/MRV | parcial | Formalizar aval y monitoreo | — |
 
 ---
 
-## 4. Proyección / roadmap (por dependencias)
+## 4. Proyección / plan (por dependencias)
 
 ```mermaid
 flowchart TD
@@ -154,5 +154,5 @@ flowchart TD
 - `CONTEXTO_MODULO_SIG.md` (geoespacial + reunión SIG)
 - `app_vivero/CONTEXTO_MODULO_VIVERO.md` (producción + costeo)
 - `juridica/CONTEXTO_MODULO_JURIDICO.md` (debida diligencia)
-- `PENDIENTES_INTEGRACION.md` (backlog vivo)
+- `PENDIENTES_INTEGRACION.md` (lista de pendientes)
 - **`ARTICULACION_Y_PROYECCION.md`** (este documento)

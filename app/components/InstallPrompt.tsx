@@ -40,21 +40,21 @@ export default function InstallPrompt() {
     <div className="fixed bottom-0 left-0 right-0 bg-stone-900 text-white p-4 shadow-2xl z-50 border-t-4 border-primary animate-slide-up">
       <div className="max-w-md mx-auto">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="font-bold text-lg text-primary-light">Instala la App</h3>
+          <h3 className="font-bold text-lg text-primary-light">Instala la aplicación</h3>
           <button onClick={() => setIsVisible(false)} className="text-stone-400 hover:text-white transition-colors">
             <X size={18} />
           </button>
         </div>
 
         <p className="text-sm text-stone-300 mb-4">
-          Para una experiencia completa e inmersiva, agrega esta web a tu inicio.
+          Agrega esta página a tu pantalla de inicio para abrirla como una aplicación.
         </p>
 
         <div className="bg-stone-800 p-3 rounded-lg border border-stone-700">
           {deviceInfo.isIOS ? (
             <div className="flex items-center gap-3 text-sm">
               <span className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold shrink-0">1</span>
-              <p>Toca el boton <strong>Compartir</strong> <span className="inline-block bg-stone-700 px-1.5 py-0.5 rounded text-xs">&#x23CB;</span> abajo.</p>
+              <p>Toca el botón <strong>Compartir</strong> <span className="inline-block bg-stone-700 px-1.5 py-0.5 rounded text-xs">&#x23CB;</span> abajo.</p>
             </div>
           ) : (
             <div className="flex items-center gap-3 text-sm">

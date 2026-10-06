@@ -45,10 +45,10 @@ const CHANGELOG = [
     date: 'Mayo 2026',
     tipo: 'fix' as const,
     cambios: [
-      'Fix crítico de autenticación — botón Intranet ya visible correctamente',
-      'Módulo Ejecutivo: dashboard de seguimiento de reuniones',
-      'Tab "Mis Sesiones" para todos los departamentos',
-      'Rediseño visual de la landing page',
+      'Se corrigió el inicio de sesión: el botón Intranet ya aparece',
+      'Módulo Ejecutivo: seguimiento de reuniones',
+      'Pestaña «Mis sesiones» para todos los departamentos',
+      'Nuevo diseño de la página de inicio',
     ],
   },
   {
@@ -56,8 +56,8 @@ const CHANGELOG = [
     date: 'Abril 2026',
     tipo: 'launch' as const,
     cambios: [
-      'Lanzamiento oficial de la Intranet Corporativa',
-      'Calendario de vehículos corporativos en tiempo real',
+      'Primera versión de la intranet',
+      'Calendario de vehículos',
       'Formulario de inspección de vehículos (8 pasos)',
       'Panel de administración de usuarios',
     ],
@@ -225,10 +225,8 @@ export default function LandingPage() {
               <span className="font-thin">corporativa</span>
             </h1>
             <p className="mt-[clamp(0.75rem,2vh,2.25rem)] text-[1em] font-light leading-relaxed text-hueso/75">
-              Sistema de gestión interna para el equipo de Amazonia Emprende. Reserva vehículos
-              corporativos, registra inspecciones de recepción y devolución, monitorea el avance de
-              familias en procesos de restauración y conservación ambiental, y coordina el seguimiento
-              ejecutivo del trabajo de campo — todo con acceso Microsoft 365.
+              Aquí el equipo reserva vehículos, registra las inspecciones de recepción y devolución,
+              y sigue los predios en restauración y las familias en conservación.
             </p>
 
             {/* ── Acceso ── */}
@@ -308,7 +306,7 @@ export default function LandingPage() {
                   )}
 
                   {/* Calendario — siempre visible */}
-                  <Fila href="/calendar" titulo="Calendario de vehículos" sub="Disponibilidad en tiempo real" />
+                  <Fila href="/calendar" titulo="Calendario de vehículos" sub="Qué vehículos están libres" />
 
                   {/* Validar Reserva */}
                   {user ? (

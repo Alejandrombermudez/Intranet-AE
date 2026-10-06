@@ -96,8 +96,8 @@ const PARA_EMPEZAR: { titulo: string; nota: string; ids: string[] }[] = [
     ids: ['sig_i', 'campo', 'app_campo'],
   },
   {
-    titulo: 'Lo único que tocan Siembra y Conservación',
-    nota: 'Los dos dominios no se mezclan: se encuentran en el maestro de especies.',
+    titulo: 'Lo que comparten Siembra y Conservación',
+    nota: 'Solo comparten el catálogo de especies.',
     ids: ['plan', 'catalogo', 'ras_arboles'],
   },
   {

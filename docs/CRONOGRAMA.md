@@ -18,7 +18,7 @@
 
 El detalle de entidades y parámetros por módulo está en [`ARQUITECTURA_DATOS.md`](ARQUITECTURA_DATOS.md).
 
-**Avance (2026-06-19):** Fase 1 en marcha — el modelo central `core` (aliados/predios/expedientes) está construido y el **módulo Jurídico ya opera sobre él en producción** (cutover completo, verificado con un caso real; subida de PDF/imagen/Word). Falta conectar campo/siembra y conservación al expediente. Detalle de lo hecho: `CORE_MIGRACION.md`.
+**Avance (2026-06-19):** Fase 1 en marcha — el modelo central `core` (aliados/predios/expedientes) está construido y el **módulo Jurídico ya opera sobre él en producción** (migración completa, verificado con un caso real; subida de PDF/imagen/Word). Falta conectar campo/siembra y conservación al expediente. Detalle de lo hecho: `CORE_MIGRACION.md`.
 
 ---
 

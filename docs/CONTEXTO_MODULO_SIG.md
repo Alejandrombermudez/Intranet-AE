@@ -8,7 +8,7 @@
 
 ## 1. Resumen en una frase
 
-Hoy toda la geometría se guarda como un `.zip` (shapefile) en Storage y el geovisor lo parsea en el navegador. **Proponemos separar tres roles**: la geometría vive en **PostGIS** (consultable, fuente de verdad), se publica a **PMTiles** para el geovisor (rápido, sin servidor), y el `.zip` del SIG pasa a ser **insumo de carga + respaldo**.
+Hoy toda la geometría se guarda como un `.zip` (shapefile) en Storage y el geovisor lo parsea en el navegador. **Proponemos separar tres roles**: la geometría vive en **PostGIS** (consultable; es el dato que manda), se publica a **PMTiles** para el geovisor (rápido, sin servidor), y el `.zip` del SIG pasa a ser **insumo de carga + respaldo**.
 
 ---
 
@@ -123,7 +123,7 @@ Modelo y razones: [`sql/migration_predio_grupos.sql`](sql/migration_predio_grupo
 
 ## Estado de implementación (2026-08-12) — el vigente
 
-El módulo SIG ya es productivo de punta a punta: **el SIG sube, campo corrige, y el SIG ve y descarga el resultado.**
+El módulo SIG ya es productivo de principio a fin: **el SIG sube, campo corrige, y el SIG ve y descarga el resultado.**
 
 **Tablero `/intranet/sig`** — se reorganizó por *fase cartográfica* en vez de ser una lista plana de nombres (con 111 predios era inutilizable). Cuatro tarjetas, que además son los filtros: **sin cartografía** (ni polígono de predio) · **falta zonificar** (predio sí, zonas no) · **listo para campo** · **en campo**. Hoy: 107 / 0 / 2 / 2. Filtros por municipio y zona AE, búsqueda por vereda, y cada fila muestra en chips si tiene predio, cuántas zonas, cuántas descartó campo y si ya devolvió formularios. Lo alimenta `/api/sig/worklist` (expediente + resumen de geo en una sola llamada).
 
@@ -135,13 +135,13 @@ El módulo SIG ya es productivo de punta a punta: **el SIG sube, campo corrige, 
 
 **Descarga a shapefile** — `lib/shapefile-write.ts` (escrito a mano siguiendo la especificación ESRI: las librerías de JS tratan mal los MultiPolygon, que es como PostGIS guarda todo, y no dejan controlar el `.dbf`). Sale `.zip` con `.shp/.shx/.dbf/.prj/.cpg` en **EPSG:4326** — el sistema en que quedan las geometrías tras la ingesta — con los atributos del sistema. Cada corrección exporta dos polígonos (`momento` = `antes`/`despues`). Verificado de ida y vuelta con shpjs (`scripts/verificar-shapefile.mjs`) y con la corrección real de La Dalia.
 
-**Lo que falta:** respaldo del `.zip` en Storage y el pipeline a PMTiles. (El versionado ya se estrenó: `geo.zonas_carga` tiene historial real — verificado por REST el 2026-09-17.)
+**Lo que falta:** respaldo del `.zip` en Storage y la publicación a PMTiles. (El versionado ya se estrenó: `geo.zonas_carga` tiene historial real — verificado por REST el 2026-09-17.)
 
 ---
 
 ## Estado de implementación (2026-06-19) — histórico
 
-Arrancó **SIG I**. **Hecho:** el flujo **Jurídica → SIG** (la abogada aprueba y "Envía a SIG"; el expediente avanza a `sig_i`); el módulo **`/intranet/sig`** (worklist de predios por zonificar, enlazado desde el tablero `/intranet/expedientes`); y el modelo de datos **`geo.zonas` + PostGIS** escrito en [`sql/migration_geo.sql`](sql/migration_geo.sql) (PostGIS + tabla + RPC `geo.crear_zona`, que recibe GeoJSON, repara la geometría con `ST_MakeValid`/`ST_Multi` y calcula el área). **Decisiones tomadas (defaults de este doc):** G1 = sí PostGIS; G3 = incremental (GeoJSON ya, PMTiles después); G4 = `geo.zonas` central; carga = el SIG **sube `.zip`** (no edita en el navegador — eso es "futuro" D10). PostGIS ya corrido y expuesto. **Ingesta HECHA (2026-06-19):** `/intranet/sig/[predioId]` sube el `.zip` → parsea (shpjs) → reproyecta a 4326 leyendo el `.prj` (proj4) → **previsualiza en mapa Leaflet/OpenStreetMap + tabla de atributos + métricas** (área ha/km², perímetro, nº de zonas) → guarda en `geo.zonas` vía `geo.crear_zona`. La pregunta A1 del SRID queda resuelta: se lee del `.prj` (si las coords ya están en lon/lat, no reproyecta). **Falta:** correr `migration_geo_v2.sql` (persistir `propiedades`/`perimetro_m` + RPC `geo.zonas_de_predio` para ver las zonas guardadas en el mapa al recargar) y **probar con un shapefile real del SIG**. Opcional: respaldo del `.zip` en Storage (`sig-shapefiles`).
+Arrancó **SIG I**. **Hecho:** el flujo **Jurídica → SIG** (la abogada aprueba y "Envía a SIG"; el expediente avanza a `sig_i`); el módulo **`/intranet/sig`** (lista de predios por zonificar, enlazado desde el tablero `/intranet/expedientes`); y el modelo de datos **`geo.zonas` + PostGIS** escrito en [`sql/migration_geo.sql`](sql/migration_geo.sql) (PostGIS + tabla + RPC `geo.crear_zona`, que recibe GeoJSON, repara la geometría con `ST_MakeValid`/`ST_Multi` y calcula el área). **Decisiones tomadas (defaults de este doc):** G1 = sí PostGIS; G3 = incremental (GeoJSON ya, PMTiles después); G4 = `geo.zonas` central; carga = el SIG **sube `.zip`** (no edita en el navegador — eso es "futuro" D10). PostGIS ya corrido y expuesto. **Ingesta HECHA (2026-06-19):** `/intranet/sig/[predioId]` sube el `.zip` → parsea (shpjs) → reproyecta a 4326 leyendo el `.prj` (proj4) → **previsualiza en mapa Leaflet/OpenStreetMap + tabla de atributos + métricas** (área ha/km², perímetro, nº de zonas) → guarda en `geo.zonas` vía `geo.crear_zona`. La pregunta A1 del SRID queda resuelta: se lee del `.prj` (si las coords ya están en lon/lat, no reproyecta). **Falta:** correr `migration_geo_v2.sql` (persistir `propiedades`/`perimetro_m` + RPC `geo.zonas_de_predio` para ver las zonas guardadas en el mapa al recargar) y **probar con un shapefile real del SIG**. Opcional: respaldo del `.zip` en Storage (`sig-shapefiles`).
 
 ---
 
@@ -168,7 +168,7 @@ Hoy el `.zip` hace tres trabajos y no hace bien ninguno:
 
 ---
 
-## 4. Cómo subiría el SIG (pipeline de ingesta)
+## 4. Cómo subiría el SIG (proceso de carga)
 
 El SIG **no cambia su forma de trabajar**: sigue en QGIS/ArcGIS y exporta shapefile. Lo que cambia es qué pasa al subirlo:
 
@@ -213,7 +213,7 @@ Como en Fase I son ~6 predios, no hace falta construirlo todo de golpe:
 
 ---
 
-## 7. ⭐ Preguntas para la reunión con el SIG
+## 7. Preguntas para la reunión con el SIG
 
 > Estas son las que definen el futuro. Agrupadas para llevarlas como agenda.
 

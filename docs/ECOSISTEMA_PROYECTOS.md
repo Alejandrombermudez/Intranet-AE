@@ -14,14 +14,14 @@
 
 | Carpeta | Nombre | Stack | Supabase | Estado |
 |---------|--------|-------|----------|--------|
-| `Intranet-AE/` | Intranet AE | Next.js 16, React 19, Tailwind 4 | ✅ mismo proyecto | En producción |
-| `GeoAE/` | Geovisor AE | Next.js, Leaflet | ✅ mismo proyecto (service role server-side) | En producción — capa Siembra desactualizada, ver `../../GeoAE/CLAUDE.md` |
-| `amazonia-emprende-web/` | Sitio público AE | HTML estático autocontenido (`index.html`) | ❌ no toca Supabase | Landing institucional (marca 2024) — repo propio en GitHub |
-| `app_campo/` | PWA Campo (AE-CAMPO) | React + Vite, Dexie (offline), Supabase anon | ✅ mismo proyecto | **App productiva desde 2026-07-08** — reconectada a `core`/`geo` |
-| `familias-res/` | PWA Campo — versión anterior | React + Vite, Dexie (offline) | ✅ mismo proyecto | **Prueba de concepto, superada por `app_campo/`** (pendiente decidir si se archiva) |
-| `amazonia-escuela-bosque/` | Escuela Bosque | Next.js, pnpm | ❌ sin `.env`, sin integración Supabase en el código | En desarrollo |
-| `app_vivero/` | App Vivero | — (sin código aún) | ❌ sin conexión Supabase | Por construir / hoy solo Excel |
-| `modelo-web/` | Modelo Web | HTML + CSS + JS vanilla, ONNX | ❌ sin Supabase | Prototipo de teledetección (5 bandas), desconectado |
+| `Intranet-AE/` | Intranet AE | Next.js 16, React 19, Tailwind 4 | mismo proyecto | En producción |
+| `GeoAE/` | Geovisor AE | Next.js, Leaflet | mismo proyecto (service role server-side) | En producción — capa Siembra desactualizada, ver `../../GeoAE/CLAUDE.md` |
+| `amazonia-emprende-web/` | Sitio público AE | HTML estático autocontenido (`index.html`) | no toca Supabase | Landing institucional (marca 2024) — repo propio en GitHub |
+| `app_campo/` | PWA Campo (AE-CAMPO) | React + Vite, Dexie (offline), Supabase anon | mismo proyecto | **App productiva desde 2026-07-08** — reconectada a `core`/`geo` |
+| `familias-res/` | PWA Campo — versión anterior | React + Vite, Dexie (offline) | mismo proyecto | **Prueba de concepto, superada por `app_campo/`** (pendiente decidir si se archiva) |
+| `amazonia-escuela-bosque/` | Escuela Bosque | Next.js, pnpm | sin `.env`, sin integración Supabase en el código | En desarrollo |
+| `app_vivero/` | App Vivero | — (sin código aún) | sin conexión Supabase | Por construir / hoy solo Excel |
+| `modelo-web/` | Modelo Web | HTML + CSS + JS vanilla, ONNX | sin Supabase | Prototipo de teledetección (5 bandas), desconectado |
 
 > **`juridica/` ya no es una carpeta aparte.** El módulo se implementó **dentro de `Intranet-AE/`**
 > (rutas `/intranet/juridica`, schema `juridica` sobre `core`) y está **en producción** desde 2026-06-19.
@@ -131,8 +131,8 @@ decidir si se archiva — no usarla como referencia de arquitectura actual.
 
 **Origen del requerimiento:** Excel `Libro(Fase 1).csv` con 3 hojas/módulos.
 
-**Estado: ✅ en producción desde 2026-06-19**, dentro de `Intranet-AE/` (ruta `/intranet/juridica`,
-no una carpeta aparte). El diseño original se ajustó al cutover a `core`: la identidad de persona/predio
+**Estado: en producción desde 2026-06-19**, dentro de `Intranet-AE/` (ruta `/intranet/juridica`,
+no una carpeta aparte). El diseño original se ajustó al paso a `core`: la identidad de persona/predio
 salió de `juridica.aliados` (que se archivó y luego se borró) y ahora vive en `core.aliados`/`core.predios`.
 
 **Tablas reales (schema `juridica`, sobre `core`):**

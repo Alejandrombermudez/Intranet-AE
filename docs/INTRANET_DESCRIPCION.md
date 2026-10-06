@@ -139,12 +139,12 @@ Acceso: solo administradores (`is_admin = true`).
 
 | Schema | Tablas principales | Contenido | Estado |
 |---|---|---|---|
-| `people` | `user_profiles` (13 filas) | Perfiles de usuarios internos | ✅ |
-| `fleet` | `vehicle_reservations` (30), `vehicle_inspections` (3) | Reservas e inspecciones | ✅ — `vehicle_documents` pendiente de crear |
-| `ejecutivo` | `sesiones` (1), `indicaciones` (2) | Seguimiento ejecutivo | ✅ — `migration_v2.sql` pendiente |
-| `siembra` | `familias` (9), `predios` (6), `evaluaciones_campo` (10), `monitoreos` (1), `fotos_predio` (9) | Módulo restauración | ✅ |
-| `ras` | `familias` (17), fotos/monitoreos sin filas aún | Familias en conservación | ✅ |
-| `public` | `consentimientos` (4), `proyecciones` (3) | Tablas transversales | ✅ |
+| `people` | `user_profiles` (13 filas) | Perfiles de usuarios internos | Hecho |
+| `fleet` | `vehicle_reservations` (30), `vehicle_inspections` (3) | Reservas e inspecciones | Hecho — `vehicle_documents` pendiente de crear |
+| `ejecutivo` | `sesiones` (1), `indicaciones` (2) | Seguimiento ejecutivo | Hecho — `migration_v2.sql` pendiente |
+| `siembra` | `familias` (9), `predios` (6), `evaluaciones_campo` (10), `monitoreos` (1), `fotos_predio` (9) | Módulo restauración | Hecho |
+| `ras` | `familias` (17), fotos/monitoreos sin filas aún | Familias en conservación | Hecho |
+| `public` | `consentimientos` (4), `proyecciones` (3) | Tablas transversales | Hecho |
 
 ---
 

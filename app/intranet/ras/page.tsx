@@ -73,7 +73,7 @@ function CompletitudList<T extends { id: string; nombre_propietario: string; mun
         <div className="w-16 h-16 rounded-3xl bg-emerald-50 flex items-center justify-center">
           <CheckCircle2 size={32} className="text-emerald-500" />
         </div>
-        <p className="text-lg font-black text-stone-700">¡Todas las familias están completas!</p>
+        <p className="text-lg font-black text-stone-700">Todas las familias están completas</p>
         <p className="text-sm text-stone-400 max-w-xs">No hay campos faltantes en ningún registro.</p>
       </div>
     )
