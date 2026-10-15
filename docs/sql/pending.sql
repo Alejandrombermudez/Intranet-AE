@@ -1,6 +1,6 @@
 -- ============================================================
 -- SQL Pendiente — Intranet AE
--- Última revisión: 2026-09-20 (verificado contra BD real vía REST API)
+-- Última revisión: 2026-10-14 (verificado contra BD real vía REST API)
 --
 -- REGLA: solo están aquí cosas que NO se han podido verificar
 -- vía REST API. Una vez ejecutadas, mover al historial abajo.
@@ -11,23 +11,12 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-09-23  migration_decision_sig.sql — TODO EN UN ARCHIVO ─────────────
--- Un solo archivo con todo lo pendiente de esquema; se pega entero en el SQL
--- Editor y se corre una vez (todas las sentencias son repetibles):
---   PARTE 1 — geo.crear_zona, geo.crear_zona_union, geo.revisar_zona y
---     geo.crear_nucleo con ST_Force2D, y las de zonas con ST_CollectionExtract
---     (solo la parte poligonal). Sin esto, subir un shapefile PolygonZ falla
---     ("Geometry has Z dimension but column does not"), aunque el geovisor lo
---     muestre bien, y un polígono con una "espiga" falla con un error de tipos.
---   PARTE 2 — tabla geo.zona_decision + RPC geo.decidir_zonas (solo
---     service_role). Sin esto, «Resultados de campo» muestra todo pero los
---     botones Confirmar / Editar / Eliminar quedan bloqueados con un aviso.
---   PARTE 3 — les quita EXECUTE a PUBLIC/anon a las funciones que escriben:
---     las de fusión de predios (lo que era migration_predio_grupos_v2.sql, que
---     ya NO hay que correr aparte) y las de subida de zonas del SIG.
--- La app de campo no se entera: revisar_zona y zonas_de_predio siguen abiertas
--- a anon y revisar_zona conserva firma y comportamiento.
--- Verificar: las consultas del final del archivo.
+-- ── 2026-10-14  fix_fechas_hora_colombia.sql ─────────────────────────────────
+-- Dos ALTER COLUMN … SET DEFAULT: la fecha por defecto de people.cuentas_cobro
+-- y de inventario.movimientos pasa de CURRENT_DATE (UTC) a la fecha de Colombia.
+-- Sin esto, una cuenta de cobro radicada después de las 7 p. m. queda con la
+-- fecha de mañana (el 31 en la noche cae en el mes siguiente). No toca filas.
+-- Probado en PGlite. Verificación: la consulta comentada al final del archivo.
 
 -- ── 2026-09-01  merge_aliados_duplicados.sql — BLOQUE 2, opcional ───────────
 -- El BLOQUE 1 (fusión de "Álvaro Marlés Artunduaga" + "… 2") YA SE CORRIÓ:
@@ -45,6 +34,43 @@
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
+
+-- ── 2026-10-14  migration_financiero_inventario.sql + migration_talento_humano.sql
+--             + migration_usuarios_geovisor.sql ────────────────────────────────
+--             Verificado por REST el 2026-10-14, solo lectura:
+--             · inventario: 4 bodegas, 11 insumos, 3 títulos (BODEGA, SIEMBRA,
+--               MONITOREO, todavía sin clave), v_existencias responde;
+--               financiero.facturas y sugerir_items responden; financiero e
+--               inventario ya están en Exposed schemas; campo_titulos responde con
+--               la key anon y campo_datos rechaza un token falso (SESION_VENCIDA);
+--               anon NO lee movimientos ni facturas (42501); bucket privado.
+--             · talento humano: las 6 tablas/vista responden; config_talento con
+--               razón social y sin NIT ni firmante (se llenan en Plantillas);
+--               radicar_cuenta_cobro existe; anon no lee personas ni radica
+--               (42501); bucket talento-humano privado.
+--             · usuarios_geovisor existe; anon la consultaba sin error y se
+--               cerró con fix_usuarios_geovisor_permisos.sql: verificado por REST
+--               el mismo día, anon recibe 42501. GEOVISOR_SESSION_SECRET creada en
+--               Vercel (proyecto del geovisor) por el usuario.
+--             · siembra.registros_actividad responde.
+
+-- ── 2026-10-11  migration_reporte_carbono.sql + 5 seed_reporte_carbono_2026_* ─
+--             Tabla geo.reporte_carbono y vista geo.v_reporte_carbono_nucleos:
+--             los 34 polígonos del shapefile «Reporte_tco2_2026» con su carbono.
+--             Además 14 fichas nuevas en ras.familias (Solano y Escuela Bosque),
+--             3 predios preregistrados en core (Conexión Nativa) y los proyectos
+--             «Conexión Nativa» y «Escuela Bosque» en el catálogo.
+--             Verificado por REST el 2026-10-11: 34 polígonos, 7 núcleos,
+--             707,89 ha; 33 familias en ras; 127 predios en core.
+
+-- ── 2026-09-23  migration_decision_sig.sql ───────────────────────────────
+--             geo.crear_zona/crear_zona_union/revisar_zona/crear_nucleo con
+--             ST_Force2D, geo.zona_decision + geo.decidir_zonas, y el REVOKE a
+--             PUBLIC de las funciones que escriben (incluye lo que era
+--             migration_predio_grupos_v2.sql). Corrida el 2026-09-23 (ver
+--             CLAUDE.md de la intranet); geo.zona_decision vuelve a responder
+--             por REST el 2026-10-14. Seguía listada arriba como pendiente por
+--             descuido.
 
 -- ── 2026-09-20  migration_nucleacion_v2.sql ─────────────────────────────────
 --             Un lote sale de lo que campo verificó. confirmar_lotes solo toma

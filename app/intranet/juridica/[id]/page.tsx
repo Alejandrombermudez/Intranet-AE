@@ -12,6 +12,7 @@ import {
   Pencil, ChevronRight, CheckCircle2, XCircle, Lock, ExternalLink, AlertCircle, Plus, FileDown, Loader2,
 } from 'lucide-react'
 import { Aviso, Boton, Cabecera, Cargando } from '@/app/components/marca'
+import { esPreregistroPredio, faltantesPredio } from '@/lib/preregistro'
 import { descargarReportes, type ModoReporte } from '@/lib/reporte-juridico'
 import ModalReporte from '@/app/components/ModalReporte'
 import { fetchParametrosHoja1, nombreParametro, type Parametro } from '@/lib/parametros'
@@ -210,6 +211,12 @@ export default function AliadoDetailPage() {
       />
 
       <div className="max-w-3xl mx-auto px-6 sm:px-10 py-10 space-y-5">
+        {esPreregistroPredio(aliado) && (
+          <Aviso tono="arcilla" titulo="Preregistro · urgente">
+            Este predio entró por una carga y no se sabe de quién es.
+            Falta: {faltantesPredio(aliado).join(', ')}. Se completa en la HOJA 1.
+          </Aviso>
+        )}
         <div className="border border-stone-200 bg-white px-5 py-4">
           <Stepper aliado={aliado} />
         </div>

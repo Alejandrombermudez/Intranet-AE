@@ -11,6 +11,7 @@ import ModalFormatosRas from '@/app/components/ModalFormatosRas'
 import { Boton, Cabecera, Cargando } from '@/app/components/marca'
 import { fetchEspecies, fotoAleatoriaCatalogo } from '@/lib/catalogo'
 import { fetchIndicadoresDeFamilias, type IndicadoresPredio } from '@/lib/ras-arboles'
+import { esPreregistroFamilia, faltantesFamilia } from '@/lib/preregistro'
 
 const PRIMARY = '#2f3f32'
 
@@ -20,6 +21,9 @@ interface FamiliaConservacion {
   municipio: string
   vereda: string | null
   nombre_finca: string | null
+  nucleo: string | null
+  numero_documento: string | null
+  telefono: string | null
   ha_bosque: number | null
   acuerdo_conservacion: boolean | null
   created_at: string
@@ -44,6 +48,9 @@ export default function ConservacionListPage() {
   // Familias con cesión de derechos de imagen firmada (para el filtro / badge)
   const [conCesion, setConCesion] = useState<Set<string>>(new Set())
   const [filtroCesion, setFiltroCesion] = useState<'todas' | 'con' | 'sin'>('todas')
+  // Núcleo = ubicación general de la familia (Piedemonte, Solano, Orotuyo…)
+  const [filtroNucleo, setFiltroNucleo] = useState<string>('todos')
+  const [soloPreregistros, setSoloPreregistros] = useState(false)
   const [exportando, setExportando] = useState(false)
 
   const handleDelete = async (id: string) => {
@@ -86,7 +93,7 @@ export default function ConservacionListPage() {
       const { data } = await supabase
         .schema('ras')
         .from('familias')
-        .select('id, nombre_propietario, municipio, vereda, nombre_finca, ha_bosque, acuerdo_conservacion, created_at')
+        .select('id, nombre_propietario, municipio, vereda, nombre_finca, nucleo, numero_documento, telefono, ha_bosque, acuerdo_conservacion, created_at')
         .order('created_at', { ascending: false })
 
       const fams = (data ?? []) as FamiliaConservacion[]
@@ -149,7 +156,21 @@ export default function ConservacionListPage() {
     )
   }
 
+  // Los núcleos salen de lo que hay en la base, no de una lista fija: uno nuevo aparece solo.
+  const SIN_NUCLEO = 'Sin núcleo'
+  const nucleoDe = (f: FamiliaConservacion) => f.nucleo?.trim() || SIN_NUCLEO
+  const conteoNucleos = familias.reduce<Record<string, number>>((m, f) => {
+    m[nucleoDe(f)] = (m[nucleoDe(f)] ?? 0) + 1
+    return m
+  }, {})
+  const nucleos = Object.keys(conteoNucleos).sort((a, b) =>
+    a === SIN_NUCLEO ? 1 : b === SIN_NUCLEO ? -1 : a.localeCompare(b, 'es'))
+
+  const nPreregistros = familias.filter(esPreregistroFamilia).length
+
   const familiasFiltradas = familias.filter((f) => {
+    if (soloPreregistros && !esPreregistroFamilia(f)) return false
+    if (filtroNucleo !== 'todos' && nucleoDe(f) !== filtroNucleo) return false
     if (filtroCesion === 'con') return conCesion.has(f.id)
     if (filtroCesion === 'sin') return !conCesion.has(f.id)
     return true
@@ -202,6 +223,44 @@ export default function ConservacionListPage() {
           </div>
         </div>
 
+        {/* Preregistros: fichas que entraron por una carga y a las que les falta lo básico */}
+        {nPreregistros > 0 && (
+          <div className="mb-5 flex flex-wrap items-center gap-3 border-l-2 border-red-600 py-1 pl-4">
+            <AlertTriangle size={16} className="text-red-600 shrink-0" />
+            <p className="text-[12.5px] text-tinta">
+              <strong>{nPreregistros} {nPreregistros === 1 ? 'preregistro urgente' : 'preregistros urgentes'}:</strong>{' '}
+              {nPreregistros === 1 ? 'entró' : 'entraron'} por una carga y {nPreregistros === 1 ? 'le' : 'les'} falta documento y teléfono de la familia.
+            </p>
+            <button onClick={() => setSoloPreregistros((v) => !v)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all ${
+                soloPreregistros
+                  ? 'border-red-600 text-red-600 bg-red-50'
+                  : 'border-stone-200 text-stone-500 hover:border-stone-300'
+              }`}>
+              {soloPreregistros ? 'Ver todas' : 'Ver solo estos'}
+            </button>
+          </div>
+        )}
+
+        {/* Filtro por núcleo */}
+        {nucleos.length > 1 && (
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <span className="text-xs font-bold text-stone-500 uppercase tracking-wider mr-1">Núcleo:</span>
+            {[{ k: 'todos', label: `Todos (${familias.length})` },
+              ...nucleos.map((n) => ({ k: n, label: `${n} (${conteoNucleos[n]})` })),
+            ].map(({ k, label }) => (
+              <button key={k} onClick={() => setFiltroNucleo(k)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all ${
+                  filtroNucleo === k
+                    ? 'border-primary text-primary bg-primary/5'
+                    : 'border-stone-200 text-stone-500 hover:border-stone-300'
+                }`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Filtro por cesión de derechos de imagen */}
         {familias.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -251,10 +310,12 @@ export default function ConservacionListPage() {
               const isConfirming = confirmId === f.id
               const isDeleting = deletingId === f.id
               const ind = indicadores[f.id]
+              const preregistro = esPreregistroFamilia(f)
+              const faltan = preregistro ? faltantesFamilia(f) : []
               return (
                 <div key={f.id}
                   className={`group bg-white rounded-2xl shadow-sm border overflow-hidden transition-all ${
-                    isConfirming ? 'border-red-300' : 'border-stone-200 hover:shadow-md hover:border-primary'
+                    isConfirming || preregistro ? 'border-red-300' : 'border-stone-200 hover:shadow-md hover:border-primary'
                   }`}>
                   <div className="relative flex aspect-[2/1]">
                     <div className="w-1/2 bg-stone-100 overflow-hidden relative">
@@ -338,12 +399,18 @@ export default function ConservacionListPage() {
                   </div>
 
                   <div className="p-4">
+                    {preregistro && (
+                      <p className="mb-2 flex items-start gap-1.5 text-[11px] leading-snug text-red-600">
+                        <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                        <span><strong>Preregistro · urgente.</strong> Falta: {faltan.join(', ')}.</span>
+                      </p>
+                    )}
                     <p className="font-bold text-stone-900 text-sm truncate">{f.nombre_propietario}</p>
                     {f.nombre_finca && <p className="text-xs text-stone-400 truncate">{f.nombre_finca}</p>}
 
                     <div className="flex items-center gap-1 text-xs text-stone-500 mt-2">
                       <MapPin size={11} className="text-stone-400 shrink-0" />
-                      <span className="truncate">{f.municipio}{f.vereda ? ` · ${f.vereda}` : ''}</span>
+                      <span className="truncate">{f.nucleo ? `${f.nucleo} · ` : ''}{f.municipio}{f.vereda ? ` · ${f.vereda}` : ''}</span>
                     </div>
 
                     <div className="flex flex-wrap gap-1.5 mt-2">

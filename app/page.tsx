@@ -80,6 +80,7 @@ export default function LandingPage() {
   const [validarMsg, setValidarMsg] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [department, setDepartment] = useState<string | null>(null)
+  const [foto, setFoto] = useState<string | null>(null)
   const [bgIndex, setBgIndex] = useState(0)
   const [showChangelog, setShowChangelog] = useState(false)
 
@@ -111,6 +112,11 @@ export default function LandingPage() {
           } catch {
             // perfil no disponible — botón Intranet no aparece
           }
+          // La foto de la ficha de talento humano, si la tiene (si no, quedan las iniciales).
+          fetch('/api/talento/saludo', { headers: { Authorization: `Bearer ${session.access_token}` } })
+            .then((r) => (r.ok ? r.json() : {}))
+            .then((j: { foto?: string | null }) => { if (j.foto) setFoto(j.foto) })
+            .catch(() => {/* sin foto: iniciales */})
         }
       }
       setAuthLoading(false)
@@ -269,9 +275,14 @@ export default function LandingPage() {
 
               {!authLoading && user && (
                 <div className="flex items-center gap-4">
-                  <div className="grid h-[3.43em] w-[3.43em] shrink-0 place-items-center bg-bosque font-display text-[1.285em] font-bold text-white">
-                    {initials}
-                  </div>
+                  {foto ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- foto en base64 de la ficha
+                    <img src={foto} alt="" className="h-[3.43em] w-[3.43em] shrink-0 rounded-full object-cover ring-2 ring-hueso/30" />
+                  ) : (
+                    <div className="grid h-[3.43em] w-[3.43em] shrink-0 place-items-center bg-bosque font-display text-[1.285em] font-bold text-white">
+                      {initials}
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="text-[0.68em] uppercase tracking-[.2em] text-taupe">Sesión activa</p>
                     <p className="truncate font-display text-[1.215em] font-semibold leading-tight text-white">
@@ -302,6 +313,16 @@ export default function LandingPage() {
                       titulo="Intranet"
                       sub={isAdmin ? 'Panel de administración' : `Módulo ${department}`}
                       destacada
+                    />
+                  )}
+
+                  {/* Mi espacio — toda cuenta de la organización, tenga o no departamento */}
+                  {user?.email?.toLowerCase().endsWith('@amazoniaemprende.com') && (
+                    <Fila
+                      href="/intranet/mi-perfil"
+                      titulo="Mi espacio"
+                      sub="Mi área, mi información, contratos, certificados y cuentas de cobro"
+                      destacada={!isAdmin && !department}
                     />
                   )}
 

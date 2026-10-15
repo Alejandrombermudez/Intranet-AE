@@ -1212,6 +1212,8 @@ export default function IntranetPage() {
   const [inspections, setInspections] = useState<InspectionStat[]>([])
   const [statsLoading, setStatsLoading] = useState(false)
   const [statsLoaded, setStatsLoaded] = useState(false)
+  /** Se abrió con ?modulo=financiero (desde «Flota y datos» del módulo administrativo). */
+  const [verFinanciero, setVerFinanciero] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -1234,8 +1236,15 @@ export default function IntranetPage() {
 
       setMyProfile({ id: profile.id, is_admin: profile.is_admin, department: profile.department ?? null })
 
+      // ?modulo=financiero: lo que Financiero tenía aquí antes de tener módulo
+      // propio (estadísticas de los carros, tratamiento de datos). Se llega
+      // desde la pestaña «Flota y datos» de /intranet/administrativa.
+      const verModuloAqui = new URLSearchParams(window.location.search).get('modulo') === 'financiero'
+        && (profile.department === 'Financiero' || profile.is_admin)
+      if (verModuloAqui) { setActiveTab('modulo'); setVerFinanciero(true) }
+
       // No-admin: redirigir si tiene módulo propio con página dedicada
-      if (!profile.is_admin) {
+      if (!profile.is_admin && !verModuloAqui) {
         const ruta = profile.department ? RUTA_MODULO[profile.department] : undefined
         if (ruta) { router.push(ruta); return }
         setActiveTab('modulo')
@@ -1250,10 +1259,10 @@ export default function IntranetPage() {
 
   // Carga perezosa de stats: solo para el módulo Financiero
   useEffect(() => {
-    if (activeTab === 'modulo' && myProfile?.department === 'Financiero' && !statsLoaded && currentUser?.email) {
+    if (activeTab === 'modulo' && (myProfile?.department === 'Financiero' || verFinanciero) && !statsLoaded && currentUser?.email) {
       loadStats()
     }
-  }, [activeTab, currentUser, myProfile])
+  }, [activeTab, currentUser, myProfile, verFinanciero])
 
   const loadUsers = async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -1401,13 +1410,13 @@ export default function IntranetPage() {
         )}
 
         {/* ── Tab módulo: contenido según departamento ── */}
-        {activeTab === 'modulo' && myProfile?.department === 'Financiero' && (
+        {activeTab === 'modulo' && (myProfile?.department === 'Financiero' || verFinanciero) && (
           <FinancieroModule inspections={inspections} loading={statsLoading} />
         )}
-        {activeTab === 'modulo' && myProfile?.department === 'RAS' && (
+        {activeTab === 'modulo' && !verFinanciero && myProfile?.department === 'RAS' && (
           <ModuloRAS />
         )}
-        {activeTab === 'modulo' && myProfile?.department &&
+        {activeTab === 'modulo' && !verFinanciero && myProfile?.department &&
           myProfile.department !== 'Financiero' && myProfile.department !== 'RAS' && (
           <ModuloEnConstruccion department={myProfile.department} />
         )}

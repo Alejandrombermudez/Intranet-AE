@@ -267,6 +267,26 @@ así el SIG sube **un solo archivo por predio** y no parte el shapefile a mano. 
 **Confirmar lotes no afecta a la app de campo** (verificado en su código): `app_campo/src/lib/core.ts`
 filtra solo `descartada`, y su detector de cambios compara geometría y área, no el estado.
 
+**`geo.reporte_carbono`** — polígonos de conservación y restauración con su carbono. en producción desde el 2026-10-11 (`sql/migration_reporte_carbono.sql` + `sql/seed_reporte_carbono_2026_*.sql`); es lo que lee el geovisor
+
+Una fila por polígono del shapefile «Reporte_tco2_2026» que entrega el SIG (corte `2026`: 34 polígonos, 7 núcleos). Es la fuente de los dos tableros del geoportal público. Va en `geo` porque cruza los dos dominios sin fusionarlos: **referencia** a `ras.familias` (`ras_familia_id`, solo conservación) y a `core.predios` (`predio_id`), las dos opcionales, y no copia fichas. Los tres predios de Conexión Nativa no existían en `core`: el seed 2 los crea como **preregistro** (propietario «Por completar», `fuente_informacion = 'reporte_carbono_2026'`), igual que las 14 familias nuevas de `ras.familias` (los 13 predios de Solano y la Escuela Bosque). La intranet los marca «Preregistro · urgente» mientras les falte lo básico; la regla se deduce de los campos vacíos y vive en `lib/preregistro.ts`, no en una columna.
+
+| Parámetro | Tipo | Llave | Notas |
+|---|---|---|---|
+| corte + cod_pol | text | UQ | un corte nuevo se carga al lado del anterior |
+| tablero | text | | `conservacion` \| `restauracion` |
+| nucleo | text | | núcleo o actividad: el ítem del menú y el filtro |
+| predio | text | | como viene del SIG; en conservación es el **nombre de una persona** y no se publica |
+| finca / vereda / municipio / departamento | text | | finca y vereda se completaron desde la intranet |
+| area_ha / anio_inicio / anio_fin | numeric / int | | |
+| tco2_2026 / tco2_horizonte | numeric | | negativo = mitigación o secuestro |
+| n_semilleros / n_especies / n_sembrados / n_especies_sembradas | int | | |
+| ras_familia_id | uuid | FK→ ras.familias | ON DELETE SET NULL |
+| predio_id | uuid | FK→ core.predios | ON DELETE SET NULL |
+| geom | geometry(MultiPolygon, 4326) | | |
+
+Vista `geo.v_reporte_carbono_nucleos`: una fila por núcleo con sus totales. Lectura: `authenticated` y `service_role`; `anon` no.
+
 ### 2.3 `catalogo` — maestro de especies por construir
 
 **`catalogo.especies`** — usado por vivero, plan, ras (árboles) y Ley del árbol.
@@ -494,6 +514,66 @@ erDiagram
 - **`ejecutivo.sesiones`** (iniciado_por/ejecutivo_id/persona_id FK→people) · **`ejecutivo.indicaciones`** (sesion_id FK, bloque, estado, nota).
 - **`public.consentimientos`** (tratamiento de datos) · **`public.proyecciones`** (metas por fase I/II/III).
 
+**`people.usuarios_geovisor`** — cuentas para iniciar sesión en el geovisor. En la base desde el 2026-10-14 (`sql/migration_usuarios_geovisor.sql` + `sql/fix_usuarios_geovisor_permisos.sql`; anon sin permiso, verificado por REST)
+
+Se administran en `/intranet/sistema/usuarios-geovisor` (solo administradores) y el geovisor las verifica en su servidor. **No son usuarios de Supabase Auth, a propósito:** casi todas las tablas de la intranet se leen con una política `TO authenticated USING (true)`, así que una cuenta de Supabase Auth para un aliado externo le abriría jurídica, familias y predios por REST. Estas cuentas no reciben ningún rol en la base. Columnas: `usuario` (único, en minúsculas), `nombre`, `organizacion`, `clave_hash` (huella scrypt; la contraseña no se guarda), `activo`, `intentos_fallidos` / `bloqueado_hasta` (5 fallos bloquean 15 minutos), `ultimo_ingreso`. Solo `service_role`; RLS encendido sin políticas.
+
+### 6.1 Administrativa y financiera: compras, inventario y bodegas — en la base desde el 2026-10-14 (`sql/migration_financiero_inventario.sql`, verificada por REST)
+
+Lo usan las mismas personas que hacen administrativa, talento humano y logística (departamento `Financiero`
+en `people.user_profiles`; módulo `/intranet/administrativa`). Dos esquemas, **solo `service_role`** (RLS
+encendido sin políticas, sin grants a `anon`/`authenticated`):
+
+- **`financiero.proveedores`** (id PK, nit UQ sin DV, dv, razon_social, contacto) · **`financiero.facturas`**
+  (id PK, proveedor_id FK, numero, **cufe UQ**, fecha_emision, subtotal/impuestos/retenciones/total, proyecto FK→
+  `catalogo.proyectos.codigo`, origen `xml_dian`|`manual`, archivo_xml/archivo_pdf en el bucket privado
+  `financiero-facturas`, estado `registrada`|`anulada`; UQ proveedor+numero) · **`financiero.factura_items`**
+  (id PK, factura_id FK, linea, codigo, descripcion, cantidad, unidad_medida DIAN, precio, subtotal, impuesto, total,
+  **clase `inventario`|`gasto`**, insumo_id FK, **factor** = unidades de inventario por unidad facturada, bodega_id FK).
+- **`inventario.insumos`** (catálogo cerrado; unidad en que se cuenta) · **`inventario.bodegas`** (tipo `central`|
+  `proyecto`|`vivero`|`campo`, proyecto FK) · **`inventario.movimientos`** = **kardex** (tipo `entrada`|`traslado`|
+  `consumo`|`ajuste`, insumo_id, cantidad > 0, origen_id, destino_id, estado `confirmado`|`en_transito`|`rechazado`|
+  `anulado`, costo_unitario, factura_item_id FK, registro_id FK→`siembra.registros_actividad`). **Nada se borra: se
+  anula.** · **`inventario.v_existencias`** (saldo = entradas confirmadas − salidas confirmadas o en tránsito; puede
+  quedar negativo, se muestra en rojo) · **`inventario.v_costo_insumo`** (promedio ponderado de compra, con IVA) ·
+  `inventario.insumo_alias` (lo aprendido por proveedor para clasificar la próxima factura) · `inventario.soportes`
+  (foto/PDF de un traslado de campo, base64).
+- **Factura electrónica:** la intranet lee en el navegador el `.zip` del proveedor (AttachedDocument → `Invoice` UBL
+  2.1, `lib/factura-dian.ts`) y `financiero.registrar_factura` guarda en una transacción proveedor, factura, líneas y una
+  **entrada** al kardex por cada línea de inventario. Notas crédito/débito se rechazan (van como ajuste).
+- **App de campo de actividades** (`actividades_monitoreo_campo/`, key anon): **no lee tablas**. Entra con
+  `inventario.campo_ingresar(título, clave)` → token (90 días; bcrypt; 5 fallos bloquean 15 min) y usa solo
+  `campo_datos` / `campo_guardar_registro` / `campo_anular_registro` / `campo_trasladar` / `campo_recibir`.
+  `inventario.titulos_campo` (BODEGA, SIEMBRA, MONITOREO; rol y bodegas) · `inventario.sesiones_campo`.
+- **`siembra.registros_actividad`** (id PK que pone el celular, predio_id FK, zona_id FK→`geo.zonas` = el lote,
+  fecha, actividades[], nucleo_ids[] → `geo.nucleos`, nucleos_txt, personas, jornales, valor_jornal, bodega_id,
+  titulo, anulado). Los insumos gastados son movimientos `consumo`; editar un registro anula sus consumos y escribe
+  los nuevos.
+
+### 6.2 Talento humano — en la base desde el 2026-10-14 (`sql/migration_talento_humano.sql`, verificada por REST)
+
+En el esquema `people`, **solo `service_role`** (RLS sin políticas). Dos entradas: **«Mi perfil»**
+(`/intranet/mi-perfil`, cualquier correo @amazoniaemprende.com, solo lo suyo) y la pestaña **Talento humano** de
+`/intranet/administrativa` (departamentos `Financiero` y `Ejecutivo`: `PUEDE.talentoHumano`, más estrecho que ser admin).
+
+- **`people.personas`** — la ficha (llave: el correo de Microsoft 365, UQ; `m365_oid` UQ): identificación, datos
+  personales, contacto, seguridad social, **grupo sanguíneo e información médica (datos sensibles)**, contacto de
+  emergencia, formación, cuenta para pagos, tallas de dotación, imagen de la firma, `m365` (jsonb: cargo, área,
+  teléfonos, oficina) + `foto`, **autorización de datos** (`autoriza_datos`, `autoriza_sensibles`, fecha y versión del
+  texto — Ley 1581), `notas_rrhh`. Los campos del formulario salen de `CAMPOS_FICHA` en `lib/talento.ts`.
+- **`people.contratos`** (persona_id FK, **vinculacion `planta`|`contratista`|`aprendiz`|`practicante`**, modalidad,
+  número, cargo, objeto, proyecto FK, fechas, valor_mensual, archivo PDF, estado `vigente`|`terminado`|`anulado`).
+- **`people.cuentas_cobro`** (persona_id, contrato_id, **consecutivo por persona**, periodo, concepto, valor,
+  **`datos` = foto fija** de persona/contrato/organización al radicar, planilla de seguridad social, estado
+  `radicada`→`aprobada`→`pagada` | `devuelta` | `anulada`). Se radica con `people.radicar_cuenta_cobro(email, cuenta)`,
+  que bloquea la ficha para no repetir número y exige contrato de **contratista vigente**. El PDF lo arma el navegador
+  desde `datos` (`lib/talento-pdf.ts`).
+- **`people.certificados`** (código de verificación UQ + foto fija) · **`people.documentos_persona`** (cédula, RUT,
+  certificación bancaria…, bucket privado `talento-humano`) · **`people.config_talento`** (una fila: razón social, NIT,
+  firmante, texto al pie de las cuentas) · **`people.v_personas`** (cada persona con su contrato vigente).
+- **Microsoft 365:** el inicio de sesión ya trae nombres, apellidos y `oid` (`custom_claims`); cargo, celular, oficina y
+  foto se traen de Graph `/me` con el token de Microsoft (`/api/talento/m365`) cuando ese token tiene `User.Read`.
+
 ---
 
 ## 7. Mapa completo de relaciones (FK)
@@ -537,6 +617,19 @@ erDiagram
 | vivero.solicitudes.plan_id | siembra.planes.id | N:1 | vivero (por construir) |
 | vivero.solicitud_items.solicitud_id | vivero.solicitudes.id | N:1 | vivero (por construir) |
 | vivero.solicitud_items.especie_id | catalogo.especies.id | N:1 | vivero (por construir) |
+| financiero.facturas.proveedor_id | financiero.proveedores.id | N:1 | administrativa |
+| financiero.factura_items.factura_id | financiero.facturas.id | N:1 | administrativa |
+| financiero.factura_items.insumo_id | inventario.insumos.id | N:1 | administrativa |
+| inventario.movimientos.insumo_id | inventario.insumos.id | N:1 | administrativa |
+| inventario.movimientos.origen_id / destino_id | inventario.bodegas.id | N:1 | administrativa |
+| inventario.movimientos.factura_item_id | financiero.factura_items.id | N:1 | administrativa |
+| inventario.movimientos.registro_id | siembra.registros_actividad.id | N:1 | ejecución |
+| siembra.registros_actividad.zona_id | geo.zonas.id | N:1 | ejecución |
+| siembra.registros_actividad.predio_id | core.predios.id | N:1 | ejecución |
+| people.contratos.persona_id | people.personas.id | N:1 | talento humano |
+| people.cuentas_cobro.persona_id / contrato_id | people.personas.id / people.contratos.id | N:1 | talento humano |
+| people.certificados.persona_id | people.personas.id | N:1 | talento humano |
+| people.documentos_persona.persona_id | people.personas.id | N:1 | talento humano |
 
 ---
 
@@ -557,6 +650,9 @@ erDiagram
 | ras.familias | En uso/En diseño | rediseñar formulario (aligerar + derivar conteos) |
 | **ras.arboles_semilleros** | Por construir | **construir: tabla + carga CSV/Kobo + geovisor** |
 | ras.camaras_trampa / fotos_* / monitoreos | vacío | — |
+| financiero.* + inventario.* | en la base (2026-10-14) | poner clave a los títulos de campo; desplegar la intranet y la app de campo |
+| siembra.registros_actividad | en la base (2026-10-14) | la app de campo lo usa en cuanto se despliegue |
+| people.personas / contratos / cuentas_cobro / certificados / documentos_persona / config_talento | en la base (2026-10-14) | llenar NIT y firmante en Plantillas tras desplegar |
 
 **Secuencia recomendada para construir en bloque:**
 1. **`catalogo.especies`** — maestro que comparten conservación (árboles), plan y vivero. Es la fundación.

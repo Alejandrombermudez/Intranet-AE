@@ -177,16 +177,17 @@ export const APLICACIONES: Aplicacion[] = [
     clase: 'En el celular, en campo',
     estado: 'en_curso',
     offline: true,
-    donde: 'En el celular, desde el navegador. Se entra por título de trabajo: BODEGA, SIEMBRA o MONITOREO.',
+    donde: 'En el celular, desde el navegador. Se entra por título de trabajo (BODEGA, SIEMBRA, MONITOREO) y su clave, que se pone en Administrativa → App de campo.',
     dondeCorto: 'Celular, sin señal',
     para:
-      'Registrar lo que se hizo y con qué: actividades y rendimientos por lote y núcleo, insumos ' +
-      'consumidos, movimientos entre bodegas y el monitoreo de lo ya sembrado.',
+      'Registrar lo que se hizo y con qué: actividades y rendimientos sobre los núcleos que cargó el SIG, ' +
+      'los insumos que salen de la bodega del proyecto, los traslados entre bodegas y el monitoreo de lo ya sembrado.',
     url: 'https://actividades-monitoreo-campo.vercel.app',
     carpeta: 'actividades_monitoreo_campo/',
     tecnica:
-      'HTML estático desplegado en Vercel. Guarda en localStorage del teléfono: todavía NO escribe en ' +
-      'Supabase, así que lo registrado queda solo en ese aparato.',
+      'HTML estático desplegado en Vercel. Habla con Supabase solo por las funciones inventario.campo_* ' +
+      '(token por título, sin acceso a tablas). Trabaja sin señal con una cola que se envía al volver. ' +
+      'El monitoreo de lo sembrado todavía se guarda solo en el teléfono.',
   },
   {
     id: 'app_semilleros',
@@ -497,16 +498,19 @@ export const ETAPAS: Etapa[] = [
     ],
     entrega: 'Cuánto se sembró, con qué recursos, y qué quedó vivo con el tiempo.',
     apps: [
-      { app: 'app_actividades', rol: 'La usan hoy las cuadrillas: actividades, insumos, bodega y monitoreo' },
+      { app: 'app_actividades', rol: 'La usan las cuadrillas: actividades sobre los núcleos, insumos de la bodega y monitoreo' },
+      { app: 'intranet', rol: 'Administrativa: compras con factura electrónica, reparto a las bodegas y títulos de la app' },
     ],
     datos: [
-      { nombre: 'Memoria del teléfono', que: 'Hoy todo queda en el teléfono de cada persona.', estado: 'en_curso' },
+      { nombre: 'siembra.registros_actividad', que: 'Cada día de trabajo sobre unos núcleos de un lote.', estado: 'en_curso' },
+      { nombre: 'inventario.movimientos', que: 'El kardex: compras, traslados, consumo en campo y ajustes.', estado: 'en_curso' },
+      { nombre: 'Monitoreo de lo sembrado', que: 'Sigue solo en el teléfono de quien lo toma.', estado: 'en_curso' },
       { nombre: 'Supervivencia y MRV', que: 'El indicador que exige un proyecto de carbono. No existe aún.', estado: 'por_construir' },
     ],
     pulso: [],
     pendiente:
-      'La app está desplegada y en uso, pero no escribe en Supabase: lo registrado no sale del ' +
-      'teléfono y no se puede consolidar ni respaldar.',
+      'Desde el 2026-10-14 la app escribe en Supabase (migration_financiero_inventario.sql). Falta pasar ' +
+      'el monitoreo de lo sembrado a la base y cruzar el consumo con el plan de siembra y el vivero.',
   },
 
   // ══ CONSERVACIÓN ══════════════════════════════════════════════════════════
@@ -702,12 +706,16 @@ export const PIEZAS: Pieza[] = [
   {
     id: 'soporte',
     dominio: 'soporte',
-    nombre: 'Usuarios, flota y ejecutivo',
+    nombre: 'Usuarios, compras, flota y ejecutivo',
     que:
-      'Quién puede entrar y a qué; los vehículos con sus inspecciones y documentos; las sesiones del ' +
-      'equipo ejecutivo; los consentimientos de tratamiento de datos.',
+      'Quién puede entrar y a qué; las compras con factura electrónica y el inventario de las bodegas; ' +
+      'los vehículos con sus inspecciones y documentos; las sesiones del equipo ejecutivo; los ' +
+      'consentimientos de tratamiento de datos.',
     datos: [
       { nombre: 'people.user_profiles', que: 'Usuarios, área y permisos de acceso.', etiqueta: 'Usuarios', pulso: 'usuarios' },
+      { nombre: 'financiero.*', que: 'Proveedores y facturas de compra, leídas del XML de la DIAN.', etiqueta: 'Compras' },
+      { nombre: 'inventario.*', que: 'Insumos, bodegas por proyecto y kardex. Lo descuenta la app de actividades.', etiqueta: 'Inventario' },
+      { nombre: 'people.personas', que: 'La ficha de talento humano de cada persona, sus contratos y cuentas de cobro.', etiqueta: 'Talento humano' },
       { nombre: 'fleet.*', que: 'Reservas, inspecciones y documentos de los vehículos.', etiqueta: 'Vehículos' },
       { nombre: 'ejecutivo.*', que: 'Sesiones e indicaciones del equipo directivo.', etiqueta: 'Sesiones ejecutivas' },
       { nombre: 'public.consentimientos', que: 'Autorización de tratamiento de datos.', etiqueta: 'Consentimientos' },

@@ -10,11 +10,12 @@ import {
   ESTADO_CONFIG, ESTADOS_FLUJO, SEMAFORO_CONFIG, H1_CAMPOS_CLAVE, hoja3Habilitada,
 } from '@/lib/juridica-schema'
 import {
-  Plus, Search, Filter, ChevronRight, Loader2, Shield, LayoutGrid, FileDown,
+  Plus, Search, Filter, ChevronRight, Loader2, Shield, LayoutGrid, FileDown, AlertTriangle,
 } from 'lucide-react'
 import { descargarReportes, type ModoReporte } from '@/lib/reporte-juridico'
 import ModalReporte from '@/app/components/ModalReporte'
 import { fetchParametros, nombreParametro, type Parametro } from '@/lib/parametros'
+import { esPreregistroPredio, faltantesPredio } from '@/lib/preregistro'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -100,14 +101,22 @@ function AliadoCard({ aliado, prediosDelPropietario, proyecto, seleccion }: {
   const documento = aliado.numero_documento.startsWith('S/D-')
     ? 'sin documento'
     : `${aliado.tipo_documento} ${aliado.numero_documento}`
+  const preregistro = esPreregistroPredio(aliado)
 
   return (
     <div
       onClick={seleccion?.alternar}
       className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow p-4 ${
         seleccion ? 'cursor-pointer' : ''
-      } ${seleccion?.marcada ? 'border-bosque ring-1 ring-bosque' : 'border-stone-100'}`}
+      } ${seleccion?.marcada ? 'border-bosque ring-1 ring-bosque' : preregistro ? 'border-red-300' : 'border-stone-100'}`}
     >
+      {/* Predio que entró por una carga sin que se sepa de quién es. */}
+      {preregistro && (
+        <p className="mb-2 flex items-start gap-1.5 text-[11px] leading-snug text-red-600">
+          <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+          <span><strong>Preregistro · urgente.</strong> Falta: {faltantesPredio(aliado).join(', ')}.</span>
+        </p>
+      )}
       <div className="flex items-start justify-between gap-3 mb-3">
         {seleccion && (
           <input type="checkbox" checked={seleccion.marcada} readOnly
@@ -179,7 +188,7 @@ function AliadoCard({ aliado, prediosDelPropietario, proyecto, seleccion }: {
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 
-type FiltroEstado = 'todos' | EstadoAliado | 'pendiente_h1' | 'pendiente_h2' | 'pendiente_h3' | 'requiere_revision'
+type FiltroEstado = 'todos' | EstadoAliado | 'preregistro' | 'pendiente_h1' | 'pendiente_h2' | 'pendiente_h3' | 'requiere_revision'
 
 export default function JuridicaPage() {
   const router = useRouter()
@@ -258,7 +267,9 @@ export default function JuridicaPage() {
     } else if (filtroProyecto !== 'todos') {
       list = list.filter((a) => a.tipo_proyecto === filtroProyecto)
     }
-    if (filtro === 'pendiente_h1') {
+    if (filtro === 'preregistro') {
+      list = list.filter(esPreregistroPredio)
+    } else if (filtro === 'pendiente_h1') {
       list = list.filter((a) => h1Completitud(a).hechos < H1_CAMPOS_CLAVE.length)
     } else if (filtro === 'pendiente_h2') {
       list = list.filter((a) => !h2Hecha(a))
@@ -404,6 +415,7 @@ export default function JuridicaPage() {
                 ))}
               </optgroup>
               <optgroup label="Por completitud">
+                <option value="preregistro">Preregistros urgentes (sin propietario)</option>
                 <option value="pendiente_h1">Faltan datos HOJA 1</option>
                 <option value="pendiente_h2">Pendiente HOJA 2 (análisis)</option>
                 <option value="pendiente_h3">Pendiente HOJA 3 (antecedentes)</option>

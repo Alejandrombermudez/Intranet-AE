@@ -11,7 +11,8 @@ import {
   TreePine, BarChart3, MapPinned, AlertTriangle,
   ScrollText, Trash2, Upload, Download,
 } from 'lucide-react'
-import { Boton, Cargando, Firma } from '@/app/components/marca'
+import { Aviso, Boton, Cargando, Firma } from '@/app/components/marca'
+import { esPreregistroFamilia, faltantesFamilia } from '@/lib/preregistro'
 import {
   fetchArbolesPorFamilia, fetchIndicadoresPorFamilia, cambiarFotoArbol,
   type ArbolSemillero, type IndicadoresPredio,
@@ -367,6 +368,13 @@ export default function ConservacionDetailPage() {
       </header>
 
       <main className="w-full lg:w-[85%] max-w-[1600px] mx-auto px-6 py-10 sm:px-10 lg:px-0 space-y-8">
+
+        {esPreregistroFamilia(familia) && (
+          <Aviso tono="arcilla" titulo="Preregistro · urgente">
+            Esta ficha entró por una carga y todavía no tiene los datos de la familia.
+            Falta: {faltantesFamilia(familia).join(', ')}. Se completa con «Editar».
+          </Aviso>
+        )}
 
         {/* ── Mapa de la Red de Árboles Semilleros + ficha del árbol seleccionado ── */}
         <section className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">

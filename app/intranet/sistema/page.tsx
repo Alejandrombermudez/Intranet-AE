@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase'
 import type { Pulso } from '@/app/api/sistema/pulso/route'
 import { Boton, Cabecera, Cargando, Pestanas } from '@/app/components/marca'
 import { MapaSistema, type Vista } from './mapa-vista'
-import { BookOpen, Crosshair, LayoutGrid, RotateCcw, Sparkles } from 'lucide-react'
+import { BookOpen, Crosshair, KeyRound, LayoutGrid, RotateCcw, Sparkles } from 'lucide-react'
 
 export default function SistemaPage() {
   const router = useRouter()
@@ -90,6 +90,10 @@ export default function SistemaPage() {
               {hora ? `Cifras de las ${hora}` : 'Leyendo cifras…'}
             </Boton>
           )}
+          {/* Solo administradores: la página vuelve a comprobarlo y la API también. */}
+          <Boton variante="claro" href="/intranet/sistema/usuarios-geovisor" icono={<KeyRound size={13} />}>
+            Usuarios del geovisor
+          </Boton>
           <Boton variante="luz" href="/intranet/sistema/documentacion" icono={<BookOpen size={14} />}>
             Documentación
           </Boton>

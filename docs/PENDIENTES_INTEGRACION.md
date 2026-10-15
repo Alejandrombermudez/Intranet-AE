@@ -2,7 +2,7 @@
 
 > **Lista de pendientes.** Aquí se van anotando las cosas que faltan por módulo a medida que las detectamos, para no perderlas. Cuando algo se implemente, se marca como hecho o se mueve al historial.
 >
-> **Fecha:** 2026-06-13 · **Última revisión:** 2026-09-23 · **Relacionado:** [`ARQUITECTURA_ECOSISTEMA.md`](ARQUITECTURA_ECOSISTEMA.md) (decisiones D1–D5)
+> **Fecha:** 2026-06-13 · **Última revisión:** 2026-10-14 · **Relacionado:** [`ARQUITECTURA_ECOSISTEMA.md`](ARQUITECTURA_ECOSISTEMA.md) (decisiones D1–D5)
 
 **Cómo leer el estado:** detectado · en diseño · esperando decisión · hecho
 
@@ -78,6 +78,22 @@
 | Conectar campo al `core` (DESPUÉS de SIG) | El flujo cambió: Jurídica → **SIG** → Campo. Campo ya no es el paso inmediato | `siembra.familias.expediente_id` y la ruta `crear-en-siembra` quedan listos; se conectan cuando el proceso llegue a la etapa `campo` | Esperando decisión (tras SIG) |
 | ~~Fusionar `siembra` + `ras` en `intervenciones`~~ | **Descartada (2026-06-27)**: dominios separados (Siembra=restauración, RAS=conservación) | — | D3 descartada |
 | Crear el `catalogo.especies` | Dato maestro que usan vivero, plan y Ley del árbol | nuevo schema | En diseño |
+
+## Administrativa y financiera / inventario / ejecución en campo
+
+| Pendiente | Por qué | Dónde impacta | Estado |
+|-----------|---------|---------------|--------|
+| **Compras desde la factura electrónica DIAN** | Llevar gasto e inventario sin teclear: se sube el `.zip` del proveedor, se lee el XML (proveedor, CUFE, líneas, IVA) y cada línea queda como gasto o entrada a una bodega. La misma factura no entra dos veces | `/intranet/administrativa` (Compras) + `lib/factura-dian.ts` + `financiero.*` + `inventario.*` | Hecho y desplegado (2026-10-14) |
+| **Inventario por bodega de proyecto** | Los insumos de campo salen de una lista cerrada y se reparten a Conexión Biodiversa, Ley del Árbol, Vivero…; el saldo se calcula del kardex | Inventario: saldo por bodega, envíos con aceptación, ajustes por conteo, kardex | Hecho y desplegado (2026-10-14) |
+| **App de actividades conectada (SIG + inventario)** | Era un demo que guardaba en el celular: lotes y núcleos escritos a mano, insumos libres, nada consolidado | `actividades_monitoreo_campo/` lee lotes `definitiva` + `geo.nucleos`, descuenta de la bodega, cola sin señal, entrada por título con clave | Hecho (2026-10-14) · SQL corrido · faltan las claves de los títulos, `SUPABASE_URL`/`SUPABASE_ANON_KEY` en Vercel y desplegar |
+| Departamento para administrativa, talento humano y logística | Las mismas personas hacen las tres cosas | Se usa el departamento `Financiero`, que ahora entra a `/intranet/administrativa`. Las tres personas del equipo quedaron ahí el 2026-10-14 (la cuenta de finanzas estaba en Jurídica y se movió) | resuelto 2026-10-14 |
+| **Talento humano** | Ficha de cada persona (todo lo que se pide al vincular), contratos de planta y de contratista, certificados laborales y cuentas de cobro automáticas | «Mi perfil» (`/intranet/mi-perfil`) + pestaña Talento humano de Administrativa + `/api/talento/*` + `people.personas` y compañía | Hecho (2026-10-14) · SQL corrido y verificado · Mi espacio con foto, PDF de plantilla única y video de bienvenida; desplegado 2026-10-14 · faltan NIT y firmante en Plantillas |
+| Datos de Microsoft 365 en cada inicio de sesión | El inicio de sesión pide `email profile`: trae nombres, apellidos y el identificador, no el cargo ni la foto. Para eso hace falta el permiso `User.Read` | «Traer de Microsoft 365» en Mi perfil lo pide aparte (si Microsoft lo niega, solo falla ese botón). Para que se traigan solos al entrar: confirmar en Azure (App registrations → API permissions) que la app tiene `User.Read` y agregarlo a los `scopes` de `app/page.tsx` | decisión pendiente |
+| Verificación pública de certificados | El certificado lleva un código; hoy se verifica escribiéndole a talento humano | Página pública `/verificar/<código>` que diga si existe y a nombre de quién | Detectado |
+| Monitoreo de lo sembrado a la base | Sigue solo en el celular (con fotos en IndexedDB) | `actividades_monitoreo_campo` → tabla en `siembra` + fotos en Storage | Detectado |
+| Notas crédito | Hoy se rechazan al subir; una devolución se registra como ajuste | `lib/factura-dian.ts`, `financiero.registrar_factura` | Detectado |
+| Facturas sin XML (PDF escaneado) | Solo se registran a mano («Registrar sin XML»). Leer el PDF exigiría OCR o un modelo | `/intranet/administrativa/facturas/nueva?manual=1` | aceptado por ahora |
+| Si el SIG vuelve a subir la nucleación de un lote | Los registros viejos apuntan a los `geo.nucleos` anteriores (quedan `vigente=false`): conservan el texto «1-6, 8» pero dejan de pintarse en el mapa | `siembra.registros_actividad.nucleo_ids` | Detectado |
 
 ## Seguridad de la API
 

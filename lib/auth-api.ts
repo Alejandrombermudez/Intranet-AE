@@ -42,8 +42,15 @@ export const PUEDE = {
   juridica:   (p: PerfilSesion) => p.is_admin || p.department === 'Juridica',
   /** Módulo RAS: familias, conservación, fotos de árboles y del catálogo. */
   ras:        (p: PerfilSesion) => p.is_admin || p.department === 'RAS',
-  /** Estadísticas del hub. */
+  /** Módulo administrativo y financiero (compras, inventario, bodegas) y estadísticas del hub. */
   financiero: (p: PerfilSesion) => p.is_admin || p.department === 'Financiero',
+  /**
+   * Talento humano: fichas, contratos, salarios, cuentas bancarias y cuentas de
+   * cobro de TODAS las personas. Más estrecho que `financiero` a propósito: ser
+   * administrador de otra área (SIG, RAS) no da acceso a datos personales ajenos.
+   * Lo propio de cada quien va por «Mi perfil», con su sola sesión.
+   */
+  talentoHumano: (p: PerfilSesion) => p.department === 'Financiero' || p.department === 'Ejecutivo',
   /** Enviar a campo / cancelar / subir zonas: los tres equipos que tocan el predio. */
   procesoPredio: (p: PerfilSesion) => p.is_admin || ['Juridica', 'RAS', 'SIG'].includes(p.department ?? ''),
   /** Lectura transversal (tablero, reporte, SIG): cualquiera con acceso a la intranet. */
