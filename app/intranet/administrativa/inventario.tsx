@@ -102,7 +102,7 @@ export default function Inventario({ cat, recargar }: { cat: Catalogo; recargar:
 
       {enCamino.length > 0 && (
         <Seccion titulo="En camino" sub="Envíos que todavía no acepta la bodega que recibe. Ya salieron del origen; entran al destino cuando se aceptan (en la app de campo o aquí).">
-          <div className="border border-linea bg-white">
+          <div className="vidrio rounded-2xl">
             {enCamino.map((m) => (
               <div key={m.id} className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-fina px-4 py-3 last:border-0">
                 <span className="text-[12px] text-tenue">{fechaCorta(m.fecha)}</span>
@@ -131,9 +131,9 @@ export default function Inventario({ cat, recargar }: { cat: Catalogo; recargar:
         {matriz.length === 0 ? (
           <Vacio>Todavía no ha entrado nada. Sube la primera factura en Compras.</Vacio>
         ) : (
-          <div className="overflow-x-auto border border-linea bg-white">
+          <div className="overflow-x-auto vidrio rounded-2xl">
             <table className="w-full">
-              <thead className="border-b border-linea bg-papel">
+              <thead className="border-b border-linea/70 bg-white/40">
                 <tr>
                   <th className={TH}>Insumo</th>
                   {bodegas.map((b) => <th key={b.id} className={`${TH} text-right`}>{b.nombre}</th>)}
@@ -190,9 +190,9 @@ export default function Inventario({ cat, recargar }: { cat: Catalogo; recargar:
           </Campo>
         </div>
         {movs === null ? <Vacio>Cargando…</Vacio> : movs.length === 0 ? <Vacio>Sin movimientos</Vacio> : (
-          <div className="overflow-x-auto border border-linea bg-white">
+          <div className="overflow-x-auto vidrio rounded-2xl">
             <table className="w-full">
-              <thead className="border-b border-linea bg-papel">
+              <thead className="border-b border-linea/70 bg-white/40">
                 <tr>
                   <th className={TH}>Fecha</th><th className={TH}>Tipo</th><th className={TH}>Insumo</th>
                   <th className={`${TH} text-right`}>Cantidad</th><th className={TH}>De → a</th><th className={TH}>Estado</th>

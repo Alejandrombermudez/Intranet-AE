@@ -3,17 +3,18 @@
 /**
  * PIEZAS DE MARCA
  * ───────────────
- * El lenguaje visual del Manual de Identidad de Marca 2024, hecho componentes.
- * Nació en el módulo Reporte y de ahí se extiende a toda la intranet: cabecera
- * oscura en tinta, títulos en Josefin Sans, rótulos en versalitas con tracking
- * amplio, cuerpo en Poppins, filetes finos en vez de cajas de color.
+ * El lenguaje visual de la intranet, hecho componentes. Desde el 2026-10-15:
+ * Poppins para la interfaz, como los documentos de la organización, Fraunces
+ * para los títulos, y superficies de vidrio —translúcidas, con desenfoque y un filo de luz— sobre el fondo hueso
+ * con manchas de la paleta (app/globals.css). La cabecera es un panel en verde
+ * bosque, redondeado, con un brillo ámbar y los anillos de la huella.
  *
- * Regla de uso: antes de poner un color, pregúntate si un filete o un peso
- * tipográfico no lo resuelven. El color es para decir algo —un estado, una
- * alerta—, no para decorar.
+ * Regla de uso: antes de poner un color, pregúntate si el vidrio, un filete o
+ * un peso tipográfico no lo resuelven. El color es para decir algo —un estado,
+ * una alerta—, no para decorar.
  *
- * Los colores con nombre (bg-tinta, text-taupe, border-linea…) están definidos
- * en app/globals.css.
+ * Los colores con nombre (bg-tinta, text-taupe, border-linea…) y las
+ * utilidades `vidrio` / `vidrio-oscuro` están en app/globals.css.
  */
 
 import Link from 'next/link'
@@ -33,9 +34,19 @@ const ANCHO = {
 } as const
 export type Ancho = keyof typeof ANCHO
 
+/** El fondo de la cabecera: verde bosque con un brillo ámbar arriba y salvia abajo. */
+const FONDO_CABECERA = [
+  'radial-gradient(55% 120% at 100% 0%, rgb(225 166 68 / 0.30), transparent 62%)',
+  'radial-gradient(45% 90% at 0% 100%, rgb(175 189 178 / 0.22), transparent 60%)',
+  'linear-gradient(135deg, rgb(38 52 40) 0%, rgb(47 63 50) 48%, rgb(30 41 32) 100%)',
+].join(', ')
+
+/** Los anillos de la huella, el motivo de la marca. */
+const ANILLOS = 'repeating-radial-gradient(circle, rgb(228 222 210 / 0.9) 0 1px, transparent 1.5px 22px)'
+
 // ─── Rótulo ───────────────────────────────────────────────────────────────────
 
-/** Texto pequeño en versalitas con tracking amplio: el gesto del manual. */
+/** Texto pequeño en versalitas: nombra una sección o un dato. */
 export function Rotulo({
   children,
   tono = 'tenue',
@@ -52,7 +63,7 @@ export function Rotulo({
     claro: 'text-hueso',
   }[tono]
   return (
-    <p className={`font-display text-[10px] font-semibold uppercase tracking-[.2em] ${color} ${className}`}>
+    <p className={`text-[11px] font-medium uppercase tracking-[.14em] ${color} ${className}`}>
       {children}
     </p>
   )
@@ -65,7 +76,7 @@ export function Firma({ className = '' }: { className?: string }) {
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
       <Isotipo className="w-[18px] h-[22px]" />
-      <span className="font-display text-[10px] font-semibold uppercase tracking-[.26em]">
+      <span className="text-[11px] font-semibold uppercase tracking-[.22em]">
         Amazonía Emprende
       </span>
     </div>
@@ -80,10 +91,11 @@ export interface Cifra {
 }
 
 /**
- * La cabecera oscura de cada módulo, la misma de Reporte.
+ * La cabecera de cada módulo: un panel en verde bosque, redondeado y separado
+ * del borde, con las cifras y las pestañas en vidrio oscuro.
  *
- * `compacta` es para pantallas de detalle y formularios: mantiene la banda en
- * tinta —para que se sepa dónde se está— pero sin robarle altura al trabajo.
+ * `compacta` es para pantallas de detalle y formularios: mantiene el panel
+ * —para que se sepa dónde se está— pero sin robarle altura al trabajo.
  */
 export function Cabecera({
   volver,
@@ -104,66 +116,73 @@ export function Cabecera({
   cifras?: Cifra[]
   /** Botones a la derecha del título. Usa `Boton` con variante `luz` (principal) o `claro`. */
   acciones?: ReactNode
-  /** Lo que va pegado al borde inferior: normalmente unas `Pestanas`. */
+  /** Lo que va al pie del panel: normalmente unas `Pestanas` con tono oscuro. */
   pie?: ReactNode
   ancho?: Ancho
   compacta?: boolean
 }) {
   return (
-    <header className="bg-tinta text-hueso">
-      <div className={`${ANCHO[ancho]} mx-auto px-6 sm:px-10 ${compacta ? 'pt-5 pb-6' : 'pt-8 pb-9'}`}>
-        <div className={`flex items-center justify-between gap-6 ${compacta ? 'mb-5' : 'mb-9'}`}>
-          {volver ? (
-            <Link
-              href={volver.href}
-              className="flex items-center gap-2 text-[10px] uppercase tracking-[.2em] text-taupe transition-opacity hover:opacity-70"
-            >
-              <ArrowLeft size={13} /> {volver.label}
-            </Link>
-          ) : (
-            <span />
-          )}
-          <Firma />
-        </div>
-
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            {modulo && (
-              <p className={`text-[10.5px] uppercase tracking-[.28em] text-taupe ${compacta ? 'mb-2' : 'mb-3.5'}`}>
-                {modulo}
-              </p>
-            )}
-            <h1
-              className={`font-display font-bold text-white text-balance ${
-                compacta ? 'text-2xl sm:text-[1.9rem] leading-tight' : 'text-[2.1rem] sm:text-5xl leading-[1.02]'
-              }`}
-            >
-              {titulo}
-            </h1>
-            {descripcion && (
-              <div className={`max-w-2xl text-sm font-light leading-relaxed text-hueso/90 ${compacta ? 'mt-2.5' : 'mt-4'}`}>
-                {descripcion}
-              </div>
-            )}
-          </div>
-          {acciones && <div className="flex shrink-0 flex-wrap items-center gap-2.5">{acciones}</div>}
-        </div>
-
-        {cifras && cifras.length > 0 && (
-          <dl className="mt-9 flex flex-wrap border-t border-hueso/20 pt-7">
-            {cifras.map((c, i) => (
-              <div
-                key={i}
-                className="flex min-w-[8rem] flex-1 flex-col-reverse border-l border-hueso/20 px-5 first:border-l-0 first:pl-0"
+    <header className="px-2.5 pt-2.5 sm:px-4 sm:pt-4">
+      <div
+        className="relative overflow-hidden rounded-[22px] text-hueso shadow-xl sm:rounded-[28px]"
+        style={{ background: FONDO_CABECERA }}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-28 -top-36 h-[460px] w-[460px] rounded-full opacity-[.09]"
+          style={{ background: ANILLOS }}
+        />
+        <div className={`relative ${ANCHO[ancho]} mx-auto px-5 sm:px-10 ${compacta ? 'pt-5 pb-6' : 'pt-7 pb-8'}`}>
+          <div className={`flex items-center justify-between gap-6 ${compacta ? 'mb-5' : 'mb-8'}`}>
+            {volver ? (
+              <Link
+                href={volver.href}
+                className="vidrio-oscuro flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[12px] text-hueso/85 transition-colors hover:bg-white/15 hover:text-white"
               >
-                <dt className="mt-2 text-[9.5px] uppercase tracking-[.14em] text-taupe">{c.l}</dt>
-                <dd className="font-display text-3xl font-bold leading-none tabular-nums text-white">{c.n}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
+                <ArrowLeft size={14} /> {volver.label}
+              </Link>
+            ) : (
+              <span />
+            )}
+            <Firma className="text-hueso/90" />
+          </div>
+
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              {modulo && (
+                <p className={`text-[11px] font-medium uppercase tracking-[.18em] text-ambar ${compacta ? 'mb-2' : 'mb-3'}`}>
+                  {modulo}
+                </p>
+              )}
+              <h1
+                className={`font-titulo font-medium tracking-[-0.015em] text-white text-balance ${
+                  compacta ? 'text-[1.7rem] sm:text-[2.1rem] leading-tight' : 'text-[2.2rem] sm:text-[3.1rem] leading-[1.04]'
+                }`}
+              >
+                {titulo}
+              </h1>
+              {descripcion && (
+                <div className={`max-w-2xl text-[14px] font-light leading-relaxed text-hueso/80 ${compacta ? 'mt-2' : 'mt-3.5'}`}>
+                  {descripcion}
+                </div>
+              )}
+            </div>
+            {acciones && <div className="flex shrink-0 flex-wrap items-center gap-2.5">{acciones}</div>}
+          </div>
+
+          {cifras && cifras.length > 0 && (
+            <dl className="mt-8 grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] sm:gap-3">
+              {cifras.map((c, i) => (
+                <div key={i} className="vidrio-oscuro flex flex-col-reverse rounded-2xl px-4 py-3.5 sm:px-5 sm:py-4">
+                  <dt className="mt-1.5 text-[11.5px] leading-snug text-hueso/65">{c.l}</dt>
+                  <dd className="text-[1.65rem] font-semibold leading-none tracking-[-0.02em] tabular-nums text-white sm:text-3xl">{c.n}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+        {pie && <div className={`relative ${ANCHO[ancho]} mx-auto px-5 pb-5 sm:px-10 sm:pb-6`}>{pie}</div>}
       </div>
-      {pie && <div className={`${ANCHO[ancho]} mx-auto px-6 sm:px-10`}>{pie}</div>}
     </header>
   )
 }
@@ -180,7 +199,7 @@ export function Contenido({
   ancho?: Ancho
   className?: string
 }) {
-  return <main className={`${ANCHO[ancho]} mx-auto px-6 sm:px-10 py-10 ${className}`}>{children}</main>
+  return <main className={`${ANCHO[ancho]} mx-auto px-5 sm:px-10 py-10 ${className}`}>{children}</main>
 }
 
 // ─── Pestañas ─────────────────────────────────────────────────────────────────
@@ -195,22 +214,23 @@ export interface Pestana {
 }
 
 /**
- * Subrayado, no píldoras. Sobre la cabecera oscura (`tono="oscuro"`) la activa
- * se marca en ámbar; sobre papel, en verde bosque.
+ * Una barra de vidrio con la pestaña activa como píldora. Sobre la cabecera
+ * (`tono="oscuro"`) la activa va en hueso; sobre el fondo claro, en bosque.
  */
 export function Pestanas({ items, tono = 'claro' }: { items: Pestana[]; tono?: 'claro' | 'oscuro' }) {
+  const barra = tono === 'oscuro' ? 'vidrio-oscuro' : 'vidrio'
   return (
-    <nav className="-mb-px flex gap-7 overflow-x-auto">
+    <nav className={`${barra} inline-flex max-w-full gap-1 overflow-x-auto rounded-full p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
       {items.map((it) => {
         const color =
           tono === 'oscuro'
             ? it.activa
-              ? 'border-ambar text-white'
-              : 'border-transparent text-hueso/60 hover:text-hueso'
+              ? 'bg-hueso text-tinta shadow-md'
+              : 'text-hueso/75 hover:bg-white/10 hover:text-white'
             : it.activa
-              ? 'border-bosque text-tinta'
-              : 'border-transparent text-tenue hover:text-tinta'
-        const cls = `flex items-center gap-2 whitespace-nowrap border-b-2 pb-3 pt-1 text-[10.5px] uppercase tracking-[.16em] transition-colors ${color}`
+              ? 'bg-bosque text-hueso shadow-md'
+              : 'text-suave hover:bg-white/70 hover:text-tinta'
+        const cls = `flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-medium transition-colors ${color}`
         const contenido = (
           <>
             {it.icono}
@@ -233,7 +253,7 @@ export function Pestanas({ items, tono = 'claro' }: { items: Pestana[]; tono?: '
 
 // ─── Sección ──────────────────────────────────────────────────────────────────
 
-/** Encabezado de sección con número y filete, como en el informe. */
+/** Encabezado de sección: número en una pastilla de vidrio, título y filete. */
 export function Seccion({
   n,
   titulo,
@@ -251,12 +271,14 @@ export function Seccion({
 }) {
   return (
     <section className={`mb-12 ${className}`}>
-      <header className="mb-5 flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-linea pb-2.5">
-        {n && <span className="shrink-0 font-display text-[13px] font-bold tracking-[.18em] text-bosque">{n}</span>}
-        <h2 className="font-display text-[1.4rem] font-semibold leading-tight tracking-[.02em]">{titulo}</h2>
+      <header className="mb-5 flex flex-wrap items-center gap-x-3.5 gap-y-2 border-b border-linea/70 pb-3">
+        {n && (
+          <span className="vidrio shrink-0 rounded-full px-2.5 py-0.5 text-[12px] font-semibold tabular-nums text-bosque">{n}</span>
+        )}
+        <h2 className="font-titulo text-[1.5rem] font-medium leading-tight">{titulo}</h2>
         {acciones && <div className="ml-auto flex items-center gap-2">{acciones}</div>}
       </header>
-      {sub && <p className="-mt-2 mb-5 max-w-[68ch] text-[12.5px] font-light text-suave">{sub}</p>}
+      {sub && <p className="-mt-1.5 mb-5 max-w-[68ch] text-[13px] font-light text-suave">{sub}</p>}
       {children}
     </section>
   )
@@ -267,17 +289,18 @@ export function Seccion({
 export type VarianteBoton = 'primario' | 'secundario' | 'fantasma' | 'peligro' | 'claro' | 'luz'
 
 const VARIANTE: Record<VarianteBoton, string> = {
-  primario: 'bg-bosque text-papel hover:bg-primary-dark',
-  secundario: 'border border-taupe text-suave hover:bg-hueso/60',
-  fantasma: 'text-tenue hover:text-tinta',
-  peligro: 'border border-red-600/50 text-red-700 hover:bg-red-50',
-  /** Secundario sobre la cabecera en tinta. */
-  claro: 'border border-hueso/35 text-hueso hover:bg-hueso/10',
-  /** Principal sobre la cabecera en tinta: el bosque se perdería sobre el fondo oscuro. */
-  luz: 'bg-hueso text-tinta hover:bg-white',
+  primario:
+    'bg-gradient-to-b from-emerald-600 to-bosque text-hueso shadow-[inset_0_1px_0_rgb(255_255_255/0.16),0_8px_18px_-8px_rgb(47_63_50/0.7)] hover:brightness-110',
+  secundario: 'vidrio text-tinta hover:bg-white/85',
+  fantasma: 'text-suave hover:bg-white/50 hover:text-tinta',
+  peligro: 'border border-red-600/35 bg-red-50/60 text-red-700 hover:bg-red-50',
+  /** Secundario sobre la cabecera en bosque. */
+  claro: 'vidrio-oscuro text-hueso hover:bg-white/15',
+  /** Principal sobre la cabecera: el bosque se perdería sobre el fondo oscuro. */
+  luz: 'bg-hueso text-tinta shadow-md hover:bg-white',
 }
 
-/** Rectangular y en versalitas, como en Reporte. Con `href` se vuelve enlace. */
+/** Una píldora en Poppins. Con `href` se vuelve enlace. */
 export function Boton({
   variante = 'primario',
   icono,
@@ -291,8 +314,8 @@ export function Boton({
   href?: string
 }) {
   const cls =
-    'inline-flex items-center justify-center gap-2 px-4 py-2.5 text-[10.5px] font-medium uppercase ' +
-    `tracking-[.16em] transition-colors disabled:pointer-events-none disabled:opacity-45 ${VARIANTE[variante]} ${className}`
+    'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-medium ' +
+    `transition-all active:scale-[.98] disabled:pointer-events-none disabled:opacity-45 ${VARIANTE[variante]} ${className}`
   if (href) {
     return (
       <Link href={href} className={cls}>
@@ -311,7 +334,7 @@ export function Boton({
 
 // ─── Marca de estado ──────────────────────────────────────────────────────────
 
-/** Un cuadro de color y la palabra. Nada más: sin píldora, sin fondo. */
+/** Un punto de color y la palabra. Nada más: sin píldora, sin fondo. */
 export function MarcaEstado({
   color,
   children,
@@ -322,8 +345,8 @@ export function MarcaEstado({
   className?: string
 }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] text-tinta ${className}`}>
-      <i className="inline-block h-[7px] w-[7px] shrink-0" style={{ background: color }} />
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-[12px] text-tinta ${className}`}>
+      <i className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
       {children}
     </span>
   )
@@ -332,13 +355,13 @@ export function MarcaEstado({
 // ─── Aviso ────────────────────────────────────────────────────────────────────
 
 const TONO_AVISO = {
-  ambar: 'border-ambar',
-  arcilla: 'border-red-600',
-  bosque: 'border-bosque',
-  pizarra: 'border-pizarra',
+  ambar: 'bg-ambar',
+  arcilla: 'bg-red-600',
+  bosque: 'bg-bosque',
+  pizarra: 'bg-pizarra',
 } as const
 
-/** Nota al margen: un filete de color a la izquierda y texto ligero. */
+/** Nota en vidrio con una barra de color a la izquierda. */
 export function Aviso({
   tono = 'ambar',
   titulo,
@@ -351,9 +374,12 @@ export function Aviso({
   className?: string
 }) {
   return (
-    <div className={`border-l-2 py-0.5 pl-4 ${TONO_AVISO[tono]} ${className}`}>
-      {titulo && <p className="mb-1 text-[12.5px] font-medium text-tinta">{titulo}</p>}
-      <div className="text-[12.5px] font-light leading-relaxed text-suave">{children}</div>
+    <div className={`vidrio flex gap-3.5 rounded-2xl py-3 pl-3 pr-4 ${className}`}>
+      <span aria-hidden className={`w-1 shrink-0 self-stretch rounded-full ${TONO_AVISO[tono]}`} />
+      <div className="min-w-0">
+        {titulo && <p className="mb-0.5 text-[13px] font-medium text-tinta">{titulo}</p>}
+        <div className="text-[13px] font-light leading-relaxed text-suave">{children}</div>
+      </div>
     </div>
   )
 }
@@ -363,10 +389,10 @@ export function Aviso({
 /** Pantalla completa mientras se resuelve el acceso o se traen los datos. */
 export function Cargando({ texto = 'Cargando…' }: { texto?: string }) {
   return (
-    <div className="grid min-h-screen place-items-center bg-papel">
-      <div className="text-center">
+    <div className="grid min-h-screen place-items-center px-6">
+      <div className="vidrio rounded-3xl px-10 py-8 text-center">
         <Loader2 className="mx-auto mb-3 animate-spin text-bosque" size={26} />
-        <p className="text-[11px] uppercase tracking-[.16em] text-tenue">{texto}</p>
+        <p className="text-[13px] text-suave">{texto}</p>
       </div>
     </div>
   )
@@ -374,6 +400,6 @@ export function Cargando({ texto = 'Cargando…' }: { texto?: string }) {
 
 export function Vacio({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <p className={`py-16 text-center text-[11px] uppercase tracking-[.16em] text-tenue ${className}`}>{children}</p>
+    <p className={`py-16 text-center text-[13px] text-tenue ${className}`}>{children}</p>
   )
 }

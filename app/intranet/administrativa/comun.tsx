@@ -11,9 +11,9 @@ import { fetchConSesion } from '@/lib/fetch-sesion'
 import type { Bodega, Existencia, Insumo, Proyecto, TituloCampo } from '@/lib/administrativa'
 
 export const CAMPO =
-  'w-full border border-linea bg-white px-3 py-2 text-[13px] text-tinta outline-none transition-colors placeholder:text-tenue focus:border-bosque disabled:bg-papel disabled:text-tenue'
-export const ROTULO = 'mb-1.5 block text-[10px] uppercase tracking-[.16em] text-tenue'
-export const TH = 'px-3 py-2.5 text-left text-[10px] font-medium uppercase tracking-[.14em] text-tenue'
+  'w-full rounded-xl vidrio rounded-2xl/70 px-3.5 py-2.5 text-[13px] text-tinta outline-none transition-all placeholder:text-tenue focus:border-bosque focus:bg-white focus:ring-2 focus:ring-bosque/15 disabled:bg-papel/60 disabled:text-tenue'
+export const ROTULO = 'mb-1.5 block text-[10.5px] font-medium uppercase tracking-[.12em] text-tenue'
+export const TH = 'px-3 py-3 text-left text-[10.5px] font-medium uppercase tracking-[.12em] text-tenue'
 export const TD = 'px-3 py-2.5 align-top text-[12.5px] text-tinta'
 
 /**
@@ -128,10 +128,10 @@ export function Ventana({ titulo, onCerrar, children, ancho = 'max-w-2xl' }: {
     return () => window.removeEventListener('keydown', k)
   }, [onCerrar])
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-tinta/50 px-4 py-10" onMouseDown={onCerrar}>
-      <div className={`w-full ${ancho} border border-linea bg-papel shadow-xl`} onMouseDown={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-tinta/40 px-4 py-10 backdrop-blur-sm" onMouseDown={onCerrar}>
+      <div className={`w-full ${ancho} overflow-hidden rounded-3xl border border-white/70 bg-papel shadow-2xl`} onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-linea px-6 py-4">
-          <h3 className="font-display text-lg font-semibold text-tinta">{titulo}</h3>
+          <h3 className="font-titulo text-xl font-medium text-tinta">{titulo}</h3>
           <button type="button" onClick={onCerrar} className="text-tenue hover:text-tinta" aria-label="Cerrar"><X size={18} /></button>
         </div>
         <div className="px-6 py-5">{children}</div>

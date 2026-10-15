@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Josefin_Sans, Poppins } from "next/font/google";
+import { Fraunces, Geist_Mono, Poppins } from "next/font/google";
 import "./globals.css";
 import InstallPrompt from "./components/InstallPrompt";
 import RegistroAcceso from "./components/RegistroAcceso";
@@ -9,12 +9,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Tipografías del manual de marca 2024: Josefin Sans para títulos,
-// Poppins para el cuerpo. Las usa toda la app (ver app/globals.css).
-const josefin = Josefin_Sans({
-  variable: "--font-josefin",
+// Poppins para el cuerpo y la interfaz, como en los documentos de la organización;
+// Fraunces —una serif de trazo suave— para los títulos (clase font-titulo, y h1/h2).
+// Hasta el 2026-10-15 los títulos iban en Josefin Sans; lo que todavía pide
+// --font-josefin (Reporte, mapa del sistema) recibe Poppins (ver app/globals.css).
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
-  weight: ["100", "300", "400", "600", "700"],
+  style: ["normal", "italic"],
+  axes: ["SOFT", "opsz"],
 });
 
 const poppins = Poppins({
@@ -48,7 +51,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${geistMono.variable} ${josefin.variable} ${poppins.variable} antialiased`}
+        className={`${geistMono.variable} ${poppins.variable} ${fraunces.variable} antialiased`}
       >
         {children}
         <InstallPrompt />

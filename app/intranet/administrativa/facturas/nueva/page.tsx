@@ -171,7 +171,7 @@ export default function NuevaFactura() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); leer([...e.dataTransfer.files]) }}
             onClick={() => archivoRef.current?.click()}
-            className="mb-10 cursor-pointer border border-dashed border-taupe bg-white px-6 py-10 text-center transition-colors hover:border-bosque"
+            className="mb-10 cursor-pointer rounded-2xl border border-dashed border-taupe bg-white/45 px-6 py-10 text-center transition-colors hover:border-bosque"
           >
             <FileUp className="mx-auto mb-3 text-bosque" size={26} />
             <p className="text-[13px] text-tinta">{leyendo ? 'Leyendo…' : leida ? 'Cambiar de factura' : 'Arrastra aquí el .zip de la factura, o toca para buscarlo'}</p>
@@ -234,9 +234,9 @@ export default function NuevaFactura() {
             {/* ── 3. Las líneas ── */}
             <Seccion n="02" titulo="Qué se compró"
               sub="Marca cada línea como gasto o como entrada a inventario. Si la factura viene en kilos y en bodega se cuentan bultos de 50 kg, el factor es 0,02 (cada kilo es 0,02 bultos).">
-              <div className="overflow-x-auto border border-linea bg-white">
+              <div className="overflow-x-auto vidrio rounded-2xl">
                 <table className="w-full">
-                  <thead className="border-b border-linea bg-papel">
+                  <thead className="border-b border-linea/70 bg-white/40">
                     <tr><th className={TH}>#</th><th className={TH}>Línea de la factura</th><th className={`${TH} text-right`}>Total</th><th className={TH}>Es</th><th className={TH}>Entra a inventario como</th>{manual && <th className={TH}></th>}</tr>
                   </thead>
                   <tbody>
@@ -270,7 +270,7 @@ export default function NuevaFactura() {
                           </td>
                           <td className={`${TD} whitespace-nowrap text-right tabular-nums`}>{pesos(l.total)}</td>
                           <td className={TD}>
-                            <div className="inline-flex border border-linea">
+                            <div className="inline-flex overflow-hidden rounded-full border border-linea">
                               {(['gasto', 'inventario'] as const).map((c) => (
                                 <button key={c} type="button" onClick={() => cambiar(k, { clase: c })}
                                         className={`px-2.5 py-1.5 text-[10.5px] uppercase tracking-[.12em] ${l.clase === c ? 'bg-bosque text-papel' : 'text-tenue hover:text-tinta'}`}>

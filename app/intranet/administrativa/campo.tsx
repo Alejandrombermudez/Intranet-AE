@@ -66,9 +66,9 @@ export default function AppCampo({ cat, recargar }: { cat: Catalogo; recargar: (
         {cat.titulos.some((t) => t.activo && !t.tiene_clave) && (
           <Aviso tono="ambar" className="mb-4">Hay títulos sin clave: nadie puede entrar con ellos hasta que se la pongas.</Aviso>
         )}
-        <div className="overflow-x-auto border border-linea bg-white">
+        <div className="overflow-x-auto vidrio rounded-2xl">
           <table className="w-full">
-            <thead className="border-b border-linea bg-papel">
+            <thead className="border-b border-linea/70 bg-white/40">
               <tr><th className={TH}>Título</th><th className={TH}>Puede</th><th className={TH}>Bodegas</th><th className={TH}>Clave</th><th className={TH}>Último ingreso</th><th className={TH}></th></tr>
             </thead>
             <tbody>
@@ -105,9 +105,9 @@ export default function AppCampo({ cat, recargar }: { cat: Catalogo; recargar: (
               <span><b className="font-display text-xl tabular-nums">{pesos(totales.mano)}</b> <span className="text-tenue">mano de obra</span></span>
               <span><b className="font-display text-xl tabular-nums">{pesos(totales.insumos)}</b> <span className="text-tenue">insumos</span></span>
             </div>
-            <div className="overflow-x-auto border border-linea bg-white">
+            <div className="overflow-x-auto vidrio rounded-2xl">
               <table className="w-full">
-                <thead className="border-b border-linea bg-papel">
+                <thead className="border-b border-linea/70 bg-white/40">
                   <tr><th className={TH}>Fecha</th><th className={TH}>Predio · lote</th><th className={TH}>Actividades</th><th className={`${TH} text-right`}>Núcleos</th>
                     <th className={`${TH} text-right`}>Jornales</th><th className={TH}>Insumos</th><th className={`${TH} text-right`}>Costo</th><th className={TH}>Título</th></tr>
                 </thead>
@@ -172,7 +172,7 @@ function EditarTitulo({ inicial, cat, onCerrar, onListo }: { inicial: Partial<Ti
     return (
       <Ventana titulo="Clave para entregar" onCerrar={onCerrar}>
         <p className="text-[12.5px] text-suave">Pásale esto a quien va a usar la app. La clave no se vuelve a mostrar: si se pierde, se pone otra.</p>
-        <div className="my-5 border border-linea bg-white px-5 py-4">
+        <div className="my-5 vidrio rounded-2xl px-5 py-4">
           <p className="text-[10px] uppercase tracking-[.16em] text-tenue">Título</p>
           <p className="font-display text-xl font-bold">{(nombre || inicial.nombre || '').toUpperCase()}</p>
           <p className="mt-3 text-[10px] uppercase tracking-[.16em] text-tenue">Clave</p>

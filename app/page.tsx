@@ -158,11 +158,13 @@ export default function LandingPage() {
     // que comprimir— y desde `lg` la toma de la altura de la ventana.
     <div
       style={ESCALA}
-      className="flex min-h-screen flex-col bg-tinta text-[14px] text-hueso lg:flex-row lg:text-[length:var(--esc)]"
+      className="relative isolate flex min-h-screen flex-col bg-tinta text-[14px] text-hueso lg:flex-row lg:text-[length:var(--esc)]"
     >
 
-      {/* ── Fotografía del terreno ── */}
-      <section className="relative h-56 shrink-0 overflow-hidden sm:h-72 lg:order-2 lg:h-auto lg:min-h-screen lg:flex-1">
+      {/* ── Fotografía del terreno ──
+          En el celular va arriba y el panel sube un poco sobre ella; desde `lg`
+          ocupa toda la ventana, fija, y el panel de acceso flota encima en vidrio. */}
+      <section className="relative h-64 shrink-0 overflow-hidden sm:h-80 lg:fixed lg:inset-0 lg:h-auto">
         {BG_IMAGES.map((src, i) => (
           <div
             key={src}
@@ -182,10 +184,10 @@ export default function LandingPage() {
 
         {/* Velo en tinta: funde la foto con el panel y deja leer el pie. */}
         <div className="absolute inset-0 bg-gradient-to-t from-tinta/85 via-tinta/15 to-tinta/10" />
-        <div className="absolute inset-y-0 left-0 hidden w-40 bg-gradient-to-r from-tinta/70 to-transparent lg:block" />
+        <div className="absolute inset-y-0 left-0 hidden w-[55%] bg-gradient-to-r from-tinta/30 to-transparent lg:block" />
 
-        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 px-8 pb-7 sm:px-12 lg:pb-10">
-          <p className="hidden max-w-[26em] font-display text-[1.45em] font-semibold leading-snug text-white sm:block lg:text-[1.6em]">
+        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 px-8 pb-14 sm:px-12 lg:pb-10 lg:pl-[calc(44%+4rem)] xl:pl-[calc(40%+4rem)]">
+          <p className="hidden max-w-[24em] font-titulo text-[1.6em] font-normal italic leading-snug text-white sm:block lg:text-[1.8em]">
             Restauramos la biodiversidad de los ecosistemas con especies forestales nativas
           </p>
           <div className="flex shrink-0 gap-1.5">
@@ -195,7 +197,7 @@ export default function LandingPage() {
                 type="button"
                 onClick={() => setBgIndex(i)}
                 aria-label={`Ver foto ${i + 1}`}
-                className={`h-[2px] w-7 transition-colors ${i === bgIndex ? 'bg-ambar' : 'bg-hueso/35 hover:bg-hueso/60'}`}
+                className={`h-1.5 rounded-full transition-all ${i === bgIndex ? 'w-8 bg-ambar' : 'w-4 bg-hueso/40 hover:bg-hueso/70'}`}
               />
             ))}
           </div>
@@ -219,16 +221,16 @@ export default function LandingPage() {
           Mezclar los dos en una sola curva no funciona: en un portátil los
           espacios tienen que apretarse mucho más de lo que el texto puede
           encoger sin volverse ilegible. */}
-      <section className="flex flex-col px-8 py-[clamp(0.875rem,2vh,2.5rem)] sm:px-12 lg:order-1 lg:min-h-screen lg:w-[44%] lg:py-[clamp(0.875rem,2vh,3rem)] xl:w-[40%] xl:px-16">
-        <Firma className="gap-[0.18em] [&>span]:text-[0.715em] [&>svg]:h-[1.57em] [&>svg]:w-[1.29em]" />
+      <section className="relative z-10 -mt-8 flex flex-col rounded-t-[28px] border-t border-white/10 bg-tinta/85 px-7 py-[clamp(0.875rem,2vh,2.5rem)] shadow-[inset_0_1px_0_rgb(255_255_255/0.08)] backdrop-blur-2xl sm:px-12 lg:m-4 lg:min-h-[calc(100vh-2rem)] lg:w-[44%] lg:rounded-[28px] lg:border lg:border-white/15 lg:bg-tinta/40 lg:py-[clamp(0.875rem,2vh,3rem)] lg:shadow-2xl xl:w-[40%] xl:px-14">
+        <Firma className="gap-[0.6em] [&>span]:text-[0.715em] [&>svg]:h-[1.57em] [&>svg]:w-[1.29em]" />
 
         <div className="flex flex-1 flex-col justify-center py-[clamp(0.25rem,1vh,4rem)]">
           <div className="w-full max-w-[34em]">
-            <p className="mb-[clamp(0.5rem,1.4vh,1.5rem)] text-[0.75em] uppercase tracking-[.28em] text-taupe">Uso interno del equipo</p>
-            <h1 className="font-display text-[3.4em] leading-[1.02] text-white">
+            <p className="mb-[clamp(0.5rem,1.4vh,1.5rem)] text-[0.75em] font-medium uppercase tracking-[.22em] text-ambar">Uso interno del equipo</p>
+            <h1 className="font-sans text-[3.4em] leading-[1.02] tracking-[-0.03em] text-white">
               <span className="font-bold">Intranet</span>
               <br />
-              <span className="font-thin">corporativa</span>
+              <span className="font-titulo text-[1.06em] font-light italic tracking-[-0.01em]">corporativa</span>
             </h1>
             <p className="mt-[clamp(0.75rem,2vh,2.25rem)] text-[1em] font-light leading-relaxed text-hueso/75">
               Aquí el equipo reserva vehículos, registra las inspecciones de recepción y devolución,
@@ -236,7 +238,7 @@ export default function LandingPage() {
             </p>
 
             {/* ── Acceso ── */}
-            <div className="mt-[clamp(1rem,2.5vh,3rem)] border-t border-hueso/15 pt-[clamp(0.875rem,1.9vh,2.5rem)]">
+            <div className="mt-[clamp(1rem,2.5vh,3rem)] border-t border-white/10 pt-[clamp(0.875rem,1.9vh,2.5rem)]">
               {authLoading && (
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-[1.6em] w-[1.6em] animate-spin text-taupe" />
@@ -251,7 +253,7 @@ export default function LandingPage() {
                   <button
                     onClick={handleMicrosoftLogin}
                     disabled={loading}
-                    className="flex w-full items-center gap-3 bg-hueso px-[1.43em] py-[1em] text-tinta transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex w-full items-center gap-3 rounded-2xl bg-hueso px-[1.43em] py-[1em] text-tinta shadow-lg transition-all hover:bg-white active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <svg className="h-[1.43em] w-[1.43em] shrink-0" viewBox="0 0 23 23" fill="none" aria-hidden="true">
                       <path fill="#F25022" d="M1 1H10V10H1V1Z" />
@@ -259,13 +261,13 @@ export default function LandingPage() {
                       <path fill="#7FBA00" d="M12 1H21V10H12V1Z" />
                       <path fill="#FFB900" d="M12 12H21V21H12V12Z" />
                     </svg>
-                    <span className="flex-1 text-left text-[0.785em] font-medium uppercase tracking-[.16em]">
+                    <span className="flex-1 text-left text-[0.93em] font-medium">
                       {loading ? 'Redirigiendo…' : 'Iniciar con Microsoft 365'}
                     </span>
                     {!loading && <ArrowRight className="h-[1.14em] w-[1.14em] shrink-0 opacity-50" />}
                   </button>
 
-                  {msg && <p className="mt-4 border-l-2 border-red-400 pl-3 text-[0.857em] text-red-200">{msg}</p>}
+                  {msg && <p className="vidrio-oscuro mt-4 rounded-xl px-3.5 py-2.5 text-[0.857em] text-red-200">{msg}</p>}
 
                   <p className="mt-4 text-[0.715em] uppercase tracking-[.16em] text-hueso/40">
                     Solo personal autorizado
@@ -274,18 +276,18 @@ export default function LandingPage() {
               )}
 
               {!authLoading && user && (
-                <div className="flex items-center gap-4">
+                <div className="vidrio-oscuro flex items-center gap-4 rounded-2xl px-[1em] py-[0.9em]">
                   {foto ? (
                     // eslint-disable-next-line @next/next/no-img-element -- foto en base64 de la ficha
                     <img src={foto} alt="" className="h-[3.43em] w-[3.43em] shrink-0 rounded-full object-cover ring-2 ring-hueso/30" />
                   ) : (
-                    <div className="grid h-[3.43em] w-[3.43em] shrink-0 place-items-center bg-bosque font-display text-[1.285em] font-bold text-white">
+                    <div className="grid h-[3.43em] w-[3.43em] shrink-0 place-items-center rounded-full bg-bosque text-[1.285em] font-semibold text-white ring-2 ring-hueso/20">
                       {initials}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="text-[0.68em] uppercase tracking-[.2em] text-taupe">Sesión activa</p>
-                    <p className="truncate font-display text-[1.215em] font-semibold leading-tight text-white">
+                    <p className="truncate text-[1.215em] font-semibold leading-tight text-white">
                       {displayName}
                     </p>
                     <p className="truncate text-[0.857em] font-light text-hueso/55">{user.email}</p>
@@ -293,7 +295,7 @@ export default function LandingPage() {
                   <button
                     onClick={handleSignOut}
                     title="Cerrar sesión"
-                    className="flex shrink-0 items-center gap-1.5 text-[0.715em] uppercase tracking-[.16em] text-hueso/50 transition-colors hover:text-red-300"
+                    className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[0.82em] text-hueso/60 transition-colors hover:bg-white/10 hover:text-red-200"
                   >
                     <LogOut className="h-[1.4em] w-[1.4em]" /> Salir
                   </button>
@@ -304,8 +306,8 @@ export default function LandingPage() {
             {/* ── Servicios ── */}
             {!authLoading && (
               <nav className="mt-[clamp(0.625rem,1.7vh,3rem)]" aria-label="Servicios">
-                <p className="mb-1 text-[0.715em] uppercase tracking-[.2em] text-taupe">Servicios</p>
-                <div className="border-t border-hueso/15">
+                <p className="mb-2 text-[0.715em] uppercase tracking-[.2em] text-taupe">Servicios</p>
+                <div className="space-y-[clamp(0.3rem,0.7vh,0.6rem)]">
                   {/* Intranet — admins y usuarios con departamento */}
                   {user && (isAdmin || !!department) && (
                     <Fila
@@ -341,16 +343,16 @@ export default function LandingPage() {
                       <button
                         type="button"
                         onClick={() => setValidarMsg(v => !v)}
-                        className="flex w-full items-center gap-4 border-b border-hueso/15 py-[clamp(0.375rem,0.85vh,1.25rem)] text-left"
+                        className="vidrio-oscuro flex w-full items-center gap-4 rounded-2xl px-[1.1em] py-[clamp(0.45rem,0.95vh,1.1rem)] text-left opacity-70"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="font-display text-[1.07em] font-semibold text-hueso/45">Validar mi reserva</p>
+                          <p className="text-[1.07em] font-semibold text-hueso/60">Validar mi reserva</p>
                           <p className="text-[0.82em] font-light leading-tight text-hueso/35">Requiere inicio de sesión</p>
                         </div>
                         <ArrowRight className="h-[1.07em] w-[1.07em] shrink-0 text-hueso/20" />
                       </button>
                       {validarMsg && (
-                        <p className="mt-3 border-l-2 border-ambar pl-3 text-[0.857em] font-light text-hueso/75">
+                        <p className="vidrio-oscuro rounded-xl px-3.5 py-2.5 text-[0.857em] font-light text-hueso/80">
                           Debes iniciar sesión primero para acceder a este servicio.
                         </p>
                       )}
@@ -384,7 +386,7 @@ export default function LandingPage() {
                         <span className="text-[0.715em] text-hueso/40">{entry.date}</span>
                         <span className="inline-flex items-center gap-1.5 text-[0.715em] text-hueso/60">
                           <i
-                            className={`inline-block h-[0.6em] w-[0.6em] ${entry.tipo === 'launch' ? 'bg-ambar' : 'bg-salvia'}`}
+                            className={`inline-block h-[0.6em] w-[0.6em] rounded-full ${entry.tipo === 'launch' ? 'bg-ambar' : 'bg-salvia'}`}
                           />
                           {entry.tipo === 'launch' ? 'Lanzamiento' : 'Mejoras'}
                         </span>
@@ -405,8 +407,8 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <footer className="flex items-center justify-between gap-4 border-t border-hueso/10 pt-[clamp(0.75rem,1.6vh,2rem)] text-[0.715em] uppercase tracking-[.2em] text-hueso/40">
-          <span className="font-display">Inspirar · Nutrir · Actuar</span>
+        <footer className="flex items-center justify-between gap-4 border-t border-white/10 pt-[clamp(0.75rem,1.6vh,2rem)] text-[0.715em] uppercase tracking-[.2em] text-hueso/40">
+          <span>Inspirar · Nutrir · Actuar</span>
           <span>© {new Date().getFullYear()}</span>
         </footer>
       </section>
@@ -414,7 +416,7 @@ export default function LandingPage() {
   )
 }
 
-/** Un servicio: nombre, para qué sirve y una flecha. Separado por filete. */
+/** Un servicio: nombre, para qué sirve y una flecha, en una tarjeta de vidrio. */
 function Fila({
   href,
   titulo,
@@ -427,10 +429,10 @@ function Fila({
   destacada?: boolean
 }) {
   return (
-    <Link href={href} className="group flex items-center gap-4 border-b border-hueso/15 py-[clamp(0.375rem,0.85vh,1.25rem)]">
-      {destacada && <i className="h-[2.3em] w-[2px] shrink-0 bg-ambar" />}
+    <Link href={href} className="vidrio-oscuro group flex items-center gap-4 rounded-2xl px-[1.1em] py-[clamp(0.45rem,0.95vh,1.1rem)] transition-colors hover:bg-white/[.13]">
+      {destacada && <i className="h-[2.3em] w-[3px] shrink-0 rounded-full bg-ambar" />}
       <div className="min-w-0 flex-1">
-        <p className="font-display text-[1.07em] font-semibold text-white">{titulo}</p>
+        <p className="text-[1.07em] font-semibold text-white">{titulo}</p>
         <p className="text-[0.82em] font-light leading-tight text-hueso/55">{sub}</p>
       </div>
       <ArrowRight

@@ -211,7 +211,7 @@ function Bienvenida({
         <div className="mx-auto mt-4 h-px w-[clamp(120px,18vw,220px)] bg-gradient-to-r from-transparent via-musgo/60 to-transparent" />
 
         {estado !== 'error' && (
-          <p className={`mt-4 min-h-[1.3em] font-display text-[clamp(22px,4.2vw,40px)] font-light leading-tight text-tinta transition-opacity duration-500 ${texto ? 'opacity-100' : 'opacity-0'}`}>
+          <p className={`mt-4 min-h-[1.3em] font-titulo text-[clamp(24px,4.4vw,44px)] font-light italic leading-tight text-tinta transition-opacity duration-500 ${texto ? 'opacity-100' : 'opacity-0'}`}>
             {texto ?? '·'}
           </p>
         )}

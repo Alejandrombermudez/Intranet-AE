@@ -117,9 +117,9 @@ export default function Compras({ cat }: { cat: Catalogo }) {
         ) : visibles.length === 0 ? (
           <Vacio>No hay facturas en este periodo</Vacio>
         ) : (
-          <div className="overflow-x-auto border border-linea bg-white">
+          <div className="overflow-x-auto vidrio rounded-2xl">
             <table className="w-full">
-              <thead className="border-b border-linea bg-papel">
+              <thead className="border-b border-linea/70 bg-white/40">
                 <tr>
                   <th className={TH}>Fecha</th><th className={TH}>Proveedor</th><th className={TH}>Número</th>
                   <th className={TH}>Proyecto</th><th className={TH}>Líneas</th><th className={`${TH} text-right`}>Total</th><th className={TH}></th>
@@ -205,9 +205,9 @@ function DetalleFactura({ id, cat, onCerrar, onCambio }: { id: string; cat: Cata
             </Aviso>
           )}
 
-          <div className="overflow-x-auto border border-linea bg-white">
+          <div className="overflow-x-auto vidrio rounded-2xl">
             <table className="w-full">
-              <thead className="border-b border-linea bg-papel">
+              <thead className="border-b border-linea/70 bg-white/40">
                 <tr><th className={TH}>#</th><th className={TH}>Descripción</th><th className={`${TH} text-right`}>Cantidad</th>
                   <th className={`${TH} text-right`}>Total</th><th className={TH}>Qué es</th></tr>
               </thead>

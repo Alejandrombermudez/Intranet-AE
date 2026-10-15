@@ -24,15 +24,25 @@ documentos maestros de arquitectura de todo el ecosistema (no solo de esta app).
 
 ## Sistema visual — Manual de Identidad de Marca 2024
 
-Toda la intranet habla el lenguaje del módulo Reporte: Josefin Sans para títulos, Poppins para el cuerpo,
-papel y tinta, verde bosque como color firma, filetes finos en vez de cajas de color. Dónde vive:
+Desde el 2026-10-15, a pedido del usuario: **Poppins para la interfaz y el cuerpo** (como los documentos de la
+organización) **intercalada con Fraunces para los títulos** —una serif de trazo suave: `h1` y `h2` la toman solos
+(menos los rótulos en mayúsculas) y en lo demás va con la clase `font-titulo`; `font-display` sigue siendo Poppins
+porque también la usan cifras y rótulos diminutos—. Josefin Sans salió. Y **superficies de vidrio** sobre un fondo hueso con manchas de salvia, ámbar
+y celeste y los anillos de la huella. Verde bosque sigue siendo el color firma. Dónde vive:
 
 - **`app/globals.css`** — la paleta del manual con nombre propio (`bg-bosque`, `text-tenue`, `border-linea`…)
   y, ojo, **las familias estándar de Tailwind remapeadas a la marca**: `stone`/`gray` → neutros cálidos,
   `primary`/`emerald`/`teal`/`green` → verde bosque, `amber`/`yellow` → ámbar, `orange` → marrón,
   `red`/`rose` → arcilla, `sky`/`blue`/`cyan`/`indigo` → pizarra, `violet`/`purple` → musgo.
-  **`bg-red-500` no es rojo.** Los radios (2–4 px) y las sombras tenues también salen de ahí.
-- **`app/components/marca/`** — las piezas: `Cabecera` (la banda en tinta de cada módulo), `Contenido`,
+  **`bg-red-500` no es rojo.** También los radios (redondeados: `rounded-2xl` = 20 px), las sombras, el fondo
+  (`body::before`/`::after`) y el vidrio: utilidades `vidrio` (claro) y `vidrio-oscuro` (sobre bosque o foto), y
+  **toda tarjeta `bg-white` se vuelve translúcida por una regla global** —salvo dentro de `.fixed` (ventanas),
+  `.absolute` (menús), `.sticky` y campos; para dejar una opaca, clase `sin-vidrio`—. Las raíces
+  `min-h-screen bg-papel` quedan transparentes para que se vea el fondo. El `backdrop-filter` va solo en las
+  utilidades, no en la regla global: haría de cada tarjeta el contenedor de las ventanas `fixed` que tenga adentro.
+  `--font-josefin` es un alias de Poppins (lo piden Reporte y el mapa del sistema).
+- **`app/components/marca/`** — las piezas: `Cabecera` (panel redondeado en verde bosque con cifras y pestañas
+  en vidrio oscuro), `Contenido`,
   `Pestanas`, `Seccion`, `Boton`, `MarcaEstado`, `Aviso`, `Cargando`, `Vacio`, `Firma`. Una pantalla nueva
   empieza por `Cabecera` + `Contenido`. No escribas colores en hexadecimal: usa la paleta con nombre.
 - **Los mapas no pasan por la paleta, a propósito.** Los colores de campo (confirmada, modificada, nueva,

@@ -26,9 +26,9 @@ export default function CatalogoInsumos({ cat, recargar }: { cat: Catalogo; reca
         sub="La unidad es en la que se cuenta en bodega y en campo (bulto, litro, unidad). Si el proveedor factura en otra —kilos, galones—, al registrar la factura se pone cuántas de estas trae cada una."
         acciones={<Boton icono={<Plus size={13} />} onClick={() => setInsumo({ unidad: 'unidad' })}>Nuevo insumo</Boton>}
       >
-        <div className="overflow-x-auto border border-linea bg-white">
+        <div className="overflow-x-auto vidrio rounded-2xl">
           <table className="w-full">
-            <thead className="border-b border-linea bg-papel">
+            <thead className="border-b border-linea/70 bg-white/40">
               <tr><th className={TH}>Insumo</th><th className={TH}>Se cuenta en</th><th className={TH}>Presentación</th><th className={TH}>Categoría</th>
                 <th className={`${TH} text-right`}>Costo promedio</th><th className={TH}>Última compra</th><th className={TH}></th></tr>
             </thead>
@@ -54,9 +54,9 @@ export default function CatalogoInsumos({ cat, recargar }: { cat: Catalogo; reca
         sub="La central recibe lo comprado; cada proyecto tiene la suya, y el vivero también. La app de campo descuenta de la bodega que se elige en cada registro."
         acciones={<Boton icono={<Plus size={13} />} onClick={() => setBodega({ tipo: 'proyecto' })}>Nueva bodega</Boton>}
       >
-        <div className="overflow-x-auto border border-linea bg-white">
+        <div className="overflow-x-auto vidrio rounded-2xl">
           <table className="w-full">
-            <thead className="border-b border-linea bg-papel">
+            <thead className="border-b border-linea/70 bg-white/40">
               <tr><th className={TH}>Bodega</th><th className={TH}>Tipo</th><th className={TH}>Proyecto</th><th className={TH}>Responsable</th><th className={TH}>Estado</th><th className={TH}></th></tr>
             </thead>
             <tbody>

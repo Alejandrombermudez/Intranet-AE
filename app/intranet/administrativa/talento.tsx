@@ -35,7 +35,7 @@ export default function Talento() {
   const [sub, setSub] = useState<Sub>('personas')
   return (
     <>
-      <div className="mb-8 border-b border-linea">
+      <div className="mb-8">
         <Pestanas items={[
           { id: 'personas', label: 'Personas', activa: sub === 'personas', onClick: () => setSub('personas') },
           { id: 'cuentas', label: 'Cuentas de cobro', activa: sub === 'cuentas', onClick: () => setSub('cuentas') },
@@ -117,7 +117,7 @@ export function TarjetasPersonas({ filas }: { filas: FilaPersona[] }) {
         const porVencer = dias !== null && dias >= 0 && dias <= 30
         return (
           <Link key={p.id} href={`/intranet/administrativa/personas/${p.id}`}
-            className={`group relative flex gap-4 border border-linea bg-white px-5 py-5 transition-colors hover:border-bosque ${p.activo ? '' : 'opacity-50'}`}>
+            className={`group relative flex gap-4 vidrio rounded-2xl px-5 py-5 transition-colors hover:border-bosque ${p.activo ? '' : 'opacity-50'}`}>
             <FotoPersona persona={p} tam={64} claro />
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-[1.05rem] font-semibold leading-tight text-tinta">{[p.nombres, p.apellidos].filter(Boolean).join(' ') || p.email}</p>
@@ -269,9 +269,9 @@ function Bandeja() {
       <Mensaje error={msg.error} ok={msg.ok} />
       <Seccion titulo={`${cuentas.length} cuenta${cuentas.length === 1 ? '' : 's'} · ${pesos(total)}`} sub="El .zip lleva el PDF de cada cuenta, su planilla de seguridad social si la adjuntaron y una relación en CSV con los datos bancarios para el pago.">
         {data === null ? <Vacio>Cargando…</Vacio> : cuentas.length === 0 ? <Vacio>No hay cuentas de cobro en este mes</Vacio> : (
-          <div className="overflow-x-auto border border-linea bg-white">
+          <div className="overflow-x-auto vidrio rounded-2xl">
             <table className="w-full">
-              <thead className="border-b border-linea bg-papel">
+              <thead className="border-b border-linea/70 bg-white/40">
                 <tr>
                   <th className={TH}><input type="checkbox" checked={sel.size === cuentas.length && cuentas.length > 0}
                     onChange={(e) => setSel(e.target.checked ? new Set(cuentas.map((c) => c.id)) : new Set())} /></th>
@@ -361,7 +361,7 @@ function FormPlantillas({ inicial }: { inicial: ConfigTalento }) {
           <Campo etiqueta="Cargo"><input className={CAMPO} value={v.firmante_cargo ?? ''} onChange={(e) => pon('firmante_cargo', e.target.value)} placeholder="Dirección administrativa y financiera" /></Campo>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-5">
-          <div className="grid h-24 w-64 place-items-center border border-dashed border-taupe bg-white">
+          <div className="grid h-24 w-64 place-items-center rounded-2xl border border-dashed border-taupe bg-white/45">
             {v.firmante_firma ? <img src={v.firmante_firma} alt="Firma" className="max-h-20 max-w-60 object-contain" /> : <span className="text-[11px] text-tenue">Sin firma</span>}
           </div>
           <input type="file" accept="image/png,image/jpeg" className="text-[12px]" onChange={(e) => firma(e.target.files?.[0])} />

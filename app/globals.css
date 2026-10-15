@@ -4,9 +4,23 @@
    SISTEMA VISUAL DE LA INTRANET
    Manual de Identidad de Marca — Amazonía Emprende 2024
 
-   El lenguaje nació en el módulo Reporte y aquí se vuelve de toda la app:
-   papel y tinta, verde bosque como color firma, Josefin Sans para títulos,
-   Poppins para el cuerpo, filetes finos en vez de cajas de color.
+   Desde el 2026-10-15: Poppins para el cuerpo (como los documentos de la
+   organización), Fraunces para los títulos (font-titulo) y superficies de VIDRIO sobre un fondo hueso con manchas de
+   salvia, ámbar y celeste y los anillos de la huella. Verde bosque sigue
+   siendo el color firma.
+
+   VIDRIO, en tres piezas:
+     · el fondo (body::before y body::after) vive fijo detrás de todo;
+     · las raíces de página «min-h-screen bg-papel» quedan transparentes para
+       dejarlo ver;
+     · toda tarjeta «bg-white» se vuelve translúcida —sin tocar las 47
+       pantallas que la usan—, salvo ventanas (dentro de .fixed), menús
+       (.absolute), barras pegadas (.sticky) y campos de formulario.
+       Para una superficie que deba quedar opaca: clase «sin-vidrio».
+     · las utilidades «vidrio» y «vidrio-oscuro» ponen además el desenfoque
+       (backdrop-filter). No van en la regla global a propósito: un
+       backdrop-filter vuelve a la tarjeta el contenedor de cualquier ventana
+       «fixed» que tenga adentro.
 
    CÓMO FUNCIONA: además de la paleta con nombre propio (bg-bosque,
    text-tenue, border-fina…), las familias estándar de Tailwind que ya usaba
@@ -29,17 +43,19 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --background: #f4f1ea;
+  --background: #e6dfd1;
   --foreground: #1e1a18;
 }
 
 /* Tipografías: las variables las pone next/font en <body> (app/layout.tsx),
-   por eso van en un bloque inline. */
+   por eso van en un bloque inline. font-display queda como alias de Poppins
+   para no tocar las pantallas que ya lo usan. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-josefin), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-titulo: var(--font-fraunces), Georgia, "Times New Roman", serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "Cascadia Mono", Menlo, monospace;
 }
 
@@ -279,36 +295,39 @@
   --color-purple-900: #2c2a21;
   --color-purple-950: #1c1b15;
 
-  /* ── Esquinas casi rectas, como en Reporte ─────────────────────────────── */
-  /* rounded-full no cambia: los avatares y los interruptores siguen redondos. */
-  --radius:     2px;
-  --radius-xs:  1px;
-  --radius-sm:  2px;
-  --radius-md:  2px;
-  --radius-lg:  3px;
-  --radius-xl:  3px;
-  --radius-2xl: 4px;
-  --radius-3xl: 5px;
-  --radius-4xl: 6px;
+  /* ── Esquinas redondeadas: el vidrio no tiene aristas ──────────────────── */
+  --radius:     10px;
+  --radius-xs:  4px;
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 26px;
+  --radius-4xl: 32px;
 
-  /* ── Sombras cálidas y tenues: el relieve lo dan los filetes ───────────── */
+  /* ── Sombras amplias y cálidas: el vidrio flota sobre el fondo ─────────── */
   --shadow-2xs: 0 1px rgb(30 26 24 / 0.04);
   --shadow-xs:  0 1px 2px 0 rgb(30 26 24 / 0.05);
-  --shadow-sm:  0 1px 2px 0 rgb(30 26 24 / 0.06);
-  --shadow:     0 1px 2px 0 rgb(30 26 24 / 0.06);
-  --shadow-md:  0 2px 6px -1px rgb(30 26 24 / 0.07);
-  --shadow-lg:  0 6px 16px -4px rgb(30 26 24 / 0.10);
-  --shadow-xl:  0 12px 28px -8px rgb(30 26 24 / 0.14);
-  --shadow-2xl: 0 20px 44px -12px rgb(30 26 24 / 0.22);
+  --shadow-sm:  0 1px 2px 0 rgb(30 26 24 / 0.04), 0 6px 18px -8px rgb(30 26 24 / 0.12);
+  --shadow:     0 1px 2px 0 rgb(30 26 24 / 0.04), 0 6px 18px -8px rgb(30 26 24 / 0.12);
+  --shadow-md:  0 2px 4px -1px rgb(30 26 24 / 0.05), 0 12px 28px -12px rgb(30 26 24 / 0.16);
+  --shadow-lg:  0 4px 8px -2px rgb(30 26 24 / 0.06), 0 18px 40px -16px rgb(30 26 24 / 0.20);
+  --shadow-xl:  0 8px 16px -6px rgb(30 26 24 / 0.08), 0 28px 56px -20px rgb(30 26 24 / 0.26);
+  --shadow-2xl: 0 12px 24px -8px rgb(30 26 24 / 0.10), 0 40px 80px -24px rgb(30 26 24 / 0.34);
 
-  /* ── Pesos: las fuentes se cargan hasta 700 ────────────────────────────── */
-  /* font-black (900) obligaba al navegador a inventarse una negrita. */
+  /* ── Pesos: Poppins se carga de 200 a 700 ──────────────────────────────── */
+  /* font-black (900) obligaba al navegador a inventarse una negrita, y
+     font-thin (100) no existe en la carga. */
+  --font-weight-thin:      200;
   --font-weight-extrabold: 700;
   --font-weight-black:     700;
 }
 
 @layer base {
   body {
+    /* Lo que todavía pide Josefin Sans (Reporte, mapa del sistema) recibe Poppins. */
+    --font-josefin: var(--font-poppins);
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
@@ -316,11 +335,47 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Títulos en Josefin Sans, como pide el manual para títulos y subtítulos. */
-  h1, h2, h3, h4 {
-    font-family: var(--font-josefin), ui-sans-serif, system-ui, sans-serif;
-    letter-spacing: 0.01em;
+  /* El fondo: manchas de la paleta, muy abiertas, fijas detrás de todo. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(40% 50% at 6% 8%,   rgb(175 189 178 / 1), transparent 72%),
+      radial-gradient(34% 42% at 96% 18%, rgb(225 166 68 / 0.50),  transparent 70%),
+      radial-gradient(38% 44% at 18% 62%, rgb(175 189 178 / 0.85), transparent 70%),
+      radial-gradient(36% 40% at 84% 64%, rgb(225 166 68 / 0.34),  transparent 70%),
+      radial-gradient(44% 48% at 92% 100%, rgb(47 63 50 / 0.36),   transparent 70%),
+      radial-gradient(40% 46% at 4% 100%, rgb(183 205 222 / 1), transparent 72%),
+      radial-gradient(26% 30% at 52% 40%, rgb(244 241 234 / 0.6),  transparent 80%);
   }
+  /* Los anillos de la huella (el concepto de la marca), apenas visibles, en una esquina. */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: repeating-radial-gradient(circle at 92% 8%, rgb(47 63 50 / 0.07) 0 1px, transparent 1.5px 26px);
+    -webkit-mask-image: radial-gradient(60% 60% at 92% 8%, #000, transparent 75%);
+    mask-image: radial-gradient(60% 60% at 92% 8%, #000, transparent 75%);
+  }
+
+  /* Títulos en Fraunces, intercalada con Poppins: h1 y h2 (menos los que son
+     rótulos en mayúsculas) y todo lo que lleve la clase font-titulo. h3 y h4
+     siguen en Poppins: son títulos de tarjeta, de lectura rápida. */
+  h1:not(.uppercase), h2:not(.uppercase) {
+    font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
+    letter-spacing: -0.012em;
+  }
+  h3, h4 {
+    font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+  /* El eje SOFT redondea los remates de Fraunces: conversa con el vidrio. */
+  h1, h2, .font-titulo { font-variation-settings: "SOFT" 70; }
 
   ::selection { background: #2f3f32; color: #f4f1ea; }
 
@@ -329,4 +384,49 @@
 
   :focus-visible { outline: 2px solid #2f3f32; outline-offset: 2px; }
   input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
+}
+
+/* ── Vidrio ──────────────────────────────────────────────────────────────── */
+
+/* Claro: tarjetas, paneles, barras sobre el fondo hueso. */
+@utility vidrio {
+  background-color: rgb(255 253 249 / 0.56);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  backdrop-filter: blur(22px) saturate(1.5);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.75), 0 1px 2px rgb(30 26 24 / 0.04), 0 14px 36px -18px rgb(30 26 24 / 0.22);
+}
+
+/* Oscuro: sobre la cabecera en bosque o sobre fotografía. */
+@utility vidrio-oscuro {
+  background-color: rgb(255 255 255 / 0.07);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgb(255 255 255 / 0.13);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.10);
+}
+
+@layer utilities {
+  /* Toda tarjeta blanca es vidrio. :where deja la especificidad de .bg-white,
+     así un hover:bg-… de la misma tarjeta sigue mandando. */
+  .bg-white:where(:not(.fixed *, .absolute, .absolute *, .sticky, .sticky *, input, select, textarea, option, .sin-vidrio, .sin-vidrio *)) {
+    background-color: rgb(255 253 249 / 0.6);
+  }
+
+  /* Las raíces de página dejan ver el fondo. */
+  .min-h-screen:where(.bg-papel, .bg-stone-50, .bg-stone-100, .bg-gray-50, .bg-gray-100, .bg-background) {
+    background-color: transparent;
+  }
+}
+
+/* Quien pidió menos transparencia en su sistema ve superficies opacas. */
+@media (prefers-reduced-transparency: reduce) {
+  .bg-white, .vidrio { background-color: #fffdf9 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
+
+/* Al imprimir no hay fondo ni vidrio: papel blanco, como un documento. */
+@media print {
+  body { background: #fff; }
+  body::before, body::after { display: none; }
+  .bg-white, .vidrio { background-color: #fff !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 }

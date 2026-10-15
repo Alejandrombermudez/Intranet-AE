@@ -77,7 +77,7 @@ export function FormularioFicha({
         if (!campos.length) return null
         return (
           <fieldset key={g.id} className="mb-9">
-            <legend className="mb-4 w-full border-b border-linea pb-2 font-display text-[1.05rem] font-semibold text-tinta">{g.titulo}</legend>
+            <legend className="mb-4 w-full border-b border-linea pb-2 font-titulo text-[1.2rem] font-medium text-tinta">{g.titulo}</legend>
             <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
               {campos.map((c) => (
                 <CampoFichaInput key={c.clave} campo={c} valor={v[c.clave]} onCambio={(x) => pon(c.clave, x)}
@@ -89,13 +89,13 @@ export function FormularioFicha({
       })}
 
       <fieldset className="mb-9">
-        <legend className="mb-4 w-full border-b border-linea pb-2 font-display text-[1.05rem] font-semibold text-tinta">Firma</legend>
+        <legend className="mb-4 w-full border-b border-linea pb-2 font-titulo text-[1.2rem] font-medium text-tinta">Firma</legend>
         <Firma valor={(v.firma as string) ?? null} onCambio={(x) => pon('firma', x)} />
       </fieldset>
 
       {modo === 'rrhh' && (
         <fieldset className="mb-9">
-          <legend className="mb-4 w-full border-b border-linea pb-2 font-display text-[1.05rem] font-semibold text-tinta">Notas de talento humano</legend>
+          <legend className="mb-4 w-full border-b border-linea pb-2 font-titulo text-[1.2rem] font-medium text-tinta">Notas de talento humano</legend>
           <textarea className={`${CAMPO} min-h-24`} value={(v.notas_rrhh as string) ?? ''} onChange={(e) => pon('notas_rrhh', e.target.value)}
             placeholder="Solo las ve talento humano." />
           <Aviso tono="pizarra" className="mt-4">
@@ -107,7 +107,7 @@ export function FormularioFicha({
       )}
 
       {modo === 'persona' && (
-        <div className="mb-8 border-l-2 border-bosque bg-white px-5 py-4">
+        <div className="mb-8 vidrio rounded-2xl px-5 py-4">
           <label className="flex items-start gap-3 text-[12.5px] leading-relaxed text-suave">
             <input type="checkbox" className="mt-1" checked={autoriza} onChange={(e) => { setAutoriza(e.target.checked); if (!e.target.checked) setSensibles(false) }} />
             <span>{AUTORIZACION_TEXTO}</span>
@@ -184,7 +184,7 @@ function Firma({ valor, onCambio }: { valor: string | null; onCambio: (v: string
   }
   return (
     <div className="flex flex-wrap items-center gap-5">
-      <div className="grid h-24 w-64 place-items-center border border-dashed border-taupe bg-white">
+      <div className="grid h-24 w-64 place-items-center rounded-2xl border border-dashed border-taupe bg-white/45">
         {valor ? <img src={valor} alt="Firma" className="max-h-20 max-w-60 object-contain" /> : <PenLine className="text-taupe" size={22} />}
       </div>
       <div className="text-[12px] text-suave">

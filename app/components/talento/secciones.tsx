@@ -78,7 +78,7 @@ export function SeccionDocumentos({ documentos, personaId, modo, onCambio }: {
       </div>
       <Mensaje error={error} />
       {documentos.length === 0 ? <Vacio>Todavía no hay documentos</Vacio> : (
-        <div className="border border-linea bg-white">
+        <div className="vidrio rounded-2xl">
           {documentos.map((d) => (
             <div key={d.id} className="flex items-center gap-4 border-b border-fina px-4 py-3 last:border-0">
               <FileText size={16} className="shrink-0 text-tenue" />
@@ -113,7 +113,7 @@ export function SeccionContratos({ contratos, personaId, modo, proyectos, onCamb
       ) : (
         <div className="space-y-4">
           {contratos.map((c) => (
-            <article key={c.id} className={`border border-linea bg-white px-5 py-4 ${c.estado === 'anulado' ? 'opacity-50' : ''}`}>
+            <article key={c.id} className={`vidrio rounded-2xl px-5 py-4 ${c.estado === 'anulado' ? 'opacity-50' : ''}`}>
               <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] uppercase tracking-[.16em] text-tenue">{VINCULACION[c.vinculacion]}{c.modalidad ? ` · ${MODALIDAD[c.modalidad]}` : ''}</p>
@@ -260,7 +260,7 @@ export function SeccionCertificados({ certificados, personaId, modo, hayContrato
       {!hayContratos ? (
         <Aviso tono="ambar" className="mb-6">Para expedir un certificado laboral, talento humano tiene que cargar primero {modo === 'persona' ? 'tu contrato' : 'el contrato'}.</Aviso>
       ) : (
-        <div className="mb-8 border border-linea bg-white px-5 py-5">
+        <div className="mb-8 vidrio rounded-2xl px-5 py-5">
           <p className="mb-4 text-[12.5px] text-suave">El certificado sale con los datos de la ficha y los contratos, la firma de quien firma por la organización y un código de verificación.</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <Campo etiqueta="Dirigido a (opcional)"><input className={CAMPO} value={dirigido} onChange={(e) => setDirigido(e.target.value)} placeholder="A quien interese" /></Campo>
@@ -275,7 +275,7 @@ export function SeccionCertificados({ certificados, personaId, modo, hayContrato
       {certificados.length > 0 && (
         <>
           <p className={ROTULO}>Expedidos</p>
-          <div className="border border-linea bg-white">
+          <div className="vidrio rounded-2xl">
             {certificados.map((c) => (
               <div key={c.id} className="flex flex-wrap items-center gap-4 border-b border-fina px-4 py-3 last:border-0">
                 <span className="font-mono text-[12px] text-tinta">{c.codigo}</span>
@@ -315,7 +315,7 @@ export function SeccionCuentas({ cuentas, contratos, persona, modo, onCambio }: 
     <div>
       {modo === 'persona' && (
         vigente ? (
-          <div className="mb-8 flex flex-wrap items-center gap-4 border border-linea bg-white px-5 py-4">
+          <div className="mb-8 flex flex-wrap items-center gap-4 vidrio rounded-2xl px-5 py-4">
             <div className="min-w-0 flex-1 text-[12.5px] text-suave">
               Contrato {vigente.numero ? `N.º ${vigente.numero}` : 'vigente'} · {vigente.cargo}
               {vigente.valor_mensual ? <> · honorarios de <b className="text-tinta">{pesos(vigente.valor_mensual)}</b> al mes</> : null}
@@ -331,9 +331,9 @@ export function SeccionCuentas({ cuentas, contratos, persona, modo, onCambio }: 
       )}
       <Mensaje error={error} />
       {cuentas.length === 0 ? <Vacio>Todavía no hay cuentas de cobro</Vacio> : (
-        <div className="overflow-x-auto border border-linea bg-white">
+        <div className="overflow-x-auto vidrio rounded-2xl">
           <table className="w-full">
-            <thead className="border-b border-linea bg-papel">
+            <thead className="border-b border-linea/70 bg-white/40">
               <tr><th className={TH}>N.º</th><th className={TH}>Fecha</th><th className={TH}>Concepto</th><th className={`${TH} text-right`}>Valor</th><th className={TH}>Estado</th><th className={TH}></th></tr>
             </thead>
             <tbody>

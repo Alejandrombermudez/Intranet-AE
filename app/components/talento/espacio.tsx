@@ -175,10 +175,10 @@ export function VistaEspacio({
 
         {tab === 'informacion' && (
           <>
-            <div className="mb-10 flex flex-wrap items-center gap-8 border border-linea bg-white px-6 py-5">
+            <div className="mb-10 flex flex-wrap items-center gap-8 vidrio rounded-2xl px-6 py-5">
               <FotoPersona persona={p} tam={88} onCambiar={cambiarFoto} claro />
               <div className="min-w-0 flex-1">
-                <p className="font-display text-lg font-semibold text-tinta">Tu foto</p>
+                <p className="font-titulo text-xl font-medium text-tinta">Tu foto</p>
                 <p className="max-w-[52ch] text-[12.5px] font-light text-suave">
                   Sale en tu espacio, en el tablero de talento humano y en la página de inicio. Toca la cámara para poner otra;
                   se recorta cuadrada.
@@ -216,12 +216,12 @@ function MiArea({ exp, departamento, esAdmin, pendientes, onTab, esContratista }
     <div className="grid gap-8 lg:grid-cols-[1.35fr_1fr]">
       <div className="space-y-8">
         {/* El área */}
-        <section className="relative overflow-hidden border border-linea bg-white px-7 py-7">
+        <section className="relative overflow-hidden vidrio rounded-2xl px-7 py-7">
           <span className="absolute left-0 top-0 h-full w-1 bg-bosque" />
           <p className="text-[10px] uppercase tracking-[.2em] text-tenue">Tu área</p>
           {departamento ? (
             <>
-              <h2 className="mt-2 font-display text-[2rem] font-bold leading-tight text-tinta">{departamento.nombre}</h2>
+              <h2 className="mt-2 font-titulo text-[2.2rem] font-semibold leading-tight text-tinta">{departamento.nombre}</h2>
               <p className="mt-2 max-w-[56ch] text-[13px] font-light leading-relaxed text-suave">{departamento.que}</p>
               {departamento.ruta && (
                 <div className="mt-6"><Boton href={departamento.ruta} icono={<ArrowRight size={13} />}>Entrar al módulo</Boton></div>
@@ -232,7 +232,7 @@ function MiArea({ exp, departamento, esAdmin, pendientes, onTab, esContratista }
             </>
           ) : (
             <>
-              <h2 className="mt-2 font-display text-[1.6rem] font-semibold leading-tight text-tinta">Todavía sin área asignada</h2>
+              <h2 className="mt-2 font-titulo text-[1.75rem] font-medium leading-tight text-tinta">Todavía sin área asignada</h2>
               <p className="mt-2 max-w-[56ch] text-[13px] font-light leading-relaxed text-suave">
                 Un administrador de la intranet te asigna el área en la que trabajas; con eso aparece aquí el módulo de tu equipo.
                 Mientras tanto, desde aquí manejas tu información, tus contratos y tus certificados.
@@ -242,12 +242,12 @@ function MiArea({ exp, departamento, esAdmin, pendientes, onTab, esContratista }
         </section>
 
         {/* La vinculación */}
-        <section className="border border-linea bg-white px-7 py-6">
+        <section className="vidrio rounded-2xl px-7 py-6">
           <p className="text-[10px] uppercase tracking-[.2em] text-tenue">Tu vinculación</p>
           {vigente ? (
             <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="font-display text-xl font-semibold text-tinta">{vigente.cargo}</p>
+                <p className="font-titulo text-[1.4rem] font-medium text-tinta">{vigente.cargo}</p>
                 <p className="text-[12.5px] text-suave">{VINCULACION[vigente.vinculacion]} · desde el {fechaLarga(vigente.fecha_inicio)}{vigente.fecha_fin ? ` hasta el ${fechaLarga(vigente.fecha_fin)}` : ', sin fecha de terminación'}</p>
               </div>
               <Boton variante="secundario" onClick={() => onTab('contratos')}>Ver contrato</Boton>
@@ -270,8 +270,8 @@ function MiArea({ exp, departamento, esAdmin, pendientes, onTab, esContratista }
       </div>
 
       {/* Pendientes */}
-      <aside className="h-fit border border-linea bg-white">
-        <p className="border-b border-linea px-6 py-4 font-display text-lg font-semibold text-tinta">Pendientes</p>
+      <aside className="h-fit vidrio rounded-2xl">
+        <p className="border-b border-linea px-6 py-4 font-titulo text-xl font-medium text-tinta">Pendientes</p>
         {pendientes.length === 0 ? (
           <p className="flex items-center gap-2 px-6 py-6 text-[13px] text-bosque"><Check size={16} /> Nada pendiente. Todo al día.</p>
         ) : (
@@ -299,10 +299,10 @@ function MiArea({ exp, departamento, esAdmin, pendientes, onTab, esContratista }
 }
 
 function Acceso({ icono, titulo, sub, href, onClick }: { icono: ReactNode; titulo: string; sub: string; href?: string; onClick?: () => void }) {
-  const cls = 'group flex items-center gap-4 border border-linea bg-white px-5 py-4 text-left transition-colors hover:border-bosque'
+  const cls = 'group flex items-center gap-4 vidrio rounded-2xl px-5 py-4 text-left transition-colors hover:border-bosque'
   const cuerpo = (
     <>
-      <span className="grid h-9 w-9 shrink-0 place-items-center bg-hueso text-bosque">{icono}</span>
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-hueso/80 text-bosque">{icono}</span>
       <span className="min-w-0 flex-1"><span className="block text-[13px] font-medium text-tinta">{titulo}</span><span className="block text-[11.5px] text-tenue">{sub}</span></span>
       <ArrowRight size={14} className="text-tenue transition-transform group-hover:translate-x-0.5" />
     </>
