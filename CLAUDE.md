@@ -111,7 +111,8 @@ fecha o no lo pongas.
 
 `docs/sql/pending.sql` lleva la lista de migraciones que **aún no se han corrido** en producción.
 Al **2026-10-14** no queda ninguna de esquema pendiente: las de geovisor (con su arreglo de permisos),
-financiero/inventario y talento humano corrieron ese día y se verificaron por REST. Queda
-`fix_fechas_hora_colombia.sql` (la fecha por defecto de cuentas de cobro y movimientos en hora de Colombia,
-no en UTC) y, opcional, el bloque 2 de `merge_aliados_duplicados.sql`.
+financiero/inventario, talento humano y `fix_fechas_hora_colombia.sql` corrieron ese día y se verificaron
+por REST. Solo queda, opcional, el bloque 2 de `merge_aliados_duplicados.sql`.
+**Fechas «de hoy»:** `CURRENT_DATE` en Supabase es UTC (de 7 p. m. a medianoche ya es mañana). En SQL usar
+`(now() AT TIME ZONE 'America/Bogota')::date`; en las rutas, `hoyColombia()` de `lib/administrativa.ts`.
 Antes de asumir que una tabla/columna existe, verifica por REST en vez de confiar en un doc que puede estar desactualizado.

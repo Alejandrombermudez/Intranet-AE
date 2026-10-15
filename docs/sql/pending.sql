@@ -11,13 +11,6 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-10-14  fix_fechas_hora_colombia.sql ─────────────────────────────────
--- Dos ALTER COLUMN … SET DEFAULT: la fecha por defecto de people.cuentas_cobro
--- y de inventario.movimientos pasa de CURRENT_DATE (UTC) a la fecha de Colombia.
--- Sin esto, una cuenta de cobro radicada después de las 7 p. m. queda con la
--- fecha de mañana (el 31 en la noche cae en el mes siguiente). No toca filas.
--- Probado en PGlite. Verificación: la consulta comentada al final del archivo.
-
 -- ── 2026-09-01  merge_aliados_duplicados.sql — BLOQUE 2, opcional ───────────
 -- El BLOQUE 1 (fusión de "Álvaro Marlés Artunduaga" + "… 2") YA SE CORRIÓ:
 -- verificado por REST el 2026-09-01 — quedan 94 aliados (eran 95), los dos
@@ -34,6 +27,11 @@
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
+
+-- ── 2026-10-14  fix_fechas_hora_colombia.sql ─────────────────────────────────
+--             Fecha por defecto de people.cuentas_cobro y inventario.movimientos
+--             en hora de Colombia (CURRENT_DATE es UTC). Verificado por REST
+--             (OpenAPI) el mismo día: las dos columnas con America/Bogota.
 
 -- ── 2026-10-14  migration_financiero_inventario.sql + migration_talento_humano.sql
 --             + migration_usuarios_geovisor.sql ────────────────────────────────

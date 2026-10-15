@@ -650,9 +650,9 @@ En el esquema `people`, **solo `service_role`** (RLS sin políticas). Dos entrad
 | ras.familias | En uso/En diseño | rediseñar formulario (aligerar + derivar conteos) |
 | **ras.arboles_semilleros** | Por construir | **construir: tabla + carga CSV/Kobo + geovisor** |
 | ras.camaras_trampa / fotos_* / monitoreos | vacío | — |
-| financiero.* + inventario.* | en la base (2026-10-14) | poner clave a los títulos de campo; desplegar la intranet y la app de campo |
-| siembra.registros_actividad | en la base (2026-10-14) | la app de campo lo usa en cuanto se despliegue |
-| people.personas / contratos / cuentas_cobro / certificados / documentos_persona / config_talento | en la base (2026-10-14) | llenar NIT y firmante en Plantillas tras desplegar |
+| financiero.* + inventario.* | en producción (intranet desplegada 2026-10-14) | poner clave a los títulos de campo; `SUPABASE_URL`/`SUPABASE_ANON_KEY` en el proyecto Vercel de la app de campo y redesplegarla |
+| siembra.registros_actividad | en la base (2026-10-14) | la app de campo lo usa en cuanto tenga sus variables en Vercel |
+| people.personas / contratos / cuentas_cobro / certificados / documentos_persona / config_talento | en producción (2026-10-14) | llenar NIT y firmante en Talento humano → Plantillas |
 
 **Secuencia recomendada para construir en bloque:**
 1. **`catalogo.especies`** — maestro que comparten conservación (árboles), plan y vivero. Es la fundación.
