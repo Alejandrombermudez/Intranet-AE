@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, FileUp, Plus, Trash2 } from 'lucide-react'
 import { Aviso, Boton, Cabecera, Cargando, Contenido, Seccion } from '@/app/components/marca'
 import { fetchConSesion } from '@/lib/fetch-sesion'
+import { aligerarDocumento } from '@/lib/comprimir-pdf'
 import { FacturaIlegible, leerArchivosFactura, nombreUnidad, type FacturaLeida } from '@/lib/factura-dian'
 import { cantidad, fechaCorta, hoyISO, nitConDv, pesos, UNIDADES_INVENTARIO, type Insumo, type LineaClasificada } from '@/lib/administrativa'
 import { CAMPO, Campo, enviar, Mensaje, TD, TH, Ventana, useAccesoFinanciero, useCatalogo } from '../../comun'
@@ -139,7 +140,9 @@ export default function NuevaFactura() {
     const form = new FormData()
     form.append('datos', JSON.stringify(datos))
     if (xml) form.append('xml', new File([xml.contenido], xml.nombre, { type: 'application/xml' }))
-    if (pdf) form.append('pdf', pdf)
+    // Un escaneo de CamScanner pesaba 2,3 MB por dos páginas: se aligera aquí,
+    // solo en sus fotos. Una factura electrónica nativa o un PDF firmado van intactos.
+    if (pdf) form.append('pdf', (await aligerarDocumento(pdf)).archivo)
     const r = await fetchConSesion('/api/administrativa/facturas', { method: 'POST', body: form })
     const j = await r.json().catch(() => ({}))
     setGuardando(false)

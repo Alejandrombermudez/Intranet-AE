@@ -1,7 +1,9 @@
 'use client'
 import { useMemo, useState } from 'react'
-import { Ban, Download, FileText } from 'lucide-react'
+import { Ban, Download, FileText, Upload } from 'lucide-react'
 import { Aviso, Boton, MarcaEstado, Seccion, Vacio } from '@/app/components/marca'
+import { fetchConSesion } from '@/lib/fetch-sesion'
+import { aligerarDocumento } from '@/lib/comprimir-pdf'
 import { nombreUnidad } from '@/lib/factura-dian'
 import { cantidad, fechaCorta, nitConDv, pesos, type FacturaItem, type FacturaResumen } from '@/lib/administrativa'
 import { CAMPO, Campo, enviar, Mensaje, TD, TH, useCarga, Ventana, type Catalogo } from './comun'
@@ -13,6 +15,9 @@ import { CAMPO, Campo, enviar, Mensaje, TD, TH, useCarga, Ventana, type Catalogo
  */
 
 type Rango = 'mes' | 'anterior' | 'anio' | 'todo'
+
+/** Registrada sin XML ni PDF: se avisa hasta que alguien adjunte el soporte. */
+const sinSoporte = (f: Pick<FacturaResumen, 'archivo_pdf' | 'archivo_xml'>) => !f.archivo_pdf && !f.archivo_xml
 
 function rangoFechas(r: Rango): { desde?: string; hasta?: string } {
   const h = new Date()
@@ -39,6 +44,7 @@ export default function Compras({ cat }: { cat: Catalogo }) {
     url, (j) => (j.facturas as FacturaResumen[]) ?? [], 'No se pudieron leer las facturas.')
 
   const vigentes = useMemo(() => (facturas ?? []).filter((f) => f.estado === 'registrada'), [facturas])
+  const faltan = useMemo(() => vigentes.filter(sinSoporte), [vigentes])
   const visibles = verAnuladas ? facturas ?? [] : vigentes
   const nombreProyecto = (c: string | null) => cat.proyectos.find((p) => p.codigo === c)?.nombre ?? (c ? c : 'Sin proyecto')
 
@@ -82,6 +88,14 @@ export default function Compras({ cat }: { cat: Catalogo }) {
       </div>
 
       {error && <Aviso tono="arcilla" className="mb-6">{error}</Aviso>}
+
+      {faltan.length > 0 && (
+        <Aviso tono="ambar" className="mb-8"
+          titulo={`${faltan.length} factura${faltan.length === 1 ? '' : 's'} sin documento soporte (${pesos(faltan.reduce((s, f) => s + Number(f.total), 0))})`}>
+          {faltan.map((f) => `${f.proveedor?.razon_social ?? '—'} ${f.numero}`).join(' · ')}.
+          {' '}Cuentan en el gasto y en el inventario, pero no tienen el papel que las respalda. Se adjunta abriendo la factura.
+        </Aviso>
+      )}
 
       {facturas && vigentes.length > 0 && (
         <div className="mb-10 grid gap-8 md:grid-cols-3">
@@ -140,6 +154,7 @@ export default function Compras({ cat }: { cat: Catalogo }) {
                     <td className={`${TD} text-right tabular-nums font-medium`}>{pesos(f.total)}</td>
                     <td className={`${TD} whitespace-nowrap`}>
                       {f.estado === 'anulada' ? <MarcaEstado color="var(--color-red-600)">Anulada</MarcaEstado>
+                        : sinSoporte(f) ? <MarcaEstado color="var(--color-ambar)">Falta soporte</MarcaEstado>
                         : f.origen === 'manual' ? <MarcaEstado color="var(--color-taupe)">Sin XML</MarcaEstado>
                         : <MarcaEstado color="var(--color-bosque)">Electrónica</MarcaEstado>}
                     </td>
@@ -179,6 +194,18 @@ function DetalleFactura({ id, cat, onCerrar, onCambio }: { id: string; cat: Cata
   const insumo = (i: string | null) => cat.insumos.find((x) => x.id === i)
   const bodega = (b: string | null) => cat.bodegas.find((x) => x.id === b)?.nombre ?? '—'
 
+  async function adjuntar(archivo: File) {
+    setOcupado(true); setError(null)
+    try {
+      const form = new FormData()
+      form.append('soporte', (await aligerarDocumento(archivo)).archivo)
+      const r = await fetchConSesion(`/api/administrativa/facturas/${id}`, { method: 'POST', body: form })
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? 'No se pudo subir el soporte.')
+      await cargar(); onCambio()
+    } catch (e) { setError((e as Error).message) }
+    setOcupado(false)
+  }
+
   async function anular() {
     setOcupado(true); setError(null)
     try {
@@ -199,6 +226,12 @@ function DetalleFactura({ id, cat, onCerrar, onCambio }: { id: string; cat: Cata
             <div><p className="text-[10px] uppercase tracking-[.14em] text-tenue">Registrada por</p><p className="truncate">{f.created_by ?? '—'}</p><p className="text-tenue">{fechaCorta(f.created_at)}</p></div>
           </div>
           {f.cufe && <p className="mb-5 break-all text-[10.5px] text-tenue">CUFE {f.cufe}</p>}
+          {f.estado === 'registrada' && sinSoporte(f) && (
+            <Aviso tono="ambar" titulo="Falta el documento soporte" className="mb-5">
+              Esta compra cuenta en el gasto y en el inventario, pero no tiene el papel que la respalda. Cuando llegue, adjúntalo
+              con «Adjuntar soporte», aquí abajo.
+            </Aviso>
+          )}
           {f.estado === 'anulada' && (
             <Aviso tono="arcilla" titulo="Factura anulada" className="mb-5">
               {f.motivo_anulacion} — {f.anulada_por}, {fechaCorta(f.anulada_at)}. Sus entradas ya no cuentan en el inventario.
@@ -245,6 +278,16 @@ function DetalleFactura({ id, cat, onCerrar, onCambio }: { id: string; cat: Cata
           <div className="mt-6 flex flex-wrap gap-2">
             {f.url_pdf && <Boton variante="secundario" href={f.url_pdf} icono={<Download size={13} />}>Ver PDF / soporte</Boton>}
             {f.url_xml && <Boton variante="secundario" href={f.url_xml} icono={<Download size={13} />}>Descargar XML</Boton>}
+            {f.estado === 'registrada' && (
+              <label className={`inline-flex cursor-pointer items-center justify-center gap-2 px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-[.16em] transition-colors ${
+                sinSoporte(f) ? 'bg-bosque text-papel hover:bg-primary-dark' : 'border border-taupe text-suave hover:bg-hueso/60'
+              } ${ocupado ? 'pointer-events-none opacity-45' : ''}`}>
+                <Upload size={13} />
+                {ocupado ? 'Subiendo…' : f.archivo_pdf ? 'Reemplazar soporte' : 'Adjuntar soporte'}
+                <input type="file" accept="application/pdf,image/*" className="hidden"
+                  onChange={(e) => { const a = e.target.files?.[0]; e.target.value = ''; if (a) adjuntar(a) }} />
+              </label>
+            )}
             {f.estado === 'registrada' && !anulando && (
               <Boton variante="peligro" className="ml-auto" icono={<Ban size={13} />} onClick={() => setAnulando(true)}>Anular factura</Boton>
             )}

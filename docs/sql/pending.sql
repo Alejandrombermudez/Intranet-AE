@@ -18,11 +18,14 @@
 -- financiero.facturas / inventario.* y sin chocar de nombre:
 --   financiero.insumos · financiero.compras · financiero.compra_items ·
 --   financiero.flete_compras · bucket financiero-documentos
--- y ahí quedó cargada Misión 3 (15 compras, 12 archivos). Ninguna pantalla
--- publicada las lee. Pendiente: pasar esa carga a financiero.facturas +
--- inventario.movimientos y después borrar las cuatro tablas y el bucket.
--- Además dejó el COMMENT ON SCHEMA financiero con su texto: restaurar el de
--- migration_financiero_inventario.sql.
+-- y ahí quedó una primera carga de Misión 3. Ninguna pantalla las lee.
+-- Ese mismo día Misión 3 se volvió a cargar donde corresponde, con
+-- financiero.registrar_factura: 15 facturas ($43.461.850; 3 sin soporte) y 13
+-- insumos en la bodega central Recepción, sin proyecto; 12 soportes en
+-- financiero-facturas. Verificado por REST. Pendiente: borrar las cuatro
+-- tablas paralelas y vaciar/borrar el bucket financiero-documentos (ya no
+-- tienen nada que no esté en facturas/inventario), y restaurar el COMMENT ON
+-- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
 
 -- Antes del 2026-09-17 no quedaba ninguna migración de esquema pendiente
 -- (verificado por REST el 2026-08-12).
