@@ -47,7 +47,8 @@ export async function GET(req: NextRequest) {
       supabase.schema('juridica').from('analisis_juridico').select('predio_id, semaforo'),
       supabase.schema('geo').from('zonas').select('predio_id, area_ha, vigente'),
       supabase.schema('siembra').from('evaluaciones_campo').select('predio_id'),
-      supabase.schema('siembra').from('familias').select('predio_id').is('deleted_at', null),
+      // Sin la fila vacía que crea «Enviar a Campo» (step_completed NULL): no es una encuesta
+      supabase.schema('siembra').from('familias').select('predio_id').is('deleted_at', null).not('step_completed', 'is', null),
     ])
 
     const nombreAliado = new Map((aliados ?? []).map(a => [a.id, a.nombre_completo]))

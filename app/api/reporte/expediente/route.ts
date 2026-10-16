@@ -240,6 +240,7 @@ export async function GET(req: NextRequest) {
         .select('*').eq('predio_id', predioId).order('updated_at', { ascending: false }).limit(1),
       supabase.schema('siembra').from('familias')
         .select('*').eq('predio_id', predioId).is('deleted_at', null)
+        .not('step_completed', 'is', null)   // no la fila vacía de «Enviar a Campo»
         .order('updated_at', { ascending: false }).limit(1),
     ])
 

@@ -52,7 +52,8 @@ export async function GET(req: NextRequest) {
         listExpedientes(supabase),
         supabase.schema('geo').from('zonas').select('predio_id, tipo, estado, area_ha, vigente'),
         supabase.schema('siembra').from('evaluaciones_campo').select('predio_id'),
-        supabase.schema('siembra').from('familias').select('predio_id').is('deleted_at', null),
+        // Sin la fila vacía que crea «Enviar a Campo» (step_completed NULL): no es una encuesta devuelta
+        supabase.schema('siembra').from('familias').select('predio_id').is('deleted_at', null).not('step_completed', 'is', null),
         supabase.schema('geo').from('zona_revision').select('predio_id'),
         // Unidades de siembra. Si migration_predio_grupos.sql no está corrida,
         // el tablero funciona igual que antes: sin unidades.

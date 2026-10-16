@@ -94,6 +94,7 @@ export async function GET(req: NextRequest) {
         .select('id, created_by, fecha_encuesta, step_completed, sec_general, sec_vivienda, sec_familia, sec_economia, sec_cultivos, sec_ganaderia, sec_tecnologia, sec_bosque, updated_at')
         .eq('predio_id', predioId)
         .is('deleted_at', null)
+        .not('step_completed', 'is', null)   // no la fila vacía de «Enviar a Campo»
         .order('updated_at', { ascending: false })
         .limit(1),
     ])
