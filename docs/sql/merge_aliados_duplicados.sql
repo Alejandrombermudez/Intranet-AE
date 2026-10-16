@@ -5,7 +5,9 @@
 -- ESTADO: BLOQUE 1 ya ejecutado (2026-09-01, verificado por REST: 94 aliados,
 --   los dos predios San Francisco bajo un solo propietario). Volver a correrlo
 --   no rompe nada — los UPDATE/DELETE ya no encuentran filas — pero no hace
---   falta. BLOQUE 2 sigue pendiente de tu decisión. BLOQUE 3 es solo lectura.
+--   falta. BLOQUE 2 ya ejecutado (2026-10-16, verificado por REST: la ficha de
+--   Rodrigo Silva Hermida no existe, 106 aliados, ninguno sin predio ni
+--   copropiedad). BLOQUE 3 es solo lectura.
 --
 -- CONTEXTO — qué se encontró al revisar los 95 aliados de producción:
 --
@@ -102,9 +104,33 @@ WHERE  a.id = 'ce4ef582-75f5-4422-b289-1f7af09de4c3';
 -- sin antecedentes y sin expediente. O le falta el predio, o fue un registro
 -- abandonado. Borrarlo NO arrastra nada.
 --
+-- 2026-10-16: ya no es solo limpieza. Al editar FINCA LA FLORIDA (Florencia,
+-- 420-101721, de "Mesías Mavesoy Arregui", documento placeholder S/D-) con el
+-- documento 17638410, jurídica responde que ese documento ya existe: lo tiene
+-- esta ficha, que no sale en el listado porque no tiene predio. Verificado por
+-- REST ese día: sigue sin predio, sin copropiedad, sin antecedentes y sin
+-- encuesta en siembra.familias ni ras.familias; es la única de 107 en ese estado.
+--
+-- ANTES de borrar: abrir la cédula escaneada de La Florida ("Ver documento
+-- actual" en jurídica). Si dice 17638410, esta ficha sobra → borrarla y volver a
+-- guardar el formulario (corrigiendo el nombre si el dueño real es Rodrigo).
+-- Si dice otro número, el 17638410 se digitó mal → NO borrar nada.
+
+-- 2.0 VERIFICAR ANTES (debe salir 1 fila con las cuatro cuentas en 0)
+SELECT a.id, a.nombre_completo, a.numero_documento,
+       (SELECT count(*) FROM core.predios              WHERE aliado_id = a.id) AS predios,
+       (SELECT count(*) FROM core.predio_propietarios  WHERE aliado_id = a.id) AS copropiedad,
+       (SELECT count(*) FROM juridica.antecedentes     WHERE aliado_id = a.id) AS antecedentes,
+       (SELECT count(*) FROM siembra.familias          WHERE aliado_id = a.id)
+     + (SELECT count(*) FROM ras.familias              WHERE aliado_id = a.id) AS encuestas
+FROM   core.aliados a
+WHERE  a.id = 'a609e94e-cff4-4b22-821b-5a4cb9c883fc';
+
+-- 2.1 BORRAR (descomentar solo después de revisar la cédula, ver arriba)
 -- DELETE FROM core.aliados
 --  WHERE id = 'a609e94e-cff4-4b22-821b-5a4cb9c883fc'
---    AND NOT EXISTS (SELECT 1 FROM core.predios WHERE aliado_id = core.aliados.id);
+--    AND NOT EXISTS (SELECT 1 FROM core.predios             WHERE aliado_id = core.aliados.id)
+--    AND NOT EXISTS (SELECT 1 FROM core.predio_propietarios WHERE aliado_id = core.aliados.id);
 
 
 -- ════════════════════════════════════════════════════════════

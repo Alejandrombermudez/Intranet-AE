@@ -62,7 +62,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .eq('id', predio.aliado_id)
     if (aErr) {
       if (aErr.code === '23505') {
-        return NextResponse.json({ error: 'Ya existe una persona con ese número de documento' }, { status: 409 })
+        // Decir QUIÉN tiene ya ese documento. Si es una ficha sin predio, no sale en
+        // el listado de jurídica (que lista predios, no personas) y el choque parece
+        // un misterio: pasó el 2026-10-16 con una persona huérfana desde agosto.
+        const { data: otro } = await supabase.schema('core').from('aliados')
+          .select('id, nombre_completo').eq('numero_documento', docEdit).maybeSingle()
+        if (!otro) {
+          return NextResponse.json({ error: 'Ya existe una persona con ese número de documento' }, { status: 409 })
+        }
+        const { count } = await supabase.schema('core').from('predios')
+          .select('id', { count: 'exact', head: true }).eq('aliado_id', otro.id)
+        const detalle = count
+          ? ` (${count} predio${count === 1 ? '' : 's'} en jurídica)`
+          : ', una ficha sin ningún predio: por eso no aparece en el listado de jurídica'
+        return NextResponse.json({
+          error: `Ese número de documento ya es de ${otro.nombre_completo}${detalle}`,
+        }, { status: 409 })
       }
       return NextResponse.json({ error: aErr.message }, { status: 500 })
     }

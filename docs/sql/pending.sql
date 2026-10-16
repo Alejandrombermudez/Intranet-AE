@@ -11,13 +11,18 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-09-01  merge_aliados_duplicados.sql — BLOQUE 2, opcional ───────────
--- El BLOQUE 1 (fusión de "Álvaro Marlés Artunduaga" + "… 2") YA SE CORRIÓ:
--- verificado por REST el 2026-09-01 — quedan 94 aliados (eran 95), los dos
--- predios San Francisco Lote 1 y 2 cuelgan del aliado conservado.
--- Queda pendiente solo el BLOQUE 2 (borrar la ficha sin predio de Rodrigo Silva
--- Hermida), comentado a propósito: es una decisión del usuario.
--- El BLOQUE 3 son consultas de lectura, se pueden correr cuando sea.
+-- ── 2026-10-16  TABLAS PARALELAS en financiero — por resolver ───────────────
+-- El 2026-10-16 se corrió en producción un migration_financiero.sql que NO está
+-- en main (vive en la rama local respaldo/financiero-paralelo-2026-10-16): se
+-- escribió sin ver que /intranet/administrativa ya existía. Creó, al lado de
+-- financiero.facturas / inventario.* y sin chocar de nombre:
+--   financiero.insumos · financiero.compras · financiero.compra_items ·
+--   financiero.flete_compras · bucket financiero-documentos
+-- y ahí quedó cargada Misión 3 (15 compras, 12 archivos). Ninguna pantalla
+-- publicada las lee. Pendiente: pasar esa carga a financiero.facturas +
+-- inventario.movimientos y después borrar las cuatro tablas y el bucket.
+-- Además dejó el COMMENT ON SCHEMA financiero con su texto: restaurar el de
+-- migration_financiero_inventario.sql.
 
 -- Antes del 2026-09-17 no quedaba ninguna migración de esquema pendiente
 -- (verificado por REST el 2026-08-12).
@@ -27,6 +32,14 @@
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
+
+-- ── 2026-10-16  merge_aliados_duplicados.sql — BLOQUE 2 ─────────────────────
+--             Se borró la ficha sin predio de "Rodrigo Silva Hermida" (CC
+--             17638410): bloqueaba guardar ese documento en FINCA LA FLORIDA
+--             («Ya existe una persona con ese número de documento»). Verificado
+--             por REST el 2026-10-16: el id a609e94e… ya no existe, quedan 106
+--             aliados y ninguno sin predio ni copropiedad. El BLOQUE 1 se había
+--             corrido el 2026-09-01; el BLOQUE 3 son consultas de lectura.
 
 -- ── 2026-10-14  fix_fechas_hora_colombia.sql ─────────────────────────────────
 --             Fecha por defecto de people.cuentas_cobro y inventario.movimientos
