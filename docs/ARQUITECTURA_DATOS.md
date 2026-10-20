@@ -152,6 +152,7 @@ municipios/propietarios toca). Se arma desde `/intranet/sig` con **Fusionar pred
 | etapa | text | | `juridica`→`sig_i`→`campo`→`sig_ii`→`plan`→`juridica_ii`→`ejecucion`→`archivado` |
 | estado | text | | `activo` \| `rechazado` \| `archivado` \| `completado` |
 | linea | text | | `restauracion` \| `conservacion` \| `ambas` |
+| flujo_campo | text | | `sig_primero` (el SIG propone, campo verifica) \| `campo_primero` (campo delimita predio y sitios desde cero, el SIG confirma). Lo fija «Enviar a Campo». `migration_campo_primero.sql`, escrita 2026-10-20 |
 | proyecto_fase / responsable | text | | |
 | fecha_inicio | timestamptz | | |
 
@@ -229,6 +230,8 @@ municipios/propietarios toca). Se arma desde `/intranet/sig` con **Fusionar pred
 > `disolver_grupo`, que la PARTE 3 de la migración cerró—, mientras que `revisar_zona` con la llave anónima
 > sigue entrando, que es lo que necesita la app de campo.
 
+> **Desde el flujo «campo primero» (2026-10-20, migración escrita, sin correr):** `geo.revisar_zona_campo` es la misma función con un argumento más, `p_tipo` (`restauracion` | `finca`), para que campo pueda **dibujar o corregir el límite del predio**. `geo.revisar_zona` no se tocó (la usan los celulares instalados). El SIG revisa ese límite con `geo.decidir_limite` (confirmar · editar · eliminar → `geo.zona_decision`); confirmar **no** lo pasa a `definitiva`, que es el estado de los lotes de siembra.
+>
 > **Única puerta de escritura para la PWA (anon): RPC `geo.revisar_zona`** (SECURITY DEFINER, 10 argumentos) — valida, aplica el cambio a `geo.zonas` y deja la auditoría; la app no tiene UPDATE/INSERT directo. La app de campo (módulo SIG) muestra finca + zonas sobre satelital, geolocaliza al técnico (dentro de / distancia y rumbo a la zona) y edita por vértices con leaflet-geoman, todo offline-first (Dexie `revisiones`).
 >
 > **Regla de negocio (desde 2026-09-23): el terreno verifica, el SIG decide.** Hasta esa fecha la regla era «el terreno tiene la última palabra»; ahora, después de campo, el SIG revisa cada zona en «Resultados de campo» y la **confirma** (queda como lote, `estado='definitiva'`), la **edita** (límite nuevo, también lote) o la **elimina** (`vigente=false`, `estado='descartada'`). Las decisiones van en `geo.zona_decision` (decisión, estado y geometría previos, nota, quién) por el RPC `geo.decidir_zonas`, que solo ejecuta la API de la intranet (`service_role`); `geo.zona_revision` sigue siendo solo lo que hizo el terreno. Si campo vuelve a revisar una zona después de la decisión, la revisión se aplica como siempre y la zona queda pendiente otra vez. No se edita ni elimina un lote con núcleos cargados. Migración: `sql/migration_decision_sig.sql`.
@@ -330,6 +333,7 @@ Vista `geo.v_reporte_carbono_nucleos`: una fila por núcleo con sus totales. Lec
 | Jurídica I | aliado/predio aprobado (semáforo) | SIG I | `core.*` + `juridica.*` |
 | SIG I | zonas potenciales | Campo | `geo.zonas` (estado potencial) |
 | **SIG I → Campo (obligatorio, 2026-07-07)** | botón **"Enviar a Campo"** en `/intranet/sig/[predioId]` → `POST /api/juridica/aliados/[id]/crear-en-siembra` | Campo | exige `expediente.etapa='sig_i'` + ≥1 `geo.zonas` (tipo `restauracion`); si no, 422. Crea `siembra.familias` (solo `predio_id`/`aliado_id`/`expediente_id`, sin duplicar identidad) y avanza `etapa` a `campo`. Cinturón de seguridad adicional: `core.v_predios_campo` (la vista que lee la PWA) exige el mismo `EXISTS` sobre `geo.zonas` — ver `migration_campo_core_v2.sql`. |
+| **SIG I → Campo, «campo primero» (2026-10-20)** | botón **«Enviar campo primero»** (solo cuando el predio no tiene sitios del SIG) → misma ruta con `{ flujo: 'campo_primero' }` | Campo | no exige zonas; anota `core.expedientes.flujo_campo`, y `core.v_predios_campo` deja pasar el predio sin zonas. En terreno se dibujan el **límite del predio** (tipo `finca`, por `geo.revisar_zona_campo`) y los **sitios** (`geo.revisar_zona`, acción `nueva`); el SIG decide los sitios con `geo.decidir_zonas` y el límite con `geo.decidir_limite`. `migration_campo_primero.sql` |
 | Campo | evaluación biofísica + encuesta | SIG II / Plan | `siembra.evaluaciones_campo`, `siembra.familias` |
 | SIG II | zonas corregidas + área (ha) | Plan | `geo.zona_revision` → `geo.zonas` |
 | Plan | demanda de plántulas | Vivero | `siembra.planes` + `modelos_floristicos` + `plan_zonas` |

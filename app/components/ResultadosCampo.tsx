@@ -186,6 +186,9 @@ function armarFichas(data: CampoResumen): Ficha[] {
 
   const fichas: Ficha[] = []
   for (const [zonaId, revs] of revsPorZona) {
+    // El límite del predio que trajo campo («campo primero») no es un sitio de
+    // siembra: se decide aparte, en armarLimites / geo.decidir_limite.
+    if (actuales.get(zonaId)?.tipo === 'finca') continue
     const campo = revs.reduce((a, b) => (ms(b.created_at) >= ms(a.created_at) ? b : a))
     const decision = ultimaDecision.get(zonaId) ?? null
     const actual = actuales.get(zonaId) ?? null
@@ -215,6 +218,36 @@ function armarFichas(data: CampoResumen): Ficha[] {
     })
   }
   return fichas.sort((a, b) => a.numero - b.numero)
+}
+
+/** Límite del predio que campo dibujó o corrigió, con lo último que decidió el SIG. */
+interface LimiteCampo {
+  zonaId: string
+  campo: RevisionCampo
+  decision: DecisionSig | null
+  /** La decisión es posterior a lo último de campo (si campo volvió, queda pendiente otra vez). */
+  decidida: boolean
+  vigente: boolean
+  areaHa: number | null
+}
+
+function armarLimites(data: CampoResumen): LimiteCampo[] {
+  const finca = new Map(data.zonas.filter(z => z.tipo === 'finca').map(z => [z.id, z]))
+  const out: LimiteCampo[] = []
+  for (const [zonaId, z] of finca) {
+    const revs = data.revisiones.filter(r => r.zona_id === zonaId)
+    if (revs.length === 0) continue
+    const campo = revs.reduce((a, b) => (ms(b.created_at) >= ms(a.created_at) ? b : a))
+    const decs = data.decisiones.filter(d => d.zona_id === zonaId)
+    const decision = decs.length ? decs.reduce((a, b) => (ms(b.created_at) >= ms(a.created_at) ? b : a)) : null
+    out.push({
+      zonaId, campo, decision,
+      decidida: !!decision && ms(decision.created_at) > ms(campo.created_at),
+      vigente: z.vigente,
+      areaHa: z.area_ha,
+    })
+  }
+  return out
 }
 
 function estadoSig(f: Ficha): { texto: string; clase: string } {
@@ -303,6 +336,27 @@ export default function ResultadosCampo({
   }
 
   const fichas = useMemo(() => (data ? armarFichas(data) : []), [data])
+  const limitesCampo = useMemo(() => (data ? armarLimites(data) : []), [data])
+  const [decidiendoLimite, setDecidiendoLimite] = useState<string | null>(null)
+
+  async function decidirLimite(zonaId: string, decision: 'confirmar' | 'eliminar') {
+    if (decidiendoLimite) return
+    if (decision === 'eliminar' && !window.confirm('¿Retirar este límite? No se borra: queda en el historial y campo lo puede volver a trazar.')) return
+    setDecidiendoLimite(zonaId)
+    try {
+      const res = await fetchConSesion('/api/sig/campo', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ predio_id: predioId, zona_ids: [zonaId], decision, objeto: 'limite' }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) { avisar('error', body.error ?? 'No se pudo guardar la decisión'); return }
+      avisar('ok', decision === 'confirmar' ? 'Límite del predio confirmado.' : 'Límite retirado. Sigue en el historial.')
+      await cargar()
+      onCambio?.()
+    } finally {
+      setDecidiendoLimite(null)
+    }
+  }
   const numeroDe = useMemo(() => new Map(fichas.map(f => [f.zonaId, f.numero])), [fichas])
 
   const visibles = useMemo(() => fichas.filter(f =>
@@ -555,6 +609,53 @@ export default function ResultadosCampo({
           ${aviso.tipo === 'ok' ? 'bg-teal-50 border-teal-200 text-teal-800' : 'bg-red-50 border-red-200 text-red-700'}`}>
           {aviso.tipo === 'ok' ? <CheckCircle2 size={16} className="shrink-0 mt-0.5" /> : <AlertCircle size={16} className="shrink-0 mt-0.5" />}
           {aviso.msg}
+        </div>
+      )}
+
+      {/* Límite del predio que trajo campo («campo primero»): se decide aparte de los sitios */}
+      {limitesCampo.length > 0 && (
+        <div className="bg-white rounded-2xl border border-amber-200 p-5 space-y-3">
+          <div>
+            <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Límite del predio que trajo campo</h2>
+            <p className="text-xs text-stone-500 mt-0.5">
+              Campo delimitó o corrigió el lindero en terreno. Míralo en el mapa (línea del límite) y confírmalo o retíralo.
+              Confirmar no lo vuelve lote de siembra; retirar no lo borra: lo hecho en terreno queda en el historial.
+            </p>
+          </div>
+          {limitesCampo.map(l => {
+            const decidido = l.decidida && l.decision
+            return (
+              <div key={l.zonaId} className="flex items-center justify-between gap-3 flex-wrap border border-stone-100 rounded-xl px-4 py-3">
+                <div className="text-sm min-w-0">
+                  <p className="font-bold text-stone-800">
+                    {fmtHa(l.areaHa)} · campo: {ACCION[l.campo.accion].label.toLowerCase()}
+                    {l.campo.metodo === 'gps' && ' (trazado caminando con GPS)'}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    {l.campo.evaluador ?? 'Sin nombre'} · {l.campo.fecha ?? l.campo.created_at.slice(0, 10)}
+                    {l.campo.observaciones && ` · «${l.campo.observaciones}»`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {decidido ? (
+                    <span className={`text-xs font-bold px-3 py-1.5 rounded-lg border ${l.decision!.decision === 'eliminada' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
+                      {l.decision!.decision === 'eliminada' ? 'Retirado' : 'Confirmado'} por {l.decision!.decidido_por ?? 'SIG'}
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold px-3 py-1.5 rounded-lg border bg-amber-50 text-amber-800 border-amber-200">Pendiente de SIG</span>
+                  )}
+                  <button onClick={() => decidirLimite(l.zonaId, 'confirmar')} disabled={!!decidiendoLimite || (!!decidido && l.decision!.decision !== 'eliminada' && l.vigente)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700 disabled:opacity-40">
+                    {decidiendoLimite === l.zonaId ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />} Confirmar
+                  </button>
+                  <button onClick={() => decidirLimite(l.zonaId, 'eliminar')} disabled={!!decidiendoLimite || !l.vigente}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-rose-200 text-rose-700 rounded-xl text-xs font-bold hover:bg-rose-50 disabled:opacity-40">
+                    Retirar
+                  </button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 

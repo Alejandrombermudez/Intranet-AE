@@ -12,6 +12,22 @@ Hoy toda la geometría se guarda como un `.zip` (shapefile) en Storage y el geov
 
 ---
 
+## Campo primero (2026-10-20) — en rama, migración sin correr
+
+Hay predios que se visitan **antes** de que el SIG proponga nada: en terreno se delimitan el predio y los
+sitios de siembra, el SIG confirma después y sigue la nucleación. Es el mismo ciclo con el orden invertido,
+no un ciclo aparte: lo que dibuja campo entra por las mismas revisiones (`geo.zona_revision`) y lo que
+decide el SIG por `geo.zona_decision`.
+
+- **Salida a campo:** en `/intranet/sig/[predioId]`, sin sitios guardados aparece «Enviar campo primero».
+  Anota `core.expedientes.flujo_campo = 'campo_primero'` y la vista del celular deja pasar el predio sin zonas.
+- **En terreno (app de campo, mismo módulo SIG):** capa «Límite del predio» además de «Sitios de siembra»;
+  las dos se dibujan sobre el satelital o se trazan caminando con el GPS. El límite viaja por
+  `geo.revisar_zona_campo` (tipo `finca`); los sitios, por `geo.revisar_zona` como siempre.
+- **De vuelta en la oficina:** los sitios se deciden como cualquier resultado de campo; el límite tiene su
+  propio panel arriba en «Resultados de campo» (confirmar o retirar, `geo.decidir_limite`).
+- Modelo: [`sql/migration_campo_primero.sql`](sql/migration_campo_primero.sql).
+
 ## El terreno verifica, el SIG decide (2026-09-23)
 
 Hasta aquí la regla era corta: **el terreno tiene la última palabra**. Sigue siendo cierta en lo que

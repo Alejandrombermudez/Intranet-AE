@@ -1,6 +1,6 @@
 -- ============================================================
 -- SQL Pendiente — Intranet AE
--- Última revisión: 2026-10-14 (verificado contra BD real vía REST API)
+-- Última revisión: 2026-10-20 (verificado contra BD real vía REST API)
 --
 -- REGLA: solo están aquí cosas que NO se han podido verificar
 -- vía REST API. Una vez ejecutadas, mover al historial abajo.
@@ -10,6 +10,21 @@
 -- ════════════════════════════════════════════════════════════
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
+
+-- ── 2026-10-20  migration_campo_primero.sql ──────────────────────────────────
+-- Flujo «campo primero»: core.expedientes.flujo_campo, core.v_predios_campo
+-- con la columna nueva al final, RPC geo.revisar_zona_campo (anon; el límite
+-- del predio desde campo) y geo.decidir_limite (service_role). No toca
+-- geo.revisar_zona ni geo.decidir_zonas. Sin datos. Probada en PGlite (3
+-- corridas seguidas, permisos con set role anon). Verificación al pie del archivo.
+-- Mientras no corra: la app de campo y la intranet siguen como hoy (leen la
+-- vista sin la columna); lo único que no funciona es «Enviar campo primero»
+-- (responde que falta la migración) y subir un límite dibujado en campo (se
+-- queda guardado en el celular y se reintenta).
+--
+-- La carga de los predios de Elegibilidad LDH NO va aquí: tiene nombres y
+-- geometría de fincas privadas y vive fuera del repo
+-- (trabajo_elegibilidad_ldh/sql/01..03, en la carpeta D:/AMAZONIA EMPRENDE).
 
 -- ── 2026-09-01  merge_aliados_duplicados.sql — BLOQUE 2, opcional ───────────
 -- El BLOQUE 1 (fusión de "Álvaro Marlés Artunduaga" + "… 2") YA SE CORRIÓ:

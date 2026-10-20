@@ -7,7 +7,9 @@ import { exigirSesion, PUEDE } from '@/lib/auth-api'
 // identidad) y avanza el expediente de 'juridica'/'sig_i' a 'campo'. Es la acción que
 // habilita el predio en la app de Campo (core.v_predios_campo) — por eso
 // exige que el SIG ya haya subido al menos una zona real (geo.zonas), no
-// solo que Jurídica haya aprobado. Ver ARQUITECTURA_DATOS.md §3.3/§3.1.
+// solo que Jurídica haya aprobado — salvo que se envíe como «campo primero»
+// ({ flujo: 'campo_primero' }): ahí las zonas y el límite los dibuja el
+// terreno. Ver ARQUITECTURA_DATOS.md §3.3/§3.1 y migration_campo_primero.sql.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: predioId } = await params
@@ -15,6 +17,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const sesion = await exigirSesion(req, supabase, PUEDE.procesoPredio)
     if (!sesion.ok) return sesion.respuesta
     const email = sesion.perfil.email
+
+    // «campo_primero»: el predio sale a campo SIN propuesta del SIG; en terreno
+    // se delimitan el predio y los sitios, y el SIG confirma después. Cualquier
+    // otra cosa (o nada) es el flujo de siempre. Ver migration_campo_primero.sql.
+    const body = await req.json().catch(() => ({})) as { flujo?: string }
+    const campoPrimero = body?.flujo === 'campo_primero'
 
     // Predio + persona + DD + expediente + zonas del SIG
     const { data: predio, error: prErr } = await supabase
@@ -41,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       )
     }
 
-    if (!zonasCount || zonasCount === 0) {
+    if (!campoPrimero && (!zonasCount || zonasCount === 0)) {
       return NextResponse.json(
         { error: 'El SIG debe subir al menos un sitio de siembra (geo.zonas, tipo "restauracion") antes de habilitar el predio en Campo' },
         { status: 422 }
@@ -49,6 +57,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const expedienteId = exp.id
+
+    // El flujo se anota ANTES de crear nada: si la columna no existe todavía,
+    // un envío «campo primero» se rechaza entero en vez de dejar un predio sin
+    // zonas que la app de campo no mostraría. El flujo de siempre no depende de
+    // la migración: si la columna no está, se sigue como hasta hoy.
+    const { error: flujoErr } = await supabase.schema('core').from('expedientes')
+      .update({ flujo_campo: campoPrimero ? 'campo_primero' : 'sig_primero' })
+      .eq('id', expedienteId)
+    if (flujoErr && campoPrimero) {
+      return NextResponse.json(
+        { error: 'Para enviar «campo primero» falta correr docs/sql/migration_campo_primero.sql en Supabase.' },
+        { status: 503 }
+      )
+    }
 
     // ¿Ya existe una familia ACTIVA para este expediente? (Las soft-deleted por
     // un "cancelar-campo" previo no cuentan: permiten reenviar tras cancelar.)
