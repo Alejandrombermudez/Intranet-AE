@@ -27,6 +27,19 @@
 -- tienen nada que no esté en facturas/inventario), y restaurar el COMMENT ON
 -- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
 
+-- ── 2026-10-21  migration_sitios_proyecto.sql ──────────────────────────────
+-- Tipo de proyecto por sitio (ley_arbol | conexion | pastoreo) y capa de apoyo
+-- que campo trabaja: geo.zona_revision + proyecto y capa_apoyo_id; RPC
+-- geo.anotar_revision_campo (anon), geo.capa_apoyo_revision +
+-- geo.revisar_capa_apoyo (anon, motivo obligatorio) y
+-- geo.decisiones_capa_apoyo_campo() (anon). Ninguna función existente cambia de
+-- firma. Sin datos. Probada en PGlite (dos corridas, permisos, 16 casos).
+-- Mientras no corra: la app sube las geometrías igual y guarda el proyecto y
+-- los rechazos en el celular (se reintentan); la intranet no muestra el proyecto.
+-- DESPUÉS (independiente, fuera del repo): trabajo_elegibilidad_ldh/sql/
+-- 04_capa_pastoreo_ldh.sql — 32 áreas «No elegible: Cobertura o zonificación»
+-- (uso sostenible = pastoreo, 332,5 ha en 32 predios) como capa de apoyo.
+
 -- Antes del 2026-09-17 no quedaba ninguna migración de esquema pendiente
 -- (verificado por REST el 2026-08-12).
 

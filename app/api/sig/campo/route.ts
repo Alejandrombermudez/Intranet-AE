@@ -25,6 +25,20 @@ export interface RevisionCampo {
   evaluador:      string | null
   fecha:          string | null
   created_at:     string
+  /** Tipo de proyecto del sitio y área de la capa de apoyo de la que salió (migration_sitios_proyecto.sql). */
+  proyecto?:      string | null
+  capa_apoyo_id?: string | null
+}
+
+/** Un área de la capa de apoyo que campo rechazó en terreno, con su motivo. */
+export interface ApoyoRechazada {
+  id:            string
+  capa_apoyo_id: string
+  nombre:        string | null
+  clase:         string | null
+  observaciones: string
+  evaluador:     string | null
+  fecha:         string | null
 }
 
 export interface DecisionSig {
@@ -61,6 +75,8 @@ export interface CampoResumen {
   encuesta:   Record<string, unknown> | null
   /** Mensaje si falta correr migration_decision_sig.sql (las decisiones no están disponibles). */
   falta_migracion: string | null
+  /** Áreas de la capa de apoyo rechazadas en campo ([] sin migration_sitios_proyecto.sql). */
+  apoyo_rechazadas: ApoyoRechazada[]
 }
 
 const FALTA = 'Falta correr docs/sql/migration_decision_sig.sql en Supabase: hasta entonces se puede ver lo que devolvió campo, pero no decidir.'
@@ -77,12 +93,20 @@ export async function GET(req: NextRequest) {
   const predioId = req.nextUrl.searchParams.get('predio_id')
   if (!predioId) return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 })
 
+  // Con tipo de proyecto y área de origen; si la BD todavía no tiene
+  // migration_sitios_proyecto.sql (42703, columna inexistente), sin ellos.
+  const COLS_REV = 'local_id, zona_id, accion, metodo, geom_original, geom_corregida, area_ha_campo, observaciones, evaluador, fecha, created_at'
+  const leerRevisiones = async () => {
+    const r = await supabase.schema('geo').from('zona_revision')
+      .select(`${COLS_REV}, proyecto, capa_apoyo_id`).eq('predio_id', predioId).order('created_at', { ascending: true })
+    if (r.error?.code !== '42703') return r
+    return supabase.schema('geo').from('zona_revision')
+      .select(COLS_REV).eq('predio_id', predioId).order('created_at', { ascending: true })
+  }
+
   try {
-    const [{ data: revisiones }, decis, { data: evals }, { data: encuestas }] = await Promise.all([
-      supabase.schema('geo').from('zona_revision')
-        .select('local_id, zona_id, accion, metodo, geom_original, geom_corregida, area_ha_campo, observaciones, evaluador, fecha, created_at')
-        .eq('predio_id', predioId)
-        .order('created_at', { ascending: true }),
+    const [{ data: revisiones }, decis, { data: evals }, { data: encuestas }, rechazos] = await Promise.all([
+      leerRevisiones(),
       supabase.schema('geo').from('zona_decision')
         .select('id, zona_id, decision, estado_previo, geom_previa, geom_nueva, area_ha, nota, decidido_por, created_at')
         .eq('predio_id', predioId)
@@ -99,6 +123,11 @@ export async function GET(req: NextRequest) {
         .not('step_completed', 'is', null)   // no la fila vacía de «Enviar a Campo»
         .order('updated_at', { ascending: false })
         .limit(1),
+      // Sin la migración la tabla no existe: no hay rechazos que mostrar.
+      supabase.schema('geo').from('capa_apoyo_revision')
+        .select('id, capa_apoyo_id, observaciones, evaluador, fecha, created_at')
+        .eq('predio_id', predioId)
+        .order('created_at', { ascending: true }),
     ])
 
     // Estado actual de las zonas que campo tocó, con sus núcleos: es lo que
@@ -122,6 +151,16 @@ export async function GET(req: NextRequest) {
       zonas = ((zs ?? []) as Omit<ZonaActual, 'n_nucleos'>[]).map(z => ({ ...z, n_nucleos: nPorZona.get(z.id) ?? 0 }))
     }
 
+    // Las áreas rechazadas, con su nombre y clase (LA-1 · Ley del Árbol…).
+    let apoyoRechazadas: ApoyoRechazada[] = []
+    const filasRechazo = (rechazos.data ?? []) as Omit<ApoyoRechazada, 'nombre' | 'clase'>[]
+    if (filasRechazo.length) {
+      const { data: capas } = await supabase.schema('geo').from('capas_apoyo')
+        .select('id, nombre, clase').in('id', [...new Set(filasRechazo.map(r => r.capa_apoyo_id))])
+      const porId = new Map(((capas ?? []) as { id: string; nombre: string | null; clase: string | null }[]).map(c => [c.id, c]))
+      apoyoRechazadas = filasRechazo.map(r => ({ ...r, nombre: porId.get(r.capa_apoyo_id)?.nombre ?? null, clase: porId.get(r.capa_apoyo_id)?.clase ?? null }))
+    }
+
     const faltaMigracion = noExiste(decis.error) ? FALTA : null
     if (decis.error && !faltaMigracion) console.error('GET /api/sig/campo decisiones:', decis.error)
 
@@ -132,6 +171,7 @@ export async function GET(req: NextRequest) {
       evaluacion: evals?.[0] ?? null,
       encuesta:   encuestas?.[0] ?? null,
       falta_migracion: faltaMigracion,
+      apoyo_rechazadas: apoyoRechazadas,
     }
     return NextResponse.json(resumen)
   } catch (err) {

@@ -15,6 +15,7 @@ import type { CampoResumen, DecisionSig, RevisionCampo } from '@/app/api/sig/cam
 import { exportarRevisiones, exportarZonas } from '@/lib/exportar-zonas'
 import { parsearShapefile } from '@/lib/shapefile-client'
 import { COLOR_CAMPO, COLOR_SELECCION } from '@/lib/colores-campo'
+import { nombreProyectoCampo } from '@/lib/proyectos-campo'
 
 const cargandoMapa = () => (
   <div className="w-full h-96 rounded-xl border border-stone-200 bg-stone-100 flex items-center justify-center"><Loader2 className="animate-spin text-stone-400" size={28} /></div>
@@ -179,7 +180,9 @@ function armarFichas(data: CampoResumen): Ficha[] {
   // demás siguen después, en el orden en que campo las tocó por primera vez.
   const numEval = new Map<string, number>()
   for (const z of (data.evaluacion?.zonas_data as Json[] | undefined) ?? []) {
-    const n = Number(z.zona_numero)
+    // numero_mapa (desde el 2026-10-21) es el número que ve el técnico en el mapa;
+    // zona_numero renumera sin los rechazados.
+    const n = Number(z.numero_mapa ?? z.zona_numero)
     if (typeof z.zona_id === 'string' && Number.isInteger(n) && n > 0) numEval.set(z.zona_id, n)
   }
   let siguiente = Math.max(0, ...numEval.values())
@@ -874,6 +877,11 @@ export default function ResultadosCampo({
                             <Icon size={11} /> Campo: {label.toLowerCase()}
                           </span>
                           <span className="text-xs text-stone-600">{fmtHa(f.areaHa)}</span>
+                          {proyectoDe(data.revisiones, f.zonaId) && (
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded border bg-stone-50 text-stone-700 border-stone-200">
+                              {nombreProyectoCampo(proyectoDe(data.revisiones, f.zonaId))}
+                            </span>
+                          )}
                           <span className={`text-[11px] font-bold px-2 py-0.5 rounded border ${est.clase}`}>{est.texto}</span>
                           {f.nNucleos > 0 && (
                             <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded border bg-stone-50 text-stone-600 border-stone-200">
@@ -934,6 +942,25 @@ export default function ResultadosCampo({
         )}
       </div>
 
+      {/* Áreas de la capa de apoyo que campo rechazó (con el motivo) */}
+      {data.apoyo_rechazadas?.length > 0 && (
+        <section className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
+          <div className="px-5 py-3 border-b border-stone-100">
+            <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Capa de apoyo rechazada en campo</h2>
+            <p className="text-xs text-stone-500 mt-0.5">Áreas elegibles que el técnico vio en terreno y no usó como sitio. Las que sí usó salen arriba como zonas dibujadas en campo.</p>
+          </div>
+          <ul className="divide-y divide-stone-100">
+            {data.apoyo_rechazadas.map(a => (
+              <li key={a.id} className="px-5 py-2.5 text-sm text-stone-700">
+                <strong>{a.nombre ?? 'Área'}</strong>{a.clase && <span className="text-stone-500"> · {a.clase}</span>}
+                <span className="block text-xs text-stone-500 italic">“{a.observaciones}”</span>
+                <span className="text-[11px] text-stone-400">{a.evaluador ?? 'sin nombre'} · {fmtFecha(a.fecha ?? '')}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Bitácora: campo y SIG en una sola línea de tiempo */}
       {entradas.length > 0 && (
         <div className="bg-white rounded-2xl border border-stone-100 overflow-hidden">
@@ -987,8 +1014,9 @@ export default function ResultadosCampo({
                         {r.accion === 'modificada' && r.area_ha_campo != null
                           ? <>Quedó en <strong>{fmtHa(r.area_ha_campo)}</strong>{r.metodo && <span className="text-stone-400"> · por {r.metodo}</span>}</>
                           : r.accion === 'nueva' && r.area_ha_campo != null
-                            ? <>Zona dibujada en terreno de <strong>{fmtHa(r.area_ha_campo)}</strong></>
+                            ? <>Zona dibujada en terreno de <strong>{fmtHa(r.area_ha_campo)}</strong>{r.capa_apoyo_id && <span className="text-stone-400"> · desde la capa de apoyo</span>}</>
                             : <span className="text-stone-500">Sin cambio de geometría</span>}
+                        {r.proyecto && <span className="text-stone-500"> · {nombreProyectoCampo(r.proyecto)}</span>}
                       </span>
                       {r.observaciones && <span className="block text-xs text-stone-500 mt-0.5 italic">“{r.observaciones}”</span>}
                       <span className="text-[11px] text-stone-400 mt-0.5 flex items-center gap-2 flex-wrap">
@@ -1034,7 +1062,7 @@ export default function ResultadosCampo({
           </Seccion>
 
           {zonasEval.map((z, i) => (
-            <Seccion key={i} titulo={`Zona ${z.zona_numero ?? i + 1}${z.area_ha_sig ? ` · ${fmtHa(z.area_ha_sig as number)}` : ''}${z.descartada ? ' · descartada' : ''}`}>
+            <Seccion key={i} titulo={`Zona ${z.numero_mapa ?? z.zona_numero ?? i + 1}${z.area_ha_sig ? ` · ${fmtHa(z.area_ha_sig as number)}` : ''}${z.proyecto ? ` · ${nombreProyectoCampo(z.proyecto as string)}` : ''}${z.descartada ? ' · descartada' : ''}`}>
               <div className="space-y-4">
                 <div>
                   <p className="text-[11px] font-black text-teal-600 uppercase tracking-wider mb-1.5">§3 Cobertura vegetal</p>
@@ -1166,4 +1194,11 @@ export default function ResultadosCampo({
       )}
     </div>
   )
+}
+
+/** El tipo de proyecto más reciente que campo le dio a una zona (puede venir en una revisión anterior a la última). */
+function proyectoDe(revisiones: RevisionCampo[], zonaId: string): string | null {
+  let ultimo: RevisionCampo | null = null
+  for (const r of revisiones) if (r.zona_id === zonaId && r.proyecto && (!ultimo || ms(r.created_at) >= ms(ultimo.created_at))) ultimo = r
+  return ultimo?.proyecto ?? null
 }
