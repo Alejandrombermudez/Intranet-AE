@@ -27,27 +27,6 @@
 -- tienen nada que no esté en facturas/inventario), y restaurar el COMMENT ON
 -- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
 
--- ── 2026-10-21  migration_alertas_juridica.sql + sql/03 de LDH ──────────────
--- La tabla juridica.alertas (solo service_role) de /intranet/juridica/alertas.
--- Sin datos. Probada en PGlite (dos corridas, permisos). Mientras no corra, la
--- pantalla avisa que falta la tabla y el botón de jurídica dice «Alertas» sin
--- número. DESPUÉS: trabajo_elegibilidad_ldh/sql/03_alertas_juridica_ldh.sql
--- (fuera del repo, lleva propietarios): 35 alertas del cruce LDH — 15 nombres,
--- 2 municipios, 1 posible duplicado y 17 fincas sin predio.
-
--- ── 2026-10-21  Elegibilidad LDH — sql/02 (fuera del repo) — CORRIDO ─────────
--- Verificado por REST el mismo día: El Laguito (Morelia, Bocana Agua Caliente),
--- Las Delicias, Yuriparí, las 6 veredas, La Resolana en Mono Alta; límite de
--- los 2 predios y 5 áreas más en geo.capas_apoyo (192 en total). Se deja el
--- texto de abajo como registro; pasa al historial en la próxima revisión.
--- Dos fincas del SHP que casaron SOLO por propietario: San Luis → «La Resolana»
--- (Belén de los Andaquíes) y El Laguito → «Sin información» (Morelia). El
--- usuario lo confirmó el 2026-10-21 (mismo dueño, ninguno tenía geometría).
--- El archivo trae además las correcciones que pidió ese día: 3 nombres de
--- relleno («Sin información», «Sin nombre relacionado» ×2) por el de la finca,
--- 3 veredas escritas con el nombre del municipio y 3 escrituras de Bocana Agua
--- Caliente. Va fuera del repo: tiene nombres y geometría de fincas.
-
 -- Antes del 2026-09-17 no quedaba ninguna migración de esquema pendiente
 -- (verificado por REST el 2026-08-12).
 
@@ -56,6 +35,18 @@
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
+
+-- ── 2026-10-21  migration_alertas_juridica.sql + Elegibilidad LDH sql/02 y 03 ─
+--             Verificado por REST el mismo día, solo lectura:
+--             · 02 (fuera del repo): El Laguito (Morelia, Bocana Agua Caliente),
+--               Las Delicias y Yuriparí con su nombre; 6 veredas corregidas; La
+--               Resolana en Mono Alta; límite de los 2 predios y 5 áreas más en
+--               geo.capas_apoyo (192 en total).
+--             · juridica.alertas existe; anon la tiene negada (42501).
+--             · 03 (fuera del repo): 35 alertas abiertas de origen
+--               elegibilidad_ldh — 15 nombre, 2 municipio, 1 duplicado, 17
+--               sin_predio (2 con el propietario ya registrado). Las de regla
+--               las crea la intranet la primera vez que alguien abre jurídica.
 
 -- ── 2026-10-21  migration_campo_primero.sql + carga Elegibilidad LDH (sql/01) ─
 --             Verificado por REST el mismo día, solo lectura: core.v_predios_campo
