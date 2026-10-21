@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { Cabecera, Cargando } from '@/app/components/marca'
 import Link from 'next/link'
-import { MUNICIPIOS_CAQUETA, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
+import { MUNICIPIOS_CAQUETA, normalizarMunicipio, normalizarVereda, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
 import { parsearRespuestaGuardado } from '@/lib/fetch-guardar'
 import { comprimirAdjuntos, avisoPeso } from '@/lib/comprimir-imagen'
 import { fetchParametrosHoja1, type Parametro } from '@/lib/parametros'
@@ -92,6 +92,8 @@ export default function NuevoAliadoPage() {
   const [matriculas, setMatriculas] = useState<string[]>([''])
   const [aliadoLock, setAliadoLock] = useState(false)
   const [prefillNombre, setPrefillNombre] = useState('')
+  // Llegó desde una alerta «finca del SIG sin predio»: al guardar se cierra.
+  const [alertaId, setAlertaId] = useState<string | null>(null)
   const [proyectos, setProyectos] = useState<Parametro[]>([])
   const [fuentes, setFuentes]     = useState<Parametro[]>([])
 
@@ -140,6 +142,33 @@ export default function NuevoAliadoPage() {
         setPrefillNombre(data.nombre_completo)
         setAliadoLock(true)
       })
+  }, [setValue])
+
+  // Caso "finca del SIG sin predio" (/intranet/juridica/alertas): la ficha llega
+  // con lo que trae el SIG. Los datos se piden por el id de la alerta, no viajan
+  // en la URL (el propietario es un dato personal).
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('alerta')
+    if (!id) return
+    setAlertaId(id)
+    fetchConSesion(`/api/juridica/alertas/${id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((alerta) => {
+        const d = (alerta?.datos ?? {}) as Record<string, string | undefined>
+        if (d.finca) setValue('nombre_predio', d.finca)
+        const mun = normalizarMunicipio(d.municipio)
+        if (mun) {
+          setSelectedMunicipio(mun)
+          setValue('municipio', mun)
+          if (d.vereda) setValue('vereda', normalizarVereda(mun, d.vereda))
+        }
+        if (d.fuente) setValue('fuente_informacion', d.fuente)
+        // Si el propietario ya existe, lo trae (y lo bloquea) el efecto de ?aliado=.
+        if (d.propietario && !new URLSearchParams(window.location.search).get('aliado')) {
+          setValue('nombre_completo', d.propietario)
+        }
+      })
+      .catch(() => {})
   }, [setValue])
 
   // Aviso de posible duplicado: la misma persona ya registrada con otro predio.
@@ -210,6 +239,14 @@ export default function NuevoAliadoPage() {
       const nuevoId = result.body?.id
       if (!nuevoId) { setError('El caso se creó pero el servidor no devolvió su identificador. Búscalo en el listado.'); return }
       const fallidos = result.body?.documentos_fallidos ?? []
+      if (alertaId) {
+        // La finca ya quedó registrada: la alerta se cierra y queda ligada al predio.
+        await fetchConSesion(`/api/juridica/alertas/${alertaId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accion: 'resolver', nota: 'Se registró el predio', predio_id: nuevoId }),
+        }).catch(() => {})
+      }
       router.push(fallidos.length
         ? `/intranet/juridica/${nuevoId}/editar?docs=${encodeURIComponent(fallidos.join(','))}`
         : `/intranet/juridica/${nuevoId}`)

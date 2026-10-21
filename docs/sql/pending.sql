@@ -27,7 +27,19 @@
 -- tienen nada que no esté en facturas/inventario), y restaurar el COMMENT ON
 -- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
 
--- ── 2026-10-21  Elegibilidad LDH — sql/02 (fuera del repo) ──────────────────
+-- ── 2026-10-21  migration_alertas_juridica.sql + sql/03 de LDH ──────────────
+-- La tabla juridica.alertas (solo service_role) de /intranet/juridica/alertas.
+-- Sin datos. Probada en PGlite (dos corridas, permisos). Mientras no corra, la
+-- pantalla avisa que falta la tabla y el botón de jurídica dice «Alertas» sin
+-- número. DESPUÉS: trabajo_elegibilidad_ldh/sql/03_alertas_juridica_ldh.sql
+-- (fuera del repo, lleva propietarios): 35 alertas del cruce LDH — 15 nombres,
+-- 2 municipios, 1 posible duplicado y 17 fincas sin predio.
+
+-- ── 2026-10-21  Elegibilidad LDH — sql/02 (fuera del repo) — CORRIDO ─────────
+-- Verificado por REST el mismo día: El Laguito (Morelia, Bocana Agua Caliente),
+-- Las Delicias, Yuriparí, las 6 veredas, La Resolana en Mono Alta; límite de
+-- los 2 predios y 5 áreas más en geo.capas_apoyo (192 en total). Se deja el
+-- texto de abajo como registro; pasa al historial en la próxima revisión.
 -- Dos fincas del SHP que casaron SOLO por propietario: San Luis → «La Resolana»
 -- (Belén de los Andaquíes) y El Laguito → «Sin información» (Morelia). El
 -- usuario lo confirmó el 2026-10-21 (mismo dueño, ninguno tenía geometría).

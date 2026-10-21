@@ -207,6 +207,8 @@ export default function JuridicaPage() {
   const [progreso, setProgreso] = useState<string | null>(null)
   const [preguntando, setPreguntando] = useState(false)
   const [avisoReporte, setAvisoReporte] = useState<string | null>(null)
+  // Alertas de datos por revisar (/intranet/juridica/alertas); null mientras carga.
+  const [alertasAbiertas, setAlertasAbiertas] = useState<number | null>(null)
 
   useEffect(() => { fetchParametros('proyectos').then(setProyectos) }, [])
 
@@ -236,6 +238,16 @@ export default function JuridicaPage() {
       .then((data) => { setAliados(Array.isArray(data) ? data : []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [authReady, userEmail])
+
+  useEffect(() => {
+    if (!authReady) return
+    fetchConSesion('/api/juridica/alertas')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => setAlertasAbiertas(
+        Array.isArray(body?.alertas) ? body.alertas.filter((a: { estado: string }) => a.estado === 'abierta').length : null,
+      ))
+      .catch(() => {})
+  }, [authReady])
 
   // Cuántos casos tiene cada persona: sirve para explicar en la tarjeta por qué
   // el mismo propietario aparece varias veces (un predio = una ficha).
@@ -344,6 +356,9 @@ export default function JuridicaPage() {
           <Boton variante="claro" onClick={() => (seleccionando ? salirDeSeleccion() : setSeleccionando(true))}
             icono={<FileDown size={14} />}>
             {seleccionando ? 'Cancelar selección' : 'Reporte jurídico'}
+          </Boton>
+          <Boton variante="claro" href="/intranet/juridica/alertas" icono={<AlertTriangle size={14} />}>
+            {alertasAbiertas ? `Alertas · ${alertasAbiertas}` : 'Alertas'}
           </Boton>
           <Boton variante="claro" href="/intranet/expedientes" icono={<LayoutGrid size={14} />}>Tablero</Boton>
           <Boton variante="luz" href="/intranet/juridica/nuevo" icono={<Plus size={14} />}>Nuevo aliado</Boton>
