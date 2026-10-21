@@ -12,6 +12,25 @@ Hoy toda la geometría se guarda como un `.zip` (shapefile) en Storage y el geov
 
 ---
 
+## Campo primero (2026-10-20) — en producción desde el 2026-10-21
+
+Hay predios que se visitan **antes** de que el SIG proponga nada: en terreno se delimitan el predio y los
+sitios de siembra, el SIG confirma después y sigue la nucleación. Es el mismo ciclo con el orden invertido,
+no un ciclo aparte: lo que dibuja campo entra por las mismas revisiones (`geo.zona_revision`) y lo que
+decide el SIG por `geo.zona_decision`.
+
+- **Salida a campo:** ya no hay que enviarlo. Desde `migration_campo_primero.sql` todo predio con expediente
+  activo se ve en la app de campo; si el SIG no le ha propuesto sitios, sale como «campo primero» (la vista lo
+  deduce, no se guarda). «Enviar a Campo» sigue, pero solo pasa el expediente a la etapa Campo.
+- **Capas de apoyo** (`geo.capas_apoyo`): referencia por predio que la app pinta como guía, p. ej. las áreas
+  elegibles del SHP de Lácteos del Hogar. No son sitios: el SIG no las decide y la nucleación no las ve.
+- **En terreno (app de campo, mismo módulo SIG):** capa «Límite del predio» además de «Sitios de siembra»;
+  las dos se dibujan sobre el satelital o se trazan caminando con el GPS. El límite viaja por
+  `geo.revisar_zona_campo` (tipo `finca`); los sitios, por `geo.revisar_zona` como siempre.
+- **De vuelta en la oficina:** los sitios se deciden como cualquier resultado de campo; el límite tiene su
+  propio panel arriba en «Resultados de campo» (confirmar o retirar, `geo.decidir_limite`).
+- Modelo: [`sql/migration_campo_primero.sql`](sql/migration_campo_primero.sql).
+
 ## El terreno verifica, el SIG decide (2026-09-23)
 
 Hasta aquí la regla era corta: **el terreno tiene la última palabra**. Sigue siendo cierta en lo que

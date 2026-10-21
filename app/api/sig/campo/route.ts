@@ -43,6 +43,8 @@ export interface DecisionSig {
 /** Cómo está HOY cada zona que campo tocó (geo.zonas), no cómo la dejó campo. */
 export interface ZonaActual {
   id:        string
+  /** 'restauracion' (sitio de siembra) o 'finca' (límite del predio que campo dibujó o corrigió). */
+  tipo:      string
   estado:    string
   vigente:   boolean
   origen:    string
@@ -107,7 +109,7 @@ export async function GET(req: NextRequest) {
     if (ids.length > 0) {
       const [{ data: zs }, { data: nucs }] = await Promise.all([
         supabase.schema('geo').from('zonas')
-          .select('id, estado, vigente, origen, area_ha, geom')
+          .select('id, tipo, estado, vigente, origen, area_ha, geom')
           .in('id', ids),
         // Si la nucleación no está migrada, esto falla y se cuenta 0: no bloquea.
         supabase.schema('geo').from('nucleos')
@@ -151,15 +153,19 @@ function poligonoValido(g: unknown): g is Geometry {
     && Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90)
 }
 
+const FALTA_LIMITE = 'Falta correr docs/sql/migration_campo_primero.sql en Supabase: hasta entonces el límite que trajo campo se ve, pero no se puede decidir.'
+
 // POST /api/sig/campo — el SIG decide sobre zonas que campo ya revisó
 //   { predio_id, zona_ids: string[], decision: 'confirmar'|'editar'|'eliminar', geometry?, nota? }
+//   Con objeto: 'limite' decide sobre el límite del predio que trajo campo
+//   (flujo «campo primero», geo.decidir_limite): una zona a la vez.
 export async function POST(req: NextRequest) {
   try {
     const supabase = createServerSupabaseClient()
     const sesion = await exigirSesion(req, supabase, PUEDE.procesoPredio)
     if (!sesion.ok) return sesion.respuesta
 
-    const { predio_id, zona_ids, decision, geometry, nota } = await req.json()
+    const { predio_id, zona_ids, decision, geometry, nota, objeto } = await req.json()
     if (!predio_id) return NextResponse.json({ error: 'Falta el predio' }, { status: 400 })
     if (!['confirmar', 'editar', 'eliminar'].includes(decision)) {
       return NextResponse.json({ error: 'Decisión inválida' }, { status: 400 })
@@ -173,6 +179,27 @@ export async function POST(req: NextRequest) {
       if (!poligonoValido(geometry)) {
         return NextResponse.json({ error: 'La geometría editada no es un polígono válido en EPSG:4326 (lon/lat).' }, { status: 400 })
       }
+    }
+
+    if (objeto === 'limite') {
+      if (ids.length !== 1) return NextResponse.json({ error: 'El límite se decide de a un polígono' }, { status: 400 })
+      const { error } = await supabase.schema('geo').rpc('decidir_limite', {
+        p_predio_id: predio_id,
+        p_zona_id:   ids[0],
+        p_decision:  decision,
+        p_geojson:   decision === 'editar' ? JSON.stringify(geometry) : null,
+        p_por:       sesion.perfil.email,
+        p_nota:      typeof nota === 'string' && nota.trim() ? nota.trim().slice(0, 1000) : null,
+      })
+      if (error) {
+        if (['PGRST202', '42883'].includes(error.code ?? '') || /decidir_limite/i.test(error.message ?? '')) {
+          return NextResponse.json({ error: FALTA_LIMITE }, { status: 503 })
+        }
+        if (error.code === 'P0001') return NextResponse.json({ error: error.message }, { status: 409 })
+        console.error('POST /api/sig/campo (límite) error:', error)
+        return NextResponse.json({ error: 'No se pudo guardar la decisión' }, { status: 500 })
+      }
+      return NextResponse.json({ decididas: 1 })
     }
 
     const { data, error } = await supabase.schema('geo').rpc('decidir_zonas', {

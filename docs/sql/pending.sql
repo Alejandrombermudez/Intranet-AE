@@ -1,6 +1,6 @@
 -- ============================================================
 -- SQL Pendiente — Intranet AE
--- Última revisión: 2026-10-14 (verificado contra BD real vía REST API)
+-- Última revisión: 2026-10-21 (verificado contra BD real vía REST API)
 --
 -- REGLA: solo están aquí cosas que NO se han podido verificar
 -- vía REST API. Una vez ejecutadas, mover al historial abajo.
@@ -27,6 +27,13 @@
 -- tienen nada que no esté en facturas/inventario), y restaurar el COMMENT ON
 -- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
 
+-- ── 2026-10-21  Elegibilidad LDH — sql/02 (fuera del repo), opcional ────────
+-- Dos fincas del SHP que casaron SOLO por propietario: San Luis → «La Resolana»
+-- (Belén de los Andaquíes) y El Laguito → «Sin información» (Morelia). Correr
+-- trabajo_elegibilidad_ldh/sql/02_carga_elegibilidad_ldh_verificar.sql solo
+-- cuando se confirme que cada finca es ese predio (se puede borrar el bloque
+-- del que no sea). Va fuera del repo: tiene nombres y geometría de fincas.
+
 -- Antes del 2026-09-17 no quedaba ninguna migración de esquema pendiente
 -- (verificado por REST el 2026-08-12).
 
@@ -35,6 +42,17 @@
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
+
+-- ── 2026-10-21  migration_campo_primero.sql + carga Elegibilidad LDH (sql/01) ─
+--             Verificado por REST el mismo día, solo lectura: core.v_predios_campo
+--             con flujo_campo, 124 predios para la llave anon (= expedientes
+--             activos; 120 campo_primero, 4 sig_primero); revisar_zona_campo,
+--             decidir_limite y capas_apoyo_campo existen; geo.capas_apoyo negada
+--             a anon (42501) y capas_apoyo_campo() le responde. La carga 01
+--             (fuera del repo) dejó lo esperado: 9 límites de predio en 9 cargas
+--             'carga_elegibilidad_ldh', 187 áreas elegibles en geo.capas_apoyo
+--             (70 Ley del Árbol, 117 carbono; 38 predios) y ningún sitio de
+--             siembra; los 39 predios con fuente 'lacteos_del_hogar'.
 
 -- ── 2026-10-16  merge_aliados_duplicados.sql — BLOQUE 2 ─────────────────────
 --             Se borró la ficha sin predio de "Rodrigo Silva Hermida" (CC

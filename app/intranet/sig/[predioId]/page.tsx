@@ -427,8 +427,8 @@ export default function SigPredioPage() {
               <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Enviar a Campo</h2>
               <p className="text-xs text-stone-400 mt-0.5">
                 {siembraZonas.length > 0
-                  ? `Habilita este predio en la app de Campo con ${siembraZonas.length} sitio(s) de siembra guardado(s).`
-                  : 'Guarda al menos un sitio de siembra (pestaña "Sitios de siembra") antes de poder enviarlo a Campo.'}
+                  ? `Pasa el expediente a la etapa Campo con ${siembraZonas.length} sitio(s) de siembra guardado(s). El predio ya se ve en la app de campo desde que se creó.`
+                  : 'El predio ya se ve en la app de campo: sin sitios del SIG, allá se delimitan en terreno («campo primero»). Para pasar el expediente a la etapa Campo desde aquí, guarda al menos un sitio de siembra.'}
               </p>
             </div>
             <button onClick={enviarACampo} disabled={siembraZonas.length === 0 || enviandoCampo}
