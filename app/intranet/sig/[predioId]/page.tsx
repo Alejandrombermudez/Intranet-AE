@@ -260,23 +260,14 @@ export default function SigPredioPage() {
   // vuelve a validar (etapa sig_i + geo.zonas) antes de avanzar el expediente.
   // No redirige: recarga el caso en sitio para que el predio siga visible y
   // quede a la mano la opción de cancelar el envío.
-  // «Campo primero»: sin sitios del SIG, el predio sale a terreno para que allá
-  // se delimiten el predio y los sitios; el SIG los confirma después en
-  // «Resultados de campo». Ver migration_campo_primero.sql.
-  async function enviarACampo(flujo: 'sig_primero' | 'campo_primero' = 'sig_primero') {
-    if (!userEmail || enviandoCampo) return
-    if (flujo === 'sig_primero' && siembraZonas.length === 0) return
-    if (flujo === 'campo_primero' && !window.confirm(
-      'El predio saldrá a la app de campo SIN sitios de siembra del SIG: en terreno se delimitan el predio y los sitios, '
-      + 'y después tú los confirmas en «Resultados de campo». ¿Enviar así?')) return
+  async function enviarACampo() {
+    if (!userEmail || siembraZonas.length === 0 || enviandoCampo) return
     setEnviandoCampo(true)
     try {
-      const res = await fetchConSesion(`/api/juridica/aliados/${predioId}/crear-en-siembra`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ flujo }),
-      })
+      const res = await fetchConSesion(`/api/juridica/aliados/${predioId}/crear-en-siembra`, { method: 'POST' })
       const body = await res.json()
       if (!res.ok) { showToast('error', body.error ?? 'No se pudo enviar a Campo'); return }
-      showToast('ok', flujo === 'campo_primero' ? 'Predio enviado a Campo para delimitar en terreno' : 'Predio enviado a Campo')
+      showToast('ok', 'Predio enviado a Campo')
       await cargarCaso()
     } finally {
       setEnviandoCampo(false)
@@ -436,24 +427,15 @@ export default function SigPredioPage() {
               <h2 className="font-black text-stone-800 text-sm uppercase tracking-wider">Enviar a Campo</h2>
               <p className="text-xs text-stone-400 mt-0.5">
                 {siembraZonas.length > 0
-                  ? `Habilita este predio en la app de Campo con ${siembraZonas.length} sitio(s) de siembra guardado(s).`
-                  : 'Sin sitios de siembra del SIG. Guárdalos en la pestaña "Sitios de siembra", o envíalo «campo primero»: en terreno se delimitan el predio y los sitios y tú los confirmas después.'}
+                  ? `Pasa el expediente a la etapa Campo con ${siembraZonas.length} sitio(s) de siembra guardado(s). El predio ya se ve en la app de campo desde que se creó.`
+                  : 'El predio ya se ve en la app de campo: sin sitios del SIG, allá se delimitan en terreno («campo primero»). Para pasar el expediente a la etapa Campo desde aquí, guarda al menos un sitio de siembra.'}
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap shrink-0">
-              {siembraZonas.length === 0 && (
-                <button onClick={() => enviarACampo('campo_primero')} disabled={enviandoCampo}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-sm font-bold hover:bg-amber-200 transition-colors disabled:opacity-40">
-                  {enviandoCampo ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                  Enviar campo primero
-                </button>
-              )}
-              <button onClick={() => enviarACampo('sig_primero')} disabled={siembraZonas.length === 0 || enviandoCampo}
-                className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                {enviandoCampo ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                Enviar a Campo
-              </button>
-            </div>
+            <button onClick={enviarACampo} disabled={siembraZonas.length === 0 || enviandoCampo}
+              className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0">
+              {enviandoCampo ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+              Enviar a Campo
+            </button>
           </section>
         )}
         {/* Ya en Campo: sigue visible + opción de cancelar el envío. */}

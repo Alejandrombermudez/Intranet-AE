@@ -152,7 +152,6 @@ municipios/propietarios toca). Se arma desde `/intranet/sig` con **Fusionar pred
 | etapa | text | | `juridica`→`sig_i`→`campo`→`sig_ii`→`plan`→`juridica_ii`→`ejecucion`→`archivado` |
 | estado | text | | `activo` \| `rechazado` \| `archivado` \| `completado` |
 | linea | text | | `restauracion` \| `conservacion` \| `ambas` |
-| flujo_campo | text | | `sig_primero` (el SIG propone, campo verifica) \| `campo_primero` (campo delimita predio y sitios desde cero, el SIG confirma). Lo fija «Enviar a Campo». `migration_campo_primero.sql`, escrita 2026-10-20 |
 | proyecto_fase / responsable | text | | |
 | fecha_inicio | timestamptz | | |
 
@@ -230,7 +229,9 @@ municipios/propietarios toca). Se arma desde `/intranet/sig` con **Fusionar pred
 > `disolver_grupo`, que la PARTE 3 de la migración cerró—, mientras que `revisar_zona` con la llave anónima
 > sigue entrando, que es lo que necesita la app de campo.
 
-> **Desde el flujo «campo primero» (2026-10-20, migración escrita, sin correr):** `geo.revisar_zona_campo` es la misma función con un argumento más, `p_tipo` (`restauracion` | `finca`), para que campo pueda **dibujar o corregir el límite del predio**. `geo.revisar_zona` no se tocó (la usan los celulares instalados). El SIG revisa ese límite con `geo.decidir_limite` (confirmar · editar · eliminar → `geo.zona_decision`); confirmar **no** lo pasa a `definitiva`, que es el estado de los lotes de siembra.
+> **Todo predio de jurídica se ve en campo (2026-10-20, `migration_campo_primero.sql`, escrita, sin correr):** `core.v_predios_campo` trae todos los predios con expediente `activo`, en cualquier etapa, con `flujo_campo` **deducido** (no es columna de `core.expedientes`): `sig_primero` si el SIG les propuso un sitio que sigue en juego (los que nacieron de una revisión `nueva` de campo no cuentan), `campo_primero` si no. «Enviar a Campo» ya no habilita nada en la app: solo pasa el expediente a la etapa `campo`. La misma migración crea **`geo.capas_apoyo`**: capas de referencia por predio (p. ej. las áreas elegibles de Ley del Árbol y carbono del SHP de Lácteos del Hogar) que la app pinta como guía —no son sitios: no se verifican, no se evalúan, no pasan a lote—; la app las lee por `geo.capas_apoyo_campo()` y la tabla solo la toca `service_role`.
+>
+> **Límite del predio desde campo:** `geo.revisar_zona_campo` es la misma función con un argumento más, `p_tipo` (`restauracion` | `finca`), para que campo pueda **dibujar o corregir el límite del predio**. `geo.revisar_zona` no se tocó (la usan los celulares instalados). El SIG revisa ese límite con `geo.decidir_limite` (confirmar · editar · eliminar → `geo.zona_decision`); confirmar **no** lo pasa a `definitiva`, que es el estado de los lotes de siembra.
 >
 > **Única puerta de escritura para la PWA (anon): RPC `geo.revisar_zona`** (SECURITY DEFINER, 10 argumentos) — valida, aplica el cambio a `geo.zonas` y deja la auditoría; la app no tiene UPDATE/INSERT directo. La app de campo (módulo SIG) muestra finca + zonas sobre satelital, geolocaliza al técnico (dentro de / distancia y rumbo a la zona) y edita por vértices con leaflet-geoman, todo offline-first (Dexie `revisiones`).
 >
@@ -333,7 +334,7 @@ Vista `geo.v_reporte_carbono_nucleos`: una fila por núcleo con sus totales. Lec
 | Jurídica I | aliado/predio aprobado (semáforo) | SIG I | `core.*` + `juridica.*` |
 | SIG I | zonas potenciales | Campo | `geo.zonas` (estado potencial) |
 | **SIG I → Campo (obligatorio, 2026-07-07)** | botón **"Enviar a Campo"** en `/intranet/sig/[predioId]` → `POST /api/juridica/aliados/[id]/crear-en-siembra` | Campo | exige `expediente.etapa='sig_i'` + ≥1 `geo.zonas` (tipo `restauracion`); si no, 422. Crea `siembra.familias` (solo `predio_id`/`aliado_id`/`expediente_id`, sin duplicar identidad) y avanza `etapa` a `campo`. Cinturón de seguridad adicional: `core.v_predios_campo` (la vista que lee la PWA) exige el mismo `EXISTS` sobre `geo.zonas` — ver `migration_campo_core_v2.sql`. |
-| **SIG I → Campo, «campo primero» (2026-10-20)** | botón **«Enviar campo primero»** (solo cuando el predio no tiene sitios del SIG) → misma ruta con `{ flujo: 'campo_primero' }` | Campo | no exige zonas; anota `core.expedientes.flujo_campo`, y `core.v_predios_campo` deja pasar el predio sin zonas. En terreno se dibujan el **límite del predio** (tipo `finca`, por `geo.revisar_zona_campo`) y los **sitios** (`geo.revisar_zona`, acción `nueva`); el SIG decide los sitios con `geo.decidir_zonas` y el límite con `geo.decidir_limite`. `migration_campo_primero.sql` |
+| **Jurídica → Campo, directo (2026-10-20, migración sin correr)** | nada: el predio aparece en la app de campo apenas jurídica lo registra | Campo | `core.v_predios_campo` deja de exigir etapa y sitios (solo expediente `activo`). Sin sitios del SIG sale como «campo primero». En terreno se dibujan el **límite del predio** (tipo `finca`, por `geo.revisar_zona_campo`) y los **sitios** (`geo.revisar_zona`, acción `nueva`); el SIG decide los sitios con `geo.decidir_zonas` y el límite con `geo.decidir_limite`. `migration_campo_primero.sql` |
 | Campo | evaluación biofísica + encuesta | SIG II / Plan | `siembra.evaluaciones_campo`, `siembra.familias` |
 | SIG II | zonas corregidas + área (ha) | Plan | `geo.zona_revision` → `geo.zonas` |
 | Plan | demanda de plántulas | Vivero | `siembra.planes` + `modelos_floristicos` + `plan_zonas` |

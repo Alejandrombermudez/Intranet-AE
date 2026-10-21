@@ -19,8 +19,11 @@ sitios de siembra, el SIG confirma después y sigue la nucleación. Es el mismo 
 no un ciclo aparte: lo que dibuja campo entra por las mismas revisiones (`geo.zona_revision`) y lo que
 decide el SIG por `geo.zona_decision`.
 
-- **Salida a campo:** en `/intranet/sig/[predioId]`, sin sitios guardados aparece «Enviar campo primero».
-  Anota `core.expedientes.flujo_campo = 'campo_primero'` y la vista del celular deja pasar el predio sin zonas.
+- **Salida a campo:** ya no hay que enviarlo. Desde `migration_campo_primero.sql` todo predio con expediente
+  activo se ve en la app de campo; si el SIG no le ha propuesto sitios, sale como «campo primero» (la vista lo
+  deduce, no se guarda). «Enviar a Campo» sigue, pero solo pasa el expediente a la etapa Campo.
+- **Capas de apoyo** (`geo.capas_apoyo`): referencia por predio que la app pinta como guía, p. ej. las áreas
+  elegibles del SHP de Lácteos del Hogar. No son sitios: el SIG no las decide y la nucleación no las ve.
 - **En terreno (app de campo, mismo módulo SIG):** capa «Límite del predio» además de «Sitios de siembra»;
   las dos se dibujan sobre el satelital o se trazan caminando con el GPS. El límite viaja por
   `geo.revisar_zona_campo` (tipo `finca`); los sitios, por `geo.revisar_zona` como siempre.
