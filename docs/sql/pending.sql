@@ -27,12 +27,14 @@
 -- tienen nada que no esté en facturas/inventario), y restaurar el COMMENT ON
 -- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
 
--- ── 2026-10-21  Elegibilidad LDH — sql/02 (fuera del repo), opcional ────────
+-- ── 2026-10-21  Elegibilidad LDH — sql/02 (fuera del repo) ──────────────────
 -- Dos fincas del SHP que casaron SOLO por propietario: San Luis → «La Resolana»
--- (Belén de los Andaquíes) y El Laguito → «Sin información» (Morelia). Correr
--- trabajo_elegibilidad_ldh/sql/02_carga_elegibilidad_ldh_verificar.sql solo
--- cuando se confirme que cada finca es ese predio (se puede borrar el bloque
--- del que no sea). Va fuera del repo: tiene nombres y geometría de fincas.
+-- (Belén de los Andaquíes) y El Laguito → «Sin información» (Morelia). El
+-- usuario lo confirmó el 2026-10-21 (mismo dueño, ninguno tenía geometría).
+-- El archivo trae además las correcciones que pidió ese día: 3 nombres de
+-- relleno («Sin información», «Sin nombre relacionado» ×2) por el de la finca,
+-- 3 veredas escritas con el nombre del municipio y 3 escrituras de Bocana Agua
+-- Caliente. Va fuera del repo: tiene nombres y geometría de fincas.
 
 -- Antes del 2026-09-17 no quedaba ninguna migración de esquema pendiente
 -- (verificado por REST el 2026-08-12).

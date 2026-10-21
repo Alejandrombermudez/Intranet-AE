@@ -43,6 +43,13 @@ const MINUSCULAS = new Set(['de', 'del', 'la', 'las', 'lo', 'los', 'el', 'y', 'e
 const igual = (a: string, b: string) => a.localeCompare(b, 'es', { sensitivity: 'base' }) === 0
 
 /**
+ * La misma vereda aunque cambien los espacios: el SIG escribe «Bocana Agua
+ * Caliente» y el DANE «BOCANA AGUACALIENTE»; con `igual` a secas quedaban
+ * dos veredas en los filtros.
+ */
+const mismaVereda = (a: string, b: string) => igual(a.replace(/\s+/g, ''), b.replace(/\s+/g, ''))
+
+/**
  * Tipo Título en español: "ROCHELA ALTA" → "Rochela Alta",
  * "BELÉN DE LOS ANDAQUÍES" → "Belén de los Andaquíes".
  * Respeta los separadores de los valores compuestos que ya hay en la base
@@ -82,17 +89,26 @@ export function normalizarMunicipio(valor?: string | null): MunicipioCaqueta | '
 }
 
 /**
- * Vereda en su forma canónica. Si coincide con una vereda oficial del
- * municipio se usa esa escritura; si no (hay veredas compuestas capturadas a
- * mano, "Rochela alta/Santa Rosa"), se deja en Tipo Título.
+ * Vereda en su forma canónica. Si coincide con una vereda de la lista del
+ * municipio (sin importar mayúsculas, tildes ni espacios, y pasando por
+ * `ESCRITURA_PROPIA`) se usa esa escritura; si no (veredas que no están en la
+ * lista, o compuestas capturadas a mano, "Rochela alta/Santa Rosa"), se deja
+ * en Tipo Título.
  */
 export function normalizarVereda(municipio?: string | null, valor?: string | null): string {
   if (!valor) return ''
   const v = limpiar(valor)
   if (!v) return ''
   const mun = normalizarMunicipio(municipio)
-  const oficiales = mun ? VEREDAS_POR_MUNICIPIO[mun] : []
-  return oficiales.find((x) => igual(x, v)) ?? tituloCase(v)
+  if (!mun) return tituloCase(v)
+  const propia = escrituraPropia(mun, v)
+  return VEREDAS_POR_MUNICIPIO[mun].find((x) => mismaVereda(x, propia)) ?? tituloCase(propia)
+}
+
+/** La escritura de `ESCRITURA_PROPIA` si `valor` es una de sus variantes; si no, `valor` tal cual. */
+function escrituraPropia(mun: MunicipioCaqueta, valor: string): string {
+  const ajustes = Object.entries(ESCRITURA_PROPIA).find(([k]) => igual(k, mun))?.[1] ?? {}
+  return Object.entries(ajustes).find(([variante]) => mismaVereda(variante, valor))?.[1] ?? valor
 }
 
 /** Zona AE (texto libre del equipo): misma escritura para el mismo grupo. */
@@ -122,14 +138,60 @@ const VEREDAS_CRUDO: Record<string, string[]> = {
 }
 
 /**
- * Veredas oficiales por municipio, ya en la escritura canónica y ordenadas.
- * Se deriva de la lista cruda (DANE, en mayúscula sostenida): así el selector
- * de la ficha jurídica ofrece exactamente los valores que se guardan.
+ * Veredas que la lista del DANE no trae y que sí existen: las usan el
+ * shapefile de Elegibilidad LDH del SIG (2026-10-14) y los predios ya
+ * registrados — Guayabal tenía 16 predios en Florencia el 2026-10-21, y como no
+ * estaba en el selector, editar uno de esos predios le borraba la vereda.
+ * Las demás que falten se agregan desde la ficha («+ Agregar»): quedan en la
+ * lista apenas un predio las usa (`/api/juridica/veredas`).
+ */
+const VEREDAS_AGREGADAS: Record<string, string[]> = {
+  "FLORENCIA": ["GUAYABAL", "LA VICIOSA", "SANTANDER"],
+}
+
+/**
+ * Donde la escritura de aquí no es la del DANE: variante → escritura que se
+ * guarda. Se eligió la del SIG y la mayoría de los predios (2026-10-21:
+ * «Bocana Agua Caliente» 5 predios contra 2, «Campo Alegre» 4 contra 0).
+ */
+const ESCRITURA_PROPIA: Record<string, Record<string, string>> = {
+  "MORELIA": {
+    "BOCANA AGUACALIENTE": "BOCANA AGUA CALIENTE",
+    "CAMPOALEGRE": "CAMPO ALEGRE",
+    "CARNICERIA": "CARNICERIAS",
+  },
+}
+
+/**
+ * Veredas por municipio, ya en la escritura canónica y ordenadas. Se deriva de
+ * la lista cruda (DANE, en mayúscula sostenida) más `VEREDAS_AGREGADAS`, con
+ * `ESCRITURA_PROPIA` aplicada: así el selector de la ficha jurídica ofrece
+ * exactamente los valores que se guardan.
  */
 export const VEREDAS_POR_MUNICIPIO: Record<MunicipioCaqueta, string[]> = Object.fromEntries(
   MUNICIPIOS_CAQUETA.map((mun) => {
-    const crudo = Object.entries(VEREDAS_CRUDO).find(([k]) => igual(k, mun))?.[1] ?? []
-    const unicas = [...new Set(crudo.map(tituloCase))]          // la lista cruda trae repetidas
+    const de = (fuente: Record<string, string[]>) => Object.entries(fuente).find(([k]) => igual(k, mun))?.[1] ?? []
+    const unicas: string[] = []
+    for (const cruda of [...de(VEREDAS_CRUDO), ...de(VEREDAS_AGREGADAS)]) {
+      const v = tituloCase(escrituraPropia(mun, cruda))
+      if (!unicas.some((u) => mismaVereda(u, v))) unicas.push(v)   // la lista cruda trae repetidas
+    }
     return [mun, unicas.sort((a, b) => a.localeCompare(b, 'es'))]
   }),
 ) as Record<MunicipioCaqueta, string[]>
+
+/**
+ * Veredas para el selector: la lista del municipio más las que ya usan sus
+ * predios (las que se agregaron a mano), sin repetir. Una vereda compuesta
+ * («Campo Alegre/Carnicerías») se ofrece por partes; el municipio escrito como
+ * vereda no se ofrece.
+ */
+export function opcionesVereda(municipio: MunicipioCaqueta, enUso: string[] = []): string[] {
+  const lista = [...VEREDAS_POR_MUNICIPIO[municipio]]
+  for (const usada of enUso.flatMap((v) => v.split('/'))) {
+    const v = normalizarVereda(municipio, usada)
+    if (!v || igual(v, municipio)) continue
+    if (!lista.some((x) => mismaVereda(x, v))) lista.push(v)
+  }
+  return lista.sort((a, b) => a.localeCompare(b, 'es'))
+}

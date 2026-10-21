@@ -11,11 +11,12 @@ import {
 } from 'lucide-react'
 import { Cabecera, Cargando } from '@/app/components/marca'
 import Link from 'next/link'
-import { MUNICIPIOS_CAQUETA, VEREDAS_POR_MUNICIPIO, normalizarMunicipio, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
+import { MUNICIPIOS_CAQUETA, normalizarMunicipio, type MunicipioCaqueta } from '@/lib/veredas-caqueta'
 import { parsearRespuestaGuardado, mensajeDocumentosFallidos } from '@/lib/fetch-guardar'
 import { comprimirAdjuntos, avisoPeso } from '@/lib/comprimir-imagen'
 import { fetchParametrosHoja1, type Parametro } from '@/lib/parametros'
 import SelectParametro from '@/app/components/SelectParametro'
+import SelectVereda from '@/app/components/SelectVereda'
 
 const ETIQUETAS_DOC: Record<string, string> = {
   cedula:                'Documento de identidad',
@@ -294,16 +295,11 @@ export default function EditarAliadoPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Vereda">
-              <select
-                {...register('vereda')}
-                disabled={!selectedMunicipio}
-                className={`${INPUT} ${!selectedMunicipio ? 'bg-stone-50 text-stone-400 cursor-not-allowed' : ''}`}
-              >
-                <option value="">— Seleccione vereda —</option>
-                {selectedMunicipio && VEREDAS_POR_MUNICIPIO[selectedMunicipio]?.map((v) => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
+              <SelectVereda
+                municipio={selectedMunicipio}
+                value={watch('vereda') ?? ''}
+                onChange={(v) => setValue('vereda', v, { shouldDirty: true })}
+              />
             </Field>
             <Field label="Zona AE"><input {...register('zona_ae')} className={INPUT} /></Field>
           </div>

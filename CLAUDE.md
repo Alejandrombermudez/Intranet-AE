@@ -19,6 +19,12 @@ documentos maestros de arquitectura de todo el ecosistema (no solo de esta app).
 - **`core.*` es el núcleo canónico** (persona=`core.aliados`, predio=`core.predios`, proceso=`core.expedientes`). Jurídica ya escribe sobre `core`. Los demás módulos **referencian** `predio_id`/`aliado_id`/`expediente_id` — no copian nombre/municipio/vereda/etc. Si ves un módulo guardando esos campos por su cuenta, es deuda del rediseño, no el patrón a seguir.
 - **Siempre especificar schema** en las queries: `supabase.schema('siembra').from('familias')...` (excepto `public`).
 - **Municipio, vereda y zona AE se guardan normalizados** (`normalizarMunicipio` / `normalizarVereda` / `normalizarZonaAe` de `lib/veredas-caqueta.ts`, Tipo Título en español). Se hace **en el servidor**, en las rutas que escriben `core.predios`, no solo en el formulario: si se guarda el valor como llega, los filtros del tablero SIG vuelven a partir el mismo municipio en "MORELIA" y "Morelia" (pasó hasta el 2026-09-17, con 111 predios ya cargados).
+  La vereda se compara sin mayúsculas, tildes **ni espacios**; lo que el DANE no trae va en `VEREDAS_AGREGADAS` y donde
+  la escritura de aquí no es la del DANE, en `ESCRITURA_PROPIA` («Bocana Agua Caliente», «Campo Alegre», como el SIG y
+  la mayoría de los predios). La ficha jurídica usa `app/components/SelectVereda.tsx`: lista del municipio + las que ya
+  usan los predios (`/api/juridica/veredas`) + «Agregar vereda»; la que se agrega queda para todos al guardar el predio.
+  El valor que ya tiene el predio se ofrece siempre: hasta el 2026-10-21, editar un predio de Guayabal (no estaba en la
+  lista) le borraba la vereda.
 - **Nunca hardcodear la service_role key ni ninguna key.** Se lee de `.env` (gitignored). Confirma que exista antes de escribir un script que la use — no la pidas ni la imprimas.
 - **Toda API route identifica a quien llama por el token de sesión, nunca por un correo que manda el cliente.** En el servidor: `exigirSesion(req, supabase, PUEDE.xxx)` de `lib/auth-api.ts` (el correo para `created_by` sale de `sesion.perfil.email`). En el navegador: `fetchConSesion` de `lib/fetch-sesion.ts`. Hasta el 2026-09-14, 18 rutas autorizaban con `?email=`/`created_by`/`requesterEmail` y 3 no verificaban nada: sin iniciar sesión se podía leer todo jurídica, reporte y SIG, y darse administrador. No volver a copiar ese patrón.
 
