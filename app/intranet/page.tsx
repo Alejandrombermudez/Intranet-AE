@@ -62,6 +62,7 @@ interface Consentimiento {
   acepta_tratamiento: boolean
   acepta_politicas: boolean
   acepta_cesion: boolean
+  firma: string | null
   created_at: string
 }
 
@@ -935,6 +936,7 @@ function ConsentimientosTab() {
         'Acepta tratamiento': c.acepta_tratamiento ? 'Sí' : 'No',
         'Acepta políticas':   c.acepta_politicas   ? 'Sí' : 'No',
         'Acepta cesión de imagen': c.acepta_cesion ? 'Sí' : 'No',
+        'Firma': c.firma ? 'Sí' : 'No',
       }))
       const ws = utils.json_to_sheet(rows)
       const wb = utils.book_new()
@@ -950,7 +952,7 @@ function ConsentimientosTab() {
     try {
       const { default: jsPDF } = await import('jspdf')
       const { default: autoTable } = await import('jspdf-autotable')
-      const doc = new jsPDF({ orientation: 'landscape' })
+      const doc = new jsPDF({ orientation: 'landscape', compress: true })
 
       doc.setFontSize(14)
       doc.setTextColor(13, 115, 119)
@@ -961,7 +963,7 @@ function ConsentimientosTab() {
 
       autoTable(doc, {
         startY: 27,
-        head: [['Nombre', 'Apellido', 'Cédula', 'Celular', 'Correo', 'Fecha de registro', 'Cesión de imagen']],
+        head: [['Nombre', 'Apellido', 'Cédula', 'Celular', 'Correo', 'Fecha de registro', 'Cesión de imagen', 'Firma']],
         body: registros.map((c) => [
           c.nombre,
           c.apellido,
@@ -970,10 +972,18 @@ function ConsentimientosTab() {
           c.correo,
           formatFecha(c.created_at),
           c.acepta_cesion ? 'Sí' : 'No',
+          c.firma ? '' : 'Sin firma',
         ]),
         headStyles: { fillColor: [13, 115, 119], fontSize: 9, fontStyle: 'bold' },
-        styles: { fontSize: 8, cellPadding: 3 },
+        styles: { fontSize: 8, cellPadding: 3, minCellHeight: 16 },
+        columnStyles: { 7: { cellWidth: 34 } },
         alternateRowStyles: { fillColor: [248, 247, 246] },
+        // La firma va dibujada dentro de su celda, no como texto.
+        didDrawCell: (data) => {
+          if (data.section !== 'body' || data.column.index !== 7) return
+          const firma = registros[data.row.index]?.firma
+          if (firma) doc.addImage(firma, 'PNG', data.cell.x + 1.5, data.cell.y + 1, 30, 11)
+        },
       })
 
       doc.save(`consentimientos_${new Date().toISOString().slice(0, 10)}.pdf`)
@@ -1102,7 +1112,7 @@ function ConsentimientosTab() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-stone-50 border-b border-stone-200">
-                  {['Nombre completo', 'Cédula', 'Celular', 'Correo', 'Fecha de registro', 'Cesión de imagen', ''].map((h) => (
+                  {['Nombre completo', 'Cédula', 'Celular', 'Correo', 'Fecha de registro', 'Cesión de imagen', 'Firma', ''].map((h) => (
                     <th key={h} className="px-4 py-3 text-[11px] font-bold text-stone-400 uppercase tracking-wider whitespace-nowrap">
                       {h}
                     </th>
@@ -1124,6 +1134,12 @@ function ConsentimientosTab() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-stone-600">{c.acepta_cesion ? 'Sí' : 'No'}</td>
+                    <td className="px-4 py-3">
+                      {c.firma
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={c.firma} alt={`Firma de ${c.nombre} ${c.apellido}`} className="h-9 w-auto max-w-[120px]" />
+                        : <span className="text-xs text-stone-400">Sin firma</span>}
+                    </td>
                     <td className="px-4 py-3">
                       {confirmDeleteId === c.id ? (
                         <span className="flex items-center gap-1.5 text-xs">

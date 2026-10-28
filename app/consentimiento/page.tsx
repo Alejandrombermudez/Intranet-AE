@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { FileText, CheckCircle2, Loader2, AlertCircle, ExternalLink } from 'lucide-react'
 import { Cabecera, Contenido, Rotulo, Boton, Firma } from '@/app/components/marca'
+import FirmaPad from './FirmaPad'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -34,12 +35,13 @@ export default function ConsentimientoPage() {
     acepta_tratamiento: false,
     acepta_politicas: false,
     acepta_cesion: false,
+    firma: null as string | null,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
-  const set = (field: string, value: string | boolean) =>
+  const set = (field: string, value: string | boolean | null) =>
     setForm((prev) => ({ ...prev, [field]: value }))
 
   const validate = (): boolean => {
@@ -52,6 +54,7 @@ export default function ConsentimientoPage() {
     if (!form.acepta_tratamiento) errs.acepta_tratamiento = 'Debes leer y aceptar el documento'
     if (!form.acepta_politicas)   errs.acepta_politicas   = 'Debes leer y aceptar las políticas'
     if (!form.acepta_cesion)      errs.acepta_cesion      = 'Debes leer y aceptar la autorización de uso de imagen'
+    if (!form.firma)              errs.firma              = 'Firma en el recuadro con el dedo o el mouse'
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -298,6 +301,24 @@ export default function ConsentimientoPage() {
                 </label>
                 <FieldError message={errors.acepta_cesion} />
               </div>
+            </div>
+          </div>
+
+          {/* ── Firma ── */}
+          <div>
+            <Rotulo tono="bosque" className="mb-4">Firma</Rotulo>
+            <div className="border-t border-linea pt-5">
+              <FirmaPad
+                error={!!errors.firma}
+                onChange={(f) => {
+                  set('firma', f)
+                  if (f) setErrors((prev) => ({ ...prev, firma: '' }))
+                }}
+              />
+              <FieldError message={errors.firma} />
+              <p className="mt-2 text-[11px] font-light leading-relaxed text-stone-500">
+                Tu firma queda registrada junto a tu aceptación de los tres documentos.
+              </p>
             </div>
           </div>
 

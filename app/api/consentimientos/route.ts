@@ -11,6 +11,10 @@ const schema = z.object({
   acepta_tratamiento: z.boolean().refine((v) => v === true, 'Debe aceptar el tratamiento de datos'),
   acepta_politicas:   z.boolean().refine((v) => v === true, 'Debe aceptar las políticas'),
   acepta_cesion:      z.boolean().refine((v) => v === true, 'Debe aceptar la autorización de uso de imagen'),
+  // PNG en base64 del recuadro de firma. El tope evita que alguien suba un archivo enorme.
+  firma: z.string()
+    .regex(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/, 'La firma no es válida')
+    .max(120_000, 'La firma es demasiado grande'),
 })
 
 /**
@@ -41,6 +45,7 @@ export async function POST(req: NextRequest) {
         acepta_tratamiento: result.data.acepta_tratamiento,
         acepta_politicas:   result.data.acepta_politicas,
         acepta_cesion:      result.data.acepta_cesion,
+        firma:              result.data.firma,
       })
 
     if (error) {
@@ -94,7 +99,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from('consentimientos')
-      .select('id, nombre, apellido, cedula, celular, correo, acepta_tratamiento, acepta_politicas, acepta_cesion, created_at')
+      .select('id, nombre, apellido, cedula, celular, correo, acepta_tratamiento, acepta_politicas, acepta_cesion, firma, created_at')
       .order('created_at', { ascending: false })
 
     if (desde) query = query.gte('created_at', desde)
