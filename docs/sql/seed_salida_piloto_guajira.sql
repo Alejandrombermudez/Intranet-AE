@@ -25,7 +25,7 @@
 --
 --  ANTES DE CORRERLO
 --    · EDITA v_fecha (abajo): la fecha de las actas de entrega 001 y 02. Con la de
---      devolución (21/10/2026) no hace falta: sale del correo de Jarlinson.
+--      devolución (21/10/2026) no hace falta: sale del acta de devolución final.
 --    · No lleva nombres de personas (el repo es público). El responsable de la
 --      salida se pone desde la intranet.
 --    · Supuestos de unidad: Dropex, 1 galón = 4 presentaciones de 1 L del catálogo;
@@ -42,7 +42,7 @@ DECLARE
   c_nombre  CONSTANT text := 'Siembra piloto — La Guajira, Las Dalias y Versalles';
   c_usuario CONSTANT text := 'carga piloto (conciliación de logística, 23/10/2026)';
   v_fecha     date := DATE '2026-10-01';   -- ← EDITA: fecha de las actas de entrega 001 y 02
-  v_fecha_dev date := DATE '2026-10-21';   -- devolución al vivero de Morelia (correo de Jarlinson)
+  v_fecha_dev date := DATE '2026-10-21';   -- devolución al vivero de Morelia (acta de devolución final)
   v_central uuid;
   v_vivero  uuid;
   v_sid     uuid;
