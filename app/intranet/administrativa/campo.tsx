@@ -200,7 +200,7 @@ function EditarTitulo({ inicial, cat, onCerrar, onListo }: { inicial: Partial<Ti
 
       <p className="mb-2 mt-5 text-[10px] uppercase tracking-[.16em] text-tenue">Sus bodegas</p>
       <div className="grid gap-1.5 sm:grid-cols-2">
-        {cat.bodegas.filter((b) => b.activo).map((b) => (
+        {cat.bodegas.filter((b) => b.activo && b.tipo !== 'persona').map((b) => (
           <label key={b.id} className="flex items-center gap-2 text-[12.5px] text-tinta">
             <input type="checkbox" checked={bodegas.includes(b.id)}
                    onChange={(e) => setBodegas(e.target.checked ? [...bodegas, b.id] : bodegas.filter((x) => x !== b.id))} />

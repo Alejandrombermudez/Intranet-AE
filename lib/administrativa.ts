@@ -7,10 +7,12 @@
  * Ver docs/sql/migration_financiero_inventario.sql.
  */
 
+import type { ClaseElemento } from '@/lib/salidas'
+
 export interface Bodega {
   id: string
   nombre: string
-  tipo: 'central' | 'proyecto' | 'vivero' | 'campo'
+  tipo: 'central' | 'proyecto' | 'vivero' | 'campo' | 'sede' | 'persona'
   proyecto: string | null
   responsable: string | null
   activo: boolean
@@ -23,6 +25,7 @@ export interface Insumo {
   unidad: string
   presentacion: string | null
   categoria: string | null
+  clase: ClaseElemento
   activo: boolean
   notas: string | null
   costo_promedio: number | null
@@ -145,8 +148,13 @@ export const TIPOS_BODEGA: Record<Bodega['tipo'], string> = {
   central: 'Central',
   proyecto: 'Proyecto',
   vivero: 'Vivero',
-  campo: 'En predio',
+  campo: 'Salida a campo',
+  sede: 'Sede',
+  persona: 'A cargo de un trabajador',
 }
+
+/** Las bodegas físicas de la organización: donde entra lo comprado y a donde vuelve lo que sale. */
+export const esBodegaFisica = (t: Bodega['tipo']) => t !== 'campo' && t !== 'persona'
 
 export const ROLES_CAMPO: Record<TituloCampo['rol'], { nombre: string; que: string }> = {
   bodega: { nombre: 'Bodega', que: 'Solo el inventario de su bodega: lo que recibe y lo que envía.' },

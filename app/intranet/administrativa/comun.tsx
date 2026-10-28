@@ -49,6 +49,8 @@ export interface Catalogo {
   titulos: TituloCampo[]
   proyectos: Proyecto[]
   faltaMigracion?: boolean
+  /** migration_salidas_campo.sql todavía no corrió: no existe la clase de los elementos. */
+  faltaSalidas?: boolean
   aviso?: string
 }
 

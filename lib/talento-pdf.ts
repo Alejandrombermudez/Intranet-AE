@@ -20,15 +20,15 @@ import {
   type CuentaCobro, type DatosCertificado,
 } from '@/lib/talento'
 
-type Doc = import('jspdf').jsPDF
+export type Doc = import('jspdf').jsPDF
 
-const ANCHO = 215.9, ALTO = 279.4, MARGEN = 25
-const UTIL = ANCHO - 2 * MARGEN
-const ALTO_PIE = 16
-const rgb = (hex: string): [number, number, number] =>
+export const ANCHO = 215.9, ALTO = 279.4, MARGEN = 25
+export const UTIL = ANCHO - 2 * MARGEN
+export const ALTO_PIE = 16
+export const rgb = (hex: string): [number, number, number] =>
   [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
 
-async function nuevoDoc(): Promise<Doc> {
+export async function nuevoDoc(): Promise<Doc> {
   const { jsPDF } = await import('jspdf')
   return new jsPDF({ unit: 'mm', format: 'letter', compress: true })
 }
@@ -71,7 +71,7 @@ interface Organizacion {
  *   referencia  el número o el código del documento
  *   legal       la línea pequeña del pie (quién lo generó, cómo se verifica)
  */
-async function plantilla(doc: Doc, { org, tipo, referencia, legal }: {
+export async function plantilla(doc: Doc, { org, tipo, referencia, legal }: {
   org: Organizacion; tipo: string; referencia: string; legal: string
 }): Promise<number> {
   const razon = org.razon_social || 'Amazonía Emprende'
@@ -130,7 +130,7 @@ async function plantilla(doc: Doc, { org, tipo, referencia, legal }: {
 }
 
 /** Párrafo justificado; devuelve la Y donde termina. */
-function parrafo(doc: Doc, texto: string, y: number, { tam = 10.5, negrita = false, interlinea = 5.2 } = {}): number {
+export function parrafo(doc: Doc, texto: string, y: number, { tam = 10.5, negrita = false, interlinea = 5.2 } = {}): number {
   doc.setFont('helvetica', negrita ? 'bold' : 'normal'); doc.setFontSize(tam); doc.setTextColor(...rgb(MARCA.tinta))
   const lineas: string[] = doc.splitTextToSize(texto, UTIL)
   lineas.forEach((l, i) => {
@@ -150,12 +150,12 @@ function aLaDerecha(doc: Doc, texto: string, y: number, espacio: number) {
   doc.text(texto, ANCHO - MARGEN - anchoEspaciado(doc, texto, espacio), y, { charSpace: espacio })
 }
 
-function rotulo(doc: Doc, texto: string, y: number) {
+export function rotulo(doc: Doc, texto: string, y: number) {
   doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...rgb(MARCA.musgo))
   doc.text(texto.toUpperCase(), MARGEN, y, { charSpace: 0.9 })
 }
 
-function firma(doc: Doc, y: number, imagen: string | null, lineas: string[]): number {
+export function firma(doc: Doc, y: number, imagen: string | null, lineas: string[]): number {
   if (imagen && /^data:image\/(png|jpe?g)/.test(imagen)) {
     try { doc.addImage(imagen, imagen.includes('png') ? 'PNG' : 'JPEG', MARGEN, y - 2, 50, 18, undefined, 'FAST') } catch { /* imagen dañada: va sin firma */ }
   }

@@ -11,6 +11,20 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
+-- ── 2026-10-28  migration_salidas_campo.sql  y  seed_salida_piloto_guajira.sql ──────
+-- Salidas a campo (docs/PLAN_SALIDAS_CAMPO.md): clase de cada elemento (consumible,
+-- herramienta, EPP, dotación), trabajadores de campo (people.trabajadores_campo), salidas
+-- con su bodega, actas con consecutivo y escaneo firmado (bucket inventario-actas), motivo
+-- de cada justificación, la vista inventario.v_conciliacion_salida y 8 funciones (solo
+-- service_role). Agrega las bodegas Florencia y Escuela Bosque. Sin datos personales.
+-- `campo_datos` solo AGREGA la clase de cada insumo y esconde las bodegas «a cargo de»:
+-- la app de campo instalada sigue funcionando. Probada en PGlite (dos corridas, ciclo
+-- completo de una salida, permisos de anon; 49 casos). Requiere migration_financiero_inventario.sql
+-- y migration_talento_humano.sql. El seed va DESPUÉS y una sola vez: carga la hoja de
+-- conciliación de Logística (46 elementos) como una salida con tres actas; antes de correrlo,
+-- editar v_fecha (fecha de las actas de entrega 001 y 02). Mientras no corran, la pestaña
+-- «Salidas a campo» avisa que falta la migración y lo demás sigue igual.
+
 -- ── 2026-10-16  TABLAS PARALELAS en financiero — por resolver ───────────────
 -- El 2026-10-16 se corrió en producción un migration_financiero.sql que NO está
 -- en main (vive en la rama local respaldo/financiero-paralelo-2026-10-16): se

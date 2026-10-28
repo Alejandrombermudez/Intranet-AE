@@ -6,7 +6,7 @@ import { Aviso, Boton, Cabecera, Cargando, Contenido, Seccion } from '@/app/comp
 import { fetchConSesion } from '@/lib/fetch-sesion'
 import { aligerarDocumento } from '@/lib/comprimir-pdf'
 import { FacturaIlegible, leerArchivosFactura, nombreUnidad, type FacturaLeida } from '@/lib/factura-dian'
-import { cantidad, fechaCorta, hoyISO, nitConDv, pesos, UNIDADES_INVENTARIO, type Insumo, type LineaClasificada } from '@/lib/administrativa'
+import { cantidad, esBodegaFisica, fechaCorta, hoyISO, nitConDv, pesos, UNIDADES_INVENTARIO, type Insumo, type LineaClasificada } from '@/lib/administrativa'
 import { CAMPO, Campo, enviar, Mensaje, TD, TH, Ventana, useAccesoFinanciero, useCatalogo } from '../../comun'
 
 /**
@@ -53,7 +53,7 @@ export default function NuevaFactura() {
   const [nuevoInsumo, setNuevoInsumo] = useState<{ linea: number; nombre: string } | null>(null)
   const archivoRef = useRef<HTMLInputElement>(null)
 
-  const central = cat.bodegas.find((b) => b.tipo === 'central' && b.activo) ?? cat.bodegas.find((b) => b.activo)
+  const central = cat.bodegas.find((b) => b.tipo === 'central' && b.activo) ?? cat.bodegas.find((b) => b.activo && esBodegaFisica(b.tipo))
   const insumosActivos = cat.insumos.filter((i) => i.activo)
 
   // En modo manual se arranca con una línea vacía (ajuste de estado durante el
@@ -307,7 +307,7 @@ export default function NuevaFactura() {
                                 </div>
                                 <select className={CAMPO} value={l.bodega_id ?? ''} onChange={(e) => cambiar(k, { bodega_id: e.target.value || null })}>
                                   <option value="">— Bodega que recibe —</option>
-                                  {cat.bodegas.filter((b) => b.activo).map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}
+                                  {cat.bodegas.filter((b) => b.activo && esBodegaFisica(b.tipo)).map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}
                                 </select>
                               </div>
                             ) : <span className="text-[11.5px] text-tenue">Se registra como gasto; no entra a ninguna bodega.</span>}

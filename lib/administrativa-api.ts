@@ -48,3 +48,11 @@ export const esUuid = (v: unknown): v is string =>
   typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
 
 export const BUCKET_FACTURAS = 'financiero-facturas'
+/** Escaneos de las actas firmadas (entrega, devolución, EPP). Privado. */
+export const BUCKET_ACTAS = 'inventario-actas'
+
+/** Error de una consulta a tablas o columnas de migration_salidas_campo.sql que todavía no corrió. */
+export function faltaSalidas(e: ErrorPg | null | undefined): boolean {
+  if (!e) return false
+  return faltaMigracion(e) || e.code === '42703' || /column .*(clase|trabajador_id|acta_id|motivo)/i.test(e.message ?? '')
+}

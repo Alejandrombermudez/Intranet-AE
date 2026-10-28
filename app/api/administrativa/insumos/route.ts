@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirFinanciero, errorBase, esUuid, texto } from '@/lib/administrativa-api'
 
+const CLASES = ['consumible', 'herramienta', 'epp', 'dotacion']
+const claseValida = (v: unknown) => (typeof v === 'string' && CLASES.includes(v) ? v : null)
+
 /**
  * Catálogo de insumos (inventario.insumos). Es la lista cerrada que usa la app
  * de campo. No se borran: se desactivan, porque el kardex los referencia.
@@ -22,9 +25,10 @@ export async function POST(req: NextRequest) {
       presentacion: texto(b?.presentacion),
       categoria: texto(b?.categoria),
       notas: texto(b?.notas),
+      ...(claseValida(b?.clase) ? { clase: claseValida(b?.clase) } : {}),
       created_by: sesion.perfil.email,
     })
-    .select('id, nombre, unidad, presentacion, categoria, activo, notas').single()
+    .select('id, nombre, unidad, presentacion, categoria, clase, activo, notas').single()
   if (error) {
     if (error.code === '23505') return NextResponse.json({ error: `Ya existe un insumo llamado «${nombre}».` }, { status: 409 })
     return errorBase(error)
@@ -43,10 +47,15 @@ export async function PATCH(req: NextRequest) {
   if ('unidad' in b!) { const v = texto(b!.unidad); if (!v) return NextResponse.json({ error: 'La unidad no puede quedar vacía.' }, { status: 400 }); cambios.unidad = v }
   for (const k of ['presentacion', 'categoria', 'notas'] as const) if (k in b!) cambios[k] = texto(b![k])
   if (typeof b!.activo === 'boolean') cambios.activo = b!.activo
+  if ('clase' in b!) {
+    const c = claseValida(b!.clase)
+    if (!c) return NextResponse.json({ error: 'Elige una clase: consumible, herramienta, EPP o dotación.' }, { status: 400 })
+    cambios.clase = c
+  }
 
   const { data, error } = await supabase.schema('inventario').from('insumos')
     .update(cambios).eq('id', b!.id as string)
-    .select('id, nombre, unidad, presentacion, categoria, activo, notas').single()
+    .select('id, nombre, unidad, presentacion, categoria, clase, activo, notas').single()
   if (error) {
     if (error.code === '23505') return NextResponse.json({ error: 'Ya existe otro insumo con ese nombre.' }, { status: 409 })
     return errorBase(error)

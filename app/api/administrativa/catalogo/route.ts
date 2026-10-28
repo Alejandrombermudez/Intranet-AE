@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { exigirFinanciero, errorBase, AVISO_MIGRACION, faltaMigracion } from '@/lib/administrativa-api'
+import { exigirFinanciero, errorBase, AVISO_MIGRACION, faltaMigracion, faltaSalidas } from '@/lib/administrativa-api'
 
 /**
  * GET /api/administrativa/catalogo
@@ -14,14 +14,25 @@ export async function GET(req: NextRequest) {
   const inv = supabase.schema('inventario')
   const [bodegas, insumos, costos, existencias, titulos, proyectos] = await Promise.all([
     inv.from('bodegas').select('id, nombre, tipo, proyecto, responsable, activo, notas').order('nombre'),
-    inv.from('insumos').select('id, nombre, unidad, presentacion, categoria, activo, notas').order('nombre'),
+    inv.from('insumos').select('id, nombre, unidad, presentacion, categoria, clase, activo, notas').order('nombre'),
     inv.from('v_costo_insumo').select('insumo_id, costo_promedio, ultima_compra'),
     inv.from('v_existencias').select('bodega_id, insumo_id, entradas, salidas, saldo, por_recibir'),
     inv.from('titulos_campo').select('id, nombre, rol, bodega_ids, activo, clave_hash, ultimo_ingreso, bloqueado_hasta').order('nombre'),
     supabase.schema('catalogo').from('proyectos').select('codigo, nombre, activo, orden').order('orden'),
   ])
 
-  const primerError = [bodegas, insumos, costos, existencias, titulos].find((r) => r.error)?.error
+  // Sin migration_salidas_campo.sql no existe la columna `clase`: el catálogo sigue
+  // abriendo, con todo como consumible, y la pestaña de salidas avisa que falta.
+  let insumosData = insumos.data as Record<string, unknown>[] | null
+  let faltaSalidasSql = false
+  if (insumos.error && faltaSalidas(insumos.error) && !faltaMigracion(insumos.error)) {
+    faltaSalidasSql = true
+    const r = await inv.from('insumos').select('id, nombre, unidad, presentacion, categoria, activo, notas').order('nombre')
+    insumosData = (r.data ?? []).map((i) => ({ ...i, clase: 'consumible' }))
+    if (r.error) return errorBase(r.error)
+  }
+
+  const primerError = [bodegas, insumosData ? { error: null } : insumos, costos, existencias, titulos].find((r) => r.error)?.error
   if (primerError) {
     if (faltaMigracion(primerError)) {
       return NextResponse.json({ faltaMigracion: true, aviso: AVISO_MIGRACION, bodegas: [], insumos: [], existencias: [], titulos: [], proyectos: proyectos.data ?? [] })
@@ -32,10 +43,11 @@ export async function GET(req: NextRequest) {
   const costo = new Map((costos.data ?? []).map((c) => [c.insumo_id, c]))
   return NextResponse.json({
     bodegas: bodegas.data ?? [],
-    insumos: (insumos.data ?? []).map((i) => ({
+    faltaSalidas: faltaSalidasSql,
+    insumos: (insumosData ?? []).map((i) => ({
       ...i,
-      costo_promedio: costo.get(i.id)?.costo_promedio ?? null,
-      ultima_compra: costo.get(i.id)?.ultima_compra ?? null,
+      costo_promedio: costo.get(i.id as string)?.costo_promedio ?? null,
+      ultima_compra: costo.get(i.id as string)?.ultima_compra ?? null,
     })),
     existencias: existencias.data ?? [],
     // La huella de la clave no sale del servidor: solo si la tiene.

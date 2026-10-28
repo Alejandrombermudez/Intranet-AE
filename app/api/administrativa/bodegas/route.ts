@@ -8,7 +8,8 @@ import { exigirFinanciero, errorBase, esUuid, texto } from '@/lib/administrativa
  *   POST  { nombre, tipo, proyecto?, responsable?, notas? }
  *   PATCH { id, ...campos, activo? }
  */
-const TIPOS = ['central', 'proyecto', 'vivero', 'campo']
+// 'campo' (una salida) y 'persona' (lo que tiene a cargo un trabajador) las crea inventario.crear_salida / bodega_trabajador.
+const TIPOS = ['central', 'proyecto', 'vivero', 'sede']
 
 export async function POST(req: NextRequest) {
   const { supabase, sesion } = await exigirFinanciero(req)
