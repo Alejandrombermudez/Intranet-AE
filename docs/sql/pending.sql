@@ -1,6 +1,6 @@
 -- ============================================================
 -- SQL Pendiente — Intranet AE
--- Última revisión: 2026-10-27 (verificado contra BD real vía REST API)
+-- Última revisión: 2026-10-20 (verificado contra BD real vía REST API)
 --
 -- REGLA: solo están aquí cosas que NO se han podido verificar
 -- vía REST API. Una vez ejecutadas, mover al historial abajo.
@@ -11,17 +11,22 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-10-27  migration_decision_apoyo.sql ─────────────────────────────────
--- Lo que decide campo sobre cada área recomendada (geo.capas_apoyo): aceptada,
--- modificada, descartada o reconsiderada. Tabla geo.capa_apoyo_decision
--- (historia, una fila por decisión), RPC geo.decidir_capa_apoyo_campo (anon,
--- idempotente por local_id) y vista geo.v_capas_apoyo_estado (service_role).
--- No toca geo.capas_apoyo, geo.revisar_zona ni geo.zona_revision. Sin datos.
--- Probada en PGlite (2 corridas, anon / service_role):
--- trabajo_elegibilidad_ldh/scripts/pgtest/test_decision_apoyo.mjs, 14 de 14.
--- Mientras no corra: aceptar o ajustar un área sube igual (como sitio dibujado
--- en campo); la decisión y los descartes se quedan en el celular con un aviso y
--- se reintentan solos. Verificación al pie del archivo.
+-- ── 2026-10-20  migration_campo_primero.sql ──────────────────────────────────
+-- Todo predio de jurídica se ve en la app de campo: core.v_predios_campo con
+-- todos los expedientes activos y flujo_campo deducido al final; RPC
+-- geo.revisar_zona_campo (anon; el límite del predio desde campo),
+-- geo.decidir_limite (service_role) y geo.capas_apoyo + geo.capas_apoyo_campo()
+-- (capas de referencia). No toca geo.revisar_zona ni geo.decidir_zonas. Sin
+-- datos. Probada en PGlite (3 corridas, permisos con set role anon).
+-- Verificación al pie del archivo.
+-- Mientras no corra: la app de campo y la intranet siguen como hoy; lo único
+-- que no funciona es subir un límite dibujado en campo (se queda guardado en el
+-- celular y se reintenta).
+--
+-- La carga de los predios de Elegibilidad LDH NO va aquí: tiene nombres y
+-- geometría de fincas privadas y vive fuera del repo
+-- (trabajo_elegibilidad_ldh/sql/01..02, en la carpeta D:/AMAZONIA EMPRENDE).
+-- Va DESPUÉS de esta migración (el 01 frena si no la encuentra).
 
 -- ── 2026-09-01  merge_aliados_duplicados.sql — BLOQUE 2, opcional ───────────
 -- El BLOQUE 1 (fusión de "Álvaro Marlés Artunduaga" + "… 2") YA SE CORRIÓ:
@@ -38,14 +43,6 @@
 -- ════════════════════════════════════════════════════════════
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
-
-
--- ── 2026-10-21/27  migration_campo_primero.sql + carga de Elegibilidad LDH (01 y 02)
---             Corrida entre el 2026-10-21 y el 27 (sin fecha exacta). Verificado por REST el 2026-10-27, solo lectura: core.v_predios_campo
---             trae flujo_campo y 124 predios (120 campo_primero, 4 sig_primero);
---             geo.capas_apoyo_campo() devuelve 192 áreas en 40 predios (las 187 del
---             01 y las 5 del 02); geo.revisar_zona_campo existe (P0001 con una acción
---             inválida). La carga vive fuera del repo (trabajo_elegibilidad_ldh/sql).
 
 
 -- ── 2026-10-14  fix_fechas_hora_colombia.sql ─────────────────────────────────
