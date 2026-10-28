@@ -9,12 +9,17 @@
 --
 --  QUÉ CAMBIA (decisión del usuario, 2026-10-21)
 --    · Cada sitio de siembra que campo confirma, corrige o dibuja lleva su TIPO
---      DE PROYECTO: 'ley_arbol' (Ley del Árbol), 'conexion' (Conexión) o
---      'pastoreo' (Pastoreo). Lo elige el técnico; si el sitio sale de la capa
---      de apoyo, la app se lo sugiere según la clase del shapefile:
+--      DE PROYECTO: 'ley_arbol' (Ley del Árbol), 'mercado_carbono' (Mercado
+--      voluntario de carbono) o 'ganaderia_sostenible' (Ganadería sostenible).
+--      Nombres corregidos por el usuario el 2026-10-27, antes de correrla (la
+--      primera versión decía 'conexion' y 'pastoreo'). Lo elige el técnico; si el
+--      sitio sale de la capa de apoyo, la app se lo sugiere según la clase del
+--      shapefile (a la izquierda el nombre en la capa):
 --        Ley del Arbol                          → ley_arbol
---        Mercado voluntario de carbono          → conexion
---        No elegible: Cobertura o zonificación  → pastoreo  (Zona de Uso Sostenible)
+--        Mercado voluntario de carbono          → mercado_carbono
+--        No elegible: Cobertura o zonificación  → ganaderia_sostenible
+--      Los celulares que guardaron 'conexion' o 'pastoreo' entre el 21 y el 27 de
+--      octubre los mandan así: geo.anotar_revision_campo los traduce.
 --    · Las áreas de la capa de apoyo dejan de ser solo guía: el técnico toca una
 --      y la usa como sitio (tal cual o ajustada) o la rechaza con un motivo.
 --      Usarla es una revisión 'nueva' de siempre, que además dice de qué área
@@ -49,10 +54,14 @@ ALTER TABLE geo.zona_revision ADD COLUMN IF NOT EXISTS capa_apoyo_id UUID;
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'zona_revision_proyecto_check') THEN
-    ALTER TABLE geo.zona_revision ADD CONSTRAINT zona_revision_proyecto_check
-      CHECK (proyecto IS NULL OR proyecto IN ('ley_arbol', 'conexion', 'pastoreo'));
-  END IF;
+  -- Se rehace siempre: si una corrida anterior la dejó con los nombres viejos
+  -- ('conexion', 'pastoreo'), se reemplaza y lo que hubiera se traduce.
+  ALTER TABLE geo.zona_revision DROP CONSTRAINT IF EXISTS zona_revision_proyecto_check;
+  UPDATE geo.zona_revision
+  SET proyecto = CASE proyecto WHEN 'conexion' THEN 'mercado_carbono' ELSE 'ganaderia_sostenible' END
+  WHERE proyecto IN ('conexion', 'pastoreo');
+  ALTER TABLE geo.zona_revision ADD CONSTRAINT zona_revision_proyecto_check
+    CHECK (proyecto IS NULL OR proyecto IN ('ley_arbol', 'mercado_carbono', 'ganaderia_sostenible'));
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'zona_revision_capa_apoyo_fk') THEN
     ALTER TABLE geo.zona_revision ADD CONSTRAINT zona_revision_capa_apoyo_fk
       FOREIGN KEY (capa_apoyo_id) REFERENCES geo.capas_apoyo(id) ON DELETE SET NULL;
@@ -60,7 +69,7 @@ BEGIN
 END $$;
 
 COMMENT ON COLUMN geo.zona_revision.proyecto IS
-  'Tipo de proyecto que campo le dio al sitio: ley_arbol | conexion | pastoreo. Lo anota geo.anotar_revision_campo después de subir la revisión.';
+  'Tipo de proyecto que campo le dio al sitio: ley_arbol | mercado_carbono | ganaderia_sostenible. Lo anota geo.anotar_revision_campo después de subir la revisión.';
 COMMENT ON COLUMN geo.zona_revision.capa_apoyo_id IS
   'Si el sitio se dibujó a partir de un área de la capa de apoyo (geo.capas_apoyo), cuál.';
 
@@ -86,8 +95,12 @@ AS $$
 DECLARE
   v_rev geo.zona_revision%ROWTYPE;
 BEGIN
-  IF p_proyecto IS NOT NULL AND p_proyecto NOT IN ('ley_arbol', 'conexion', 'pastoreo') THEN
-    RAISE EXCEPTION 'Tipo de proyecto inválido: % (ley_arbol | conexion | pastoreo)', p_proyecto;
+  -- Nombres de la primera versión de la app (21 al 27 de octubre de 2026)
+  p_proyecto := CASE p_proyecto WHEN 'conexion' THEN 'mercado_carbono'
+                                WHEN 'pastoreo' THEN 'ganaderia_sostenible'
+                                ELSE p_proyecto END;
+  IF p_proyecto IS NOT NULL AND p_proyecto NOT IN ('ley_arbol', 'mercado_carbono', 'ganaderia_sostenible') THEN
+    RAISE EXCEPTION 'Tipo de proyecto inválido: % (ley_arbol | mercado_carbono | ganaderia_sostenible)', p_proyecto;
   END IF;
 
   SELECT * INTO v_rev FROM geo.zona_revision WHERE local_id = p_local_id;

@@ -33,11 +33,14 @@ decide el SIG por `geo.zona_decision`.
 
 ## Sitios con tipo de proyecto y capa de apoyo que se trabaja (2026-10-21) — migración sin correr
 
-En la app de campo cada sitio de siembra lleva **tipo de proyecto** (Ley del Árbol, Conexión o Pastoreo), un
+En la app de campo cada sitio de siembra lleva **tipo de proyecto** (Ley del Árbol, Mercado voluntario de carbono o
+Ganadería sostenible; `ley_arbol` / `mercado_carbono` / `ganaderia_sostenible`, nombres corregidos por el usuario el
+2026-10-27 —la primera versión decía Conexión y Pastoreo—), un
 rechazo pide **motivo**, y las áreas de la capa de apoyo se tocan: se usan como sitio (tal cual o ajustadas) o se
 rechazan con motivo. Equivalencias de clase del shapefile LDH → proyecto sugerido: Ley del Arbol → Ley del Árbol,
-Mercado voluntario de carbono → Conexión, No elegible: cobertura o zonificación (todo Zona de Uso Sostenible) →
-Pastoreo; Otros (bosque, rastrojo), Sin definir (humedales) e infraestructura no sugieren nada.
+Mercado voluntario de carbono → Mercado voluntario de carbono, No elegible: cobertura o zonificación (todo Zona de
+Uso Sostenible) → Ganadería sostenible; Otros (bosque, rastrojo), Sin definir (humedales) e infraestructura no
+sugieren nada. En la base la clase queda con el nombre de la capa; la app muestra el del proyecto.
 
 - Servidor: `geo.zona_revision.proyecto` / `capa_apoyo_id`, `geo.zonas.propiedades->>'proyecto'`,
   `geo.capa_apoyo_revision` — [`sql/migration_sitios_proyecto.sql`](sql/migration_sitios_proyecto.sql).

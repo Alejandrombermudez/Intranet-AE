@@ -28,17 +28,27 @@
 -- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
 
 -- ── 2026-10-21  migration_sitios_proyecto.sql ──────────────────────────────
--- Tipo de proyecto por sitio (ley_arbol | conexion | pastoreo) y capa de apoyo
+-- Tipo de proyecto por sitio (ley_arbol | mercado_carbono | ganaderia_sostenible;
+-- nombres corregidos por el usuario el 2026-10-27, antes de correrla; traduce los
+-- 'conexion'/'pastoreo' que guardó la app del 21 al 27) y capa de apoyo
 -- que campo trabaja: geo.zona_revision + proyecto y capa_apoyo_id; RPC
 -- geo.anotar_revision_campo (anon), geo.capa_apoyo_revision +
 -- geo.revisar_capa_apoyo (anon, motivo obligatorio) y
 -- geo.decisiones_capa_apoyo_campo() (anon). Ninguna función existente cambia de
--- firma. Sin datos. Probada en PGlite (dos corridas, permisos, 16 casos).
+-- firma. Sin datos. Probada en PGlite (dos corridas, permisos, 16 casos; con los
+-- nombres nuevos, 11 casos el 2026-10-27: trabajo_elegibilidad_ldh/scripts/pgtest/
+-- test_sitios_proyecto.mjs).
 -- Mientras no corra: la app sube las geometrías igual y guarda el proyecto y
 -- los rechazos en el celular (se reintentan); la intranet no muestra el proyecto.
 -- DESPUÉS (independiente, fuera del repo): trabajo_elegibilidad_ldh/sql/
--- 04_capa_pastoreo_ldh.sql — 32 áreas «No elegible: Cobertura o zonificación»
--- (uso sostenible = pastoreo, 332,5 ha en 32 predios) como capa de apoyo.
+-- 04_capa_ganaderia_ldh.sql — 32 áreas «No elegible: Cobertura o zonificación»
+-- (Ganadería sostenible, 332,5 ha en 32 predios) como capa de apoyo, GS-n. El
+-- archivo del 21 (04_capa_pastoreo) se perdió sin correr; se rehízo el 27 con
+-- scripts/genera_04_ganaderia.py, mismas reglas que el 01 (probado en PGlite).
+-- 05_crear_predios_faltantes_ldh.sql (2026-10-27, pedido del usuario): crea en
+-- jurídica las 17 fincas del SHP sin predio (dueño existente o nuevo con documento
+-- provisional S/D-LDH-…, predio, expediente en jurídica, límite y áreas de apoyo) y
+-- cierra sus alertas «sin_predio». Probado en PGlite. Va después del 01–04.
 
 -- Antes del 2026-09-17 no quedaba ninguna migración de esquema pendiente
 -- (verificado por REST el 2026-08-12).
