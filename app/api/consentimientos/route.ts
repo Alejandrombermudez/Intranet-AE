@@ -10,6 +10,7 @@ const schema = z.object({
   correo:    z.string().email('Correo inválido'),
   acepta_tratamiento: z.boolean().refine((v) => v === true, 'Debe aceptar el tratamiento de datos'),
   acepta_politicas:   z.boolean().refine((v) => v === true, 'Debe aceptar las políticas'),
+  acepta_cesion:      z.boolean().refine((v) => v === true, 'Debe aceptar la autorización de uso de imagen'),
 })
 
 /**
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
         correo:             result.data.correo.trim().toLowerCase(),
         acepta_tratamiento: result.data.acepta_tratamiento,
         acepta_politicas:   result.data.acepta_politicas,
+        acepta_cesion:      result.data.acepta_cesion,
       })
 
     if (error) {
@@ -92,7 +94,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from('consentimientos')
-      .select('id, nombre, apellido, cedula, celular, correo, acepta_tratamiento, acepta_politicas, created_at')
+      .select('id, nombre, apellido, cedula, celular, correo, acepta_tratamiento, acepta_politicas, acepta_cesion, created_at')
       .order('created_at', { ascending: false })
 
     if (desde) query = query.gte('created_at', desde)

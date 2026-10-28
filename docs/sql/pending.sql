@@ -27,6 +27,12 @@
 -- tienen nada que no esté en facturas/inventario), y restaurar el COMMENT ON
 -- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
 
+-- ── 2026-10-28  migration_consentimientos_cesion_imagen.sql ─────────────────
+-- Columna public.consentimientos.acepta_cesion (boolean, default false): la
+-- tercera aceptación del formulario /consentimiento (autorización de datos y uso
+-- de imagen). CORRERLA ANTES de publicar el cambio: el formulario ya la envía y
+-- sin la columna el guardado falla. Los registros anteriores quedan en false.
+
 -- ── 2026-10-21  migration_sitios_proyecto.sql ──────────────────────────────
 -- Tipo de proyecto por sitio (ley_arbol | mercado_carbono | ganaderia_sostenible;
 -- nombres corregidos por el usuario el 2026-10-27, antes de correrla; traduce los

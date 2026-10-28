@@ -61,6 +61,7 @@ interface Consentimiento {
   correo: string
   acepta_tratamiento: boolean
   acepta_politicas: boolean
+  acepta_cesion: boolean
   created_at: string
 }
 
@@ -933,6 +934,7 @@ function ConsentimientosTab() {
         'Fecha':    formatFecha(c.created_at),
         'Acepta tratamiento': c.acepta_tratamiento ? 'Sí' : 'No',
         'Acepta políticas':   c.acepta_politicas   ? 'Sí' : 'No',
+        'Acepta cesión de imagen': c.acepta_cesion ? 'Sí' : 'No',
       }))
       const ws = utils.json_to_sheet(rows)
       const wb = utils.book_new()
@@ -959,7 +961,7 @@ function ConsentimientosTab() {
 
       autoTable(doc, {
         startY: 27,
-        head: [['Nombre', 'Apellido', 'Cédula', 'Celular', 'Correo', 'Fecha de registro']],
+        head: [['Nombre', 'Apellido', 'Cédula', 'Celular', 'Correo', 'Fecha de registro', 'Cesión de imagen']],
         body: registros.map((c) => [
           c.nombre,
           c.apellido,
@@ -967,6 +969,7 @@ function ConsentimientosTab() {
           c.celular,
           c.correo,
           formatFecha(c.created_at),
+          c.acepta_cesion ? 'Sí' : 'No',
         ]),
         headStyles: { fillColor: [13, 115, 119], fontSize: 9, fontStyle: 'bold' },
         styles: { fontSize: 8, cellPadding: 3 },
@@ -1099,7 +1102,7 @@ function ConsentimientosTab() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-stone-50 border-b border-stone-200">
-                  {['Nombre completo', 'Cédula', 'Celular', 'Correo', 'Fecha de registro', ''].map((h) => (
+                  {['Nombre completo', 'Cédula', 'Celular', 'Correo', 'Fecha de registro', 'Cesión de imagen', ''].map((h) => (
                     <th key={h} className="px-4 py-3 text-[11px] font-bold text-stone-400 uppercase tracking-wider whitespace-nowrap">
                       {h}
                     </th>
@@ -1120,6 +1123,7 @@ function ConsentimientosTab() {
                         <CalendarDays size={11} /> {formatShortDate(c.created_at)}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-sm text-stone-600">{c.acepta_cesion ? 'Sí' : 'No'}</td>
                     <td className="px-4 py-3">
                       {confirmDeleteId === c.id ? (
                         <span className="flex items-center gap-1.5 text-xs">

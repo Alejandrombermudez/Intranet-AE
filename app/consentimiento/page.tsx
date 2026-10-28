@@ -33,6 +33,7 @@ export default function ConsentimientoPage() {
     nombre: '', apellido: '', cedula: '', celular: '', correo: '',
     acepta_tratamiento: false,
     acepta_politicas: false,
+    acepta_cesion: false,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -50,6 +51,7 @@ export default function ConsentimientoPage() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) errs.correo = 'Ingresa un correo electrónico válido'
     if (!form.acepta_tratamiento) errs.acepta_tratamiento = 'Debes leer y aceptar el documento'
     if (!form.acepta_politicas)   errs.acepta_politicas   = 'Debes leer y aceptar las políticas'
+    if (!form.acepta_cesion)      errs.acepta_cesion      = 'Debes leer y aceptar la autorización de uso de imagen'
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -86,7 +88,7 @@ export default function ConsentimientoPage() {
           <Rotulo tono="bosque" className="mb-3">Consentimiento registrado</Rotulo>
           <h1 className="mb-3 font-display text-3xl font-bold text-stone-900">Firma registrada</h1>
           <p className="text-sm font-light leading-relaxed text-stone-600">
-            Tu consentimiento de tratamiento de datos quedó guardado.
+            Tu consentimiento de tratamiento de datos y uso de imagen quedó guardado.
             Gracias por tu tiempo.
           </p>
           <Firma className="mt-12 justify-center text-stone-500" />
@@ -259,6 +261,43 @@ export default function ConsentimientoPage() {
                 </label>
                 <FieldError message={errors.acepta_politicas} />
               </div>
+
+              {/* Checkbox 3 — Cesión de imagen */}
+              <div className={`border p-4 transition-colors ${errors.acepta_cesion ? 'border-red-300 bg-red-50' : 'border-stone-200 bg-white'}`}>
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={form.acepta_cesion}
+                    onChange={(e) => set('acepta_cesion', e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`pointer-events-none mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border transition-colors ${
+                      form.acepta_cesion
+                        ? 'border-bosque bg-bosque'
+                        : errors.acepta_cesion ? 'border-red-400 bg-white' : 'border-stone-400 bg-white'
+                    }`}>
+                    {form.acepta_cesion && (
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-sm leading-relaxed text-stone-700">
+                    He leído y acepto la{' '}
+                    <a
+                      href="/docs/cesion-imagen.pdf"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-medium text-bosque underline decoration-1 underline-offset-2 transition-opacity hover:opacity-75"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Autorización de Tratamiento de Datos y Uso de Imagen <ExternalLink size={11} />
+                    </a>
+                  </span>
+                </label>
+                <FieldError message={errors.acepta_cesion} />
+              </div>
             </div>
           </div>
 
@@ -275,7 +314,7 @@ export default function ConsentimientoPage() {
 
             <p className="text-[11px] font-light leading-relaxed text-stone-500">
               Al enviar este formulario autorizas a Amazonia Emprende para el tratamiento
-              de tus datos personales conforme a la normativa colombiana de protección de datos.
+              de tus datos personales y el uso de tu imagen conforme a la normativa colombiana de protección de datos.
             </p>
           </div>
         </form>
