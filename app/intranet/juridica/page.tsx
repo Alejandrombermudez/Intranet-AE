@@ -330,8 +330,9 @@ export default function JuridicaPage() {
       if (omitidos.length) {
         setAvisoReporte(`Descarga lista, pero ${omitidos.length === 1 ? 'un documento no entró' : `${omitidos.length} documentos no entraron`}: ${omitidos.map((o) => `${o.predio} — ${o.titulo} (${o.motivo})`).join('; ')}.`)
       }
-    } catch {
-      setAvisoReporte('No se pudo armar el reporte. Revisa la conexión e intenta de nuevo.')
+    } catch (e) {
+      console.error('Reporte jurídico', e)
+      setAvisoReporte(`No se pudo armar el reporte${e instanceof Error && e.message ? ` (${e.message})` : ''}. Intenta con menos predios a la vez.`)
     } finally {
       setProgreso(null)
     }

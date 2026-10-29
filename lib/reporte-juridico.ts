@@ -433,7 +433,15 @@ export async function descargarReportes(
   const usados = new Set<string>()
   for (let i = 0; i < casos.length; i++) {
     const a = casos[i]
-    const r = await armarReporte(a, (t) => onProgreso?.(`Reporte ${i + 1} de ${casos.length} — ${t}`), modo)
+    // Un predio que falla no tumba los demás: queda en los avisos con la razón.
+    let r: ResultadoReporte
+    try {
+      r = await armarReporte(a, (t) => onProgreso?.(`Reporte ${i + 1} de ${casos.length} — ${t}`), modo)
+    } catch (e) {
+      console.error('Reporte jurídico: falló el predio', nombrePredio(a), e)
+      avisos.push({ predio: nombrePredio(a), titulo: 'Reporte completo', motivo: `no se pudo armar (${e instanceof Error ? e.message : 'error desconocido'})` })
+      continue
+    }
     r.omitidos.forEach((o) => avisos.push({ predio: nombrePredio(a), ...o }))
     if (!r.bytes) { sinNada(a); continue }
     let nombre = nombreArchivo(a, modo), n = 2
@@ -443,7 +451,8 @@ export async function descargarReportes(
   }
   if (usados.size === 0) return avisos
   onProgreso?.('Comprimiendo el paquete…')
-  const blob = await zip.generateAsync({ type: 'blob' })
+  // Los PDF ya van comprimidos: STORE evita gastar memoria y tiempo recomprimiéndolos.
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' })
   descargar(blob, `${modo === 'completo' ? 'Reportes juridicos' : 'Documentos'} - ${usados.size} predios.zip`)
   return avisos
 }
