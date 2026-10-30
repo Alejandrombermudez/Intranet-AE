@@ -3,6 +3,7 @@ import { Fraunces, Geist_Mono, Poppins } from "next/font/google";
 import "./globals.css";
 import InstallPrompt from "./components/InstallPrompt";
 import RegistroAcceso from "./components/RegistroAcceso";
+import BotonActualizar from "./components/BotonActualizar";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -55,6 +56,7 @@ export default function RootLayout({
       >
         {children}
         <InstallPrompt />
+        <BotonActualizar />
         <RegistroAcceso />
       </body>
     </html>

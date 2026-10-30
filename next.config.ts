@@ -13,6 +13,9 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 });
 
 const nextConfig: NextConfig = {
+  // Commit con el que se construye esta copia; /api/version devuelve el del despliegue vigente
+  // y BotonActualizar los compara para avisar que hay una versión nueva.
+  env: { NEXT_PUBLIC_VERSION: process.env.VERCEL_GIT_COMMIT_SHA ?? 'local' },
   // Config vacía de turbopack para silenciar el aviso de Next 16
   // (el plugin PWA inyecta webpack config solo en build, no en dev)
   turbopack: {},
