@@ -15,6 +15,19 @@ const schema = z.object({
   firma: z.string()
     .regex(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/, 'La firma no es válida')
     .max(120_000, 'La firma es demasiado grande'),
+  // Persona adulta que autoriza por un menor de edad a su cargo.
+  autoriza_menor:  z.boolean().default(false),
+  menor_nombre:    z.string().max(120, 'El nombre del menor es demasiado largo').optional(),
+  menor_documento: z.string().max(30, 'El documento del menor es demasiado largo').optional(),
+  parentesco:      z.string().max(60, 'El parentesco es demasiado largo').optional(),
+}).superRefine((d, ctx) => {
+  if (!d.autoriza_menor) return
+  const falta = (campo: 'menor_nombre' | 'menor_documento' | 'parentesco', min: number, mensaje: string) => {
+    if ((d[campo] ?? '').trim().length < min) ctx.addIssue({ code: 'custom', path: [campo], message: mensaje })
+  }
+  falta('menor_nombre', 3, 'Falta el nombre completo del menor')
+  falta('menor_documento', 4, 'Falta el documento del menor')
+  falta('parentesco', 3, 'Falta el parentesco con el menor')
 })
 
 /**
@@ -46,6 +59,11 @@ export async function POST(req: NextRequest) {
         acepta_politicas:   result.data.acepta_politicas,
         acepta_cesion:      result.data.acepta_cesion,
         firma:              result.data.firma,
+        autoriza_menor:     result.data.autoriza_menor,
+        // Si no autoriza por un menor, estos tres quedan vacíos aunque el cliente los mande.
+        menor_nombre:       result.data.autoriza_menor ? result.data.menor_nombre!.trim() : null,
+        menor_documento:    result.data.autoriza_menor ? result.data.menor_documento!.trim() : null,
+        parentesco:         result.data.autoriza_menor ? result.data.parentesco!.trim() : null,
       })
 
     if (error) {
@@ -99,7 +117,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from('consentimientos')
-      .select('id, nombre, apellido, cedula, celular, correo, acepta_tratamiento, acepta_politicas, acepta_cesion, firma, created_at')
+      .select('id, nombre, apellido, cedula, celular, correo, acepta_tratamiento, acepta_politicas, acepta_cesion, firma, autoriza_menor, menor_nombre, menor_documento, parentesco, created_at')
       .order('created_at', { ascending: false })
 
     if (desde) query = query.gte('created_at', desde)

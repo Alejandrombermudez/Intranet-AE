@@ -24,6 +24,9 @@ function Etiqueta({ children }: { children: React.ReactNode }) {
   )
 }
 
+const PARENTESCOS = ['Madre', 'Padre', 'Abuelo(a)', 'Tío(a)', 'Hermano(a) mayor de edad', 'Tutor(a) o representante legal']
+const OTRO = 'Otro'
+
 const inputCls    = 'w-full border border-stone-300 bg-white px-3 py-2.5 text-sm transition-colors placeholder:text-stone-400 focus:border-bosque focus:outline-none'
 const inputErrCls = 'w-full border border-red-400 bg-white px-3 py-2.5 text-sm transition-colors placeholder:text-stone-400 focus:border-red-600 focus:outline-none'
 
@@ -36,6 +39,9 @@ export default function ConsentimientoPage() {
     acepta_politicas: false,
     acepta_cesion: false,
     firma: null as string | null,
+    // Una persona adulta que autoriza por un menor de edad a su cargo.
+    autoriza_menor: false,
+    menor_nombre: '', menor_documento: '', parentesco: '', parentesco_otro: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -51,12 +57,33 @@ export default function ConsentimientoPage() {
     if (form.cedula.trim().length < 4)             errs.cedula    = 'Ingresa un número de cédula válido'
     if (form.celular.trim().length < 7)            errs.celular   = 'Ingresa un número de celular válido'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) errs.correo = 'Ingresa un correo electrónico válido'
+    if (form.autoriza_menor) {
+      if (form.menor_nombre.trim().length < 3)     errs.menor_nombre    = 'Escribe el nombre completo del menor'
+      if (form.menor_documento.trim().length < 4)  errs.menor_documento = 'Escribe el documento del menor (tarjeta de identidad o registro civil)'
+      if (!form.parentesco)                        errs.parentesco      = 'Elige tu parentesco con el menor'
+      else if (form.parentesco === OTRO && form.parentesco_otro.trim().length < 3)
+                                                   errs.parentesco      = 'Escribe cuál es tu parentesco con el menor'
+    }
     if (!form.acepta_tratamiento) errs.acepta_tratamiento = 'Debes leer y aceptar el documento'
     if (!form.acepta_politicas)   errs.acepta_politicas   = 'Debes leer y aceptar las políticas'
     if (!form.acepta_cesion)      errs.acepta_cesion      = 'Debes leer y aceptar la autorización de uso de imagen'
     if (!form.firma)              errs.firma              = 'Firma en el recuadro con el dedo o el mouse'
     setErrors(errs)
     return Object.keys(errs).length === 0
+  }
+
+  /** Lo que viaja a la API: si no autoriza por un menor, los datos del menor no se envían. */
+  const cuerpo = () => {
+    const { parentesco_otro, menor_nombre, menor_documento, parentesco, autoriza_menor, ...resto } = form
+    return autoriza_menor
+      ? {
+          ...resto,
+          autoriza_menor,
+          menor_nombre: menor_nombre.trim(),
+          menor_documento: menor_documento.trim(),
+          parentesco: parentesco === OTRO ? parentesco_otro.trim() : parentesco,
+        }
+      : { ...resto, autoriza_menor }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,7 +94,7 @@ export default function ConsentimientoPage() {
       const res = await fetch('/api/consentimientos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(cuerpo()),
       })
       if (res.ok) {
         setDone(true)
@@ -183,6 +210,87 @@ export default function ConsentimientoPage() {
                 />
                 <FieldError message={errors.correo} />
               </div>
+            </div>
+          </div>
+
+          {/* ── Menor de edad ── */}
+          <div>
+            <Rotulo tono="bosque" className="mb-4">Menor de edad</Rotulo>
+            <div className="space-y-5 border-t border-linea pt-5">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={form.autoriza_menor}
+                  onChange={(e) => {
+                    set('autoriza_menor', e.target.checked)
+                    if (!e.target.checked) setErrors((prev) => ({ ...prev, menor_nombre: '', menor_documento: '', parentesco: '' }))
+                  }}
+                  className="sr-only"
+                />
+                <div
+                  className={`pointer-events-none mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border transition-colors ${
+                    form.autoriza_menor ? 'border-bosque bg-bosque' : 'border-stone-400 bg-white'
+                  }`}>
+                  {form.autoriza_menor && (
+                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                      <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </div>
+                <span className="text-sm leading-relaxed text-stone-700">
+                  Soy una persona adulta y autorizo en nombre de un menor de edad a mi cargo.
+                  <span className="block text-xs font-light text-stone-500">
+                    Tus datos de arriba son los tuyos; los del menor van a continuación.
+                  </span>
+                </span>
+              </label>
+
+              {form.autoriza_menor && (
+                <div className="space-y-5">
+                  <div>
+                    <Etiqueta>Nombre completo del menor</Etiqueta>
+                    <input
+                      value={form.menor_nombre}
+                      onChange={(e) => set('menor_nombre', e.target.value)}
+                      className={errors.menor_nombre ? inputErrCls : inputCls}
+                      placeholder="Nombres y apellidos del menor"
+                    />
+                    <FieldError message={errors.menor_nombre} />
+                  </div>
+
+                  <div>
+                    <Etiqueta>Documento del menor</Etiqueta>
+                    <input
+                      value={form.menor_documento}
+                      onChange={(e) => set('menor_documento', e.target.value.replace(/[^\w-]/g, ''))}
+                      className={errors.menor_documento ? inputErrCls : inputCls}
+                      placeholder="Tarjeta de identidad o registro civil"
+                    />
+                    <FieldError message={errors.menor_documento} />
+                  </div>
+
+                  <div>
+                    <Etiqueta>Tu parentesco con el menor</Etiqueta>
+                    <select
+                      value={form.parentesco}
+                      onChange={(e) => set('parentesco', e.target.value)}
+                      className={errors.parentesco ? inputErrCls : inputCls}
+                    >
+                      <option value="">Selecciona…</option>
+                      {[...PARENTESCOS, OTRO].map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                    {form.parentesco === OTRO && (
+                      <input
+                        value={form.parentesco_otro}
+                        onChange={(e) => set('parentesco_otro', e.target.value)}
+                        className={`mt-3 ${errors.parentesco ? inputErrCls : inputCls}`}
+                        placeholder="¿Cuál?"
+                      />
+                    )}
+                    <FieldError message={errors.parentesco} />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -335,7 +443,10 @@ export default function ConsentimientoPage() {
 
             <p className="text-[11px] font-light leading-relaxed text-stone-500">
               Al enviar este formulario autorizas a Amazonia Emprende para el tratamiento
-              de tus datos personales y el uso de tu imagen conforme a la normativa colombiana de protección de datos.
+              {form.autoriza_menor
+                ? 'de tus datos personales y los del menor a tu cargo, y el uso de su imagen y la tuya,'
+                : 'de tus datos personales y el uso de tu imagen'}{' '}
+              conforme a la normativa colombiana de protección de datos.
             </p>
           </div>
         </form>

@@ -63,6 +63,10 @@ interface Consentimiento {
   acepta_politicas: boolean
   acepta_cesion: boolean
   firma: string | null
+  autoriza_menor: boolean
+  menor_nombre: string | null
+  menor_documento: string | null
+  parentesco: string | null
   created_at: string
 }
 
@@ -937,6 +941,10 @@ function ConsentimientosTab() {
         'Acepta políticas':   c.acepta_politicas   ? 'Sí' : 'No',
         'Acepta cesión de imagen': c.acepta_cesion ? 'Sí' : 'No',
         'Firma': c.firma ? 'Sí' : 'No',
+        'Autoriza por un menor': c.autoriza_menor ? 'Sí' : 'No',
+        'Nombre del menor': c.menor_nombre ?? '',
+        'Documento del menor': c.menor_documento ?? '',
+        'Parentesco': c.parentesco ?? '',
       }))
       const ws = utils.json_to_sheet(rows)
       const wb = utils.book_new()
@@ -963,7 +971,7 @@ function ConsentimientosTab() {
 
       autoTable(doc, {
         startY: 27,
-        head: [['Nombre', 'Apellido', 'Cédula', 'Celular', 'Correo', 'Fecha de registro', 'Cesión de imagen', 'Firma']],
+        head: [['Nombre', 'Apellido', 'Cédula', 'Celular', 'Correo', 'Fecha de registro', 'Cesión de imagen', 'Menor a cargo', 'Firma']],
         body: registros.map((c) => [
           c.nombre,
           c.apellido,
@@ -972,15 +980,16 @@ function ConsentimientosTab() {
           c.correo,
           formatFecha(c.created_at),
           c.acepta_cesion ? 'Sí' : 'No',
+          c.autoriza_menor ? `${c.menor_nombre} (${c.menor_documento}) · ${c.parentesco}` : '—',
           c.firma ? '' : 'Sin firma',
         ]),
         headStyles: { fillColor: [13, 115, 119], fontSize: 9, fontStyle: 'bold' },
         styles: { fontSize: 8, cellPadding: 3, minCellHeight: 16 },
-        columnStyles: { 7: { cellWidth: 34 } },
+        columnStyles: { 8: { cellWidth: 34 } },
         alternateRowStyles: { fillColor: [248, 247, 246] },
         // La firma va dibujada dentro de su celda, no como texto.
         didDrawCell: (data) => {
-          if (data.section !== 'body' || data.column.index !== 7) return
+          if (data.section !== 'body' || data.column.index !== 8) return
           const firma = registros[data.row.index]?.firma
           if (firma) doc.addImage(firma, 'PNG', data.cell.x + 1.5, data.cell.y + 1, 30, 11)
         },
@@ -1124,6 +1133,12 @@ function ConsentimientosTab() {
                   <tr key={c.id} className="border-b border-stone-100 hover:bg-stone-50 transition-colors">
                     <td className="px-4 py-3">
                       <p className="font-bold text-stone-900 text-sm">{c.nombre} {c.apellido}</p>
+                      {c.autoriza_menor && (
+                        <p className="mt-0.5 text-xs text-stone-500">
+                          Autoriza por un menor: <span className="font-semibold text-stone-700">{c.menor_nombre}</span>
+                          {' '}({c.menor_documento}) · {c.parentesco}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-stone-600 font-mono">{c.cedula}</td>
                     <td className="px-4 py-3 text-sm text-stone-600">{c.celular}</td>

@@ -27,6 +27,13 @@
 -- tienen nada que no esté en facturas/inventario), y restaurar el COMMENT ON
 -- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
 
+-- ── 2026-10-30  migration_consentimientos_menor.sql ─────────────────────────
+-- Columnas public.consentimientos.autoriza_menor (boolean, default false),
+-- menor_nombre, menor_documento y parentesco (text, NULL) + CHECK
+-- consentimientos_menor_completo: la persona adulta que autoriza por un menor a su cargo
+-- en /consentimiento. CORRERLA ANTES de publicar el cambio: el formulario ya envía los
+-- campos y sin las columnas el guardado falla. Los registros anteriores quedan en false.
+
 -- ── 2026-10-28  migration_consentimientos_firma.sql ─────────────────────────
 -- Columna public.consentimientos.firma (text, NULL): la firma con el dedo o el mouse
 -- del formulario /consentimiento, como PNG en base64. CORRERLA ANTES de publicar el
