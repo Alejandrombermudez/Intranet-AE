@@ -132,8 +132,10 @@ Al **2026-11-04** no queda ninguna de esquema pendiente: ese día se verificó p
 `migration_sitios_proyecto.sql` (antes, el 2026-10-21, `migration_campo_primero.sql` y
 `migration_alertas_juridica.sql`; el 2026-10-14, las de geovisor, financiero/inventario, talento humano y
 `fix_fechas_hora_colombia.sql`; la carga de Elegibilidad LDH `01`–`03` está fuera del repo). El `04` de ganadería sostenible (fuera del repo) ya
-estaba cargado desde el 2026-10-28 (46 áreas GS-n, verificado por REST). Quedan: el seed opcional
-`seed_salida_piloto_guajira.sql` y la limpieza de las tablas paralelas de `financiero`.
+estaba cargado desde el 2026-10-28 (46 áreas GS-n, verificado por REST). El seed del piloto de La Guajira
+también corrió (verificado). Queda la limpieza de las tablas paralelas de `financiero`
+(`docs/sql/cleanup_financiero_paralelo.sql`, ya escrita; falta correrla y borrar a mano el bucket
+`financiero-documentos`).
 **Fechas «de hoy»:** `CURRENT_DATE` en Supabase es UTC (de 7 p. m. a medianoche ya es mañana). En SQL usar
 `(now() AT TIME ZONE 'America/Bogota')::date`; en las rutas, `hoyColombia()` de `lib/administrativa.ts`.
 Antes de asumir que una tabla/columna existe, verifica por REST en vez de confiar en un doc que puede estar desactualizado.

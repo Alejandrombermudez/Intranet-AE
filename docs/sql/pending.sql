@@ -11,14 +11,6 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-10-28  seed_salida_piloto_guajira.sql (opcional) ────────────────────
--- Carga la hoja de conciliación de Logística (46 elementos) como una salida con tres
--- actas sin firma; lo que la hoja da por entregado y la intranet no tiene entra a la
--- bodega central como ajuste por conteo. Se corre UNA vez, después de la migración
--- (ya corrida el 2026-11-04). Antes: editar v_fecha (fecha de las actas de entrega 001
--- y 02) y confirmar con Logística los supuestos de unidad del encabezado. Sin datos
--- personales: el responsable se pone desde la intranet.
-
 -- ── 2026-10-16  TABLAS PARALELAS en financiero — por resolver ───────────────
 -- El 2026-10-16 se corrió en producción un migration_financiero.sql que NO está
 -- en main (vive en la rama local respaldo/financiero-paralelo-2026-10-16): se
@@ -30,15 +22,25 @@
 -- Ese mismo día Misión 3 se volvió a cargar donde corresponde, con
 -- financiero.registrar_factura: 15 facturas ($43.461.850; 3 sin soporte) y 13
 -- insumos en la bodega central Recepción, sin proyecto; 12 soportes en
--- financiero-facturas. Verificado por REST. Pendiente: borrar las cuatro
--- tablas paralelas y vaciar/borrar el bucket financiero-documentos (ya no
--- tienen nada que no esté en facturas/inventario), y restaurar el COMMENT ON
--- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
+-- financiero-facturas. Verificado por REST. Pendiente: correr
+-- cleanup_financiero_paralelo.sql (borra las cuatro tablas paralelas y la función,
+-- restaura el COMMENT ON SCHEMA; tiene una guarda que aborta si facturas no está
+-- completa) y DESPUÉS vaciar y borrar a mano el bucket financiero-documentos (Storage →
+-- Empty bucket → Delete). Verificado el 2026-11-04: nada en main las referencia, la misma
+-- carga está en facturas (15 documentos, $43.461.850) y los 12 archivos son idénticos
+-- (mismo ETag). Respaldo JSON fuera del repo: Documents/AE/respaldos/.
 
 -- ════════════════════════════════════════════════════════════
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
+
+-- ── 2026-11-04  seed_salida_piloto_guajira.sql ──────────────────────────────
+--             Corrido por el usuario; verificado por REST: 1 salida abierta, 3 actas
+--             sin firma (ENT/ADI/DEV-2026-001), 46 elementos en la conciliación
+--             (impermeables con saldo 7, postes con 980, como la hoja de Logística).
+--             Ojo: las actas de entrega y adicional quedaron con fecha 2026-10-01, el
+--             valor de ejemplo de v_fecha; falta ponerles la real.
 
 -- ── 2026-11-04  migration_salidas_campo.sql, consentimientos (cesión de imagen, firma,
 --             menor de edad) y migration_sitios_proyecto.sql ────────────────────────
