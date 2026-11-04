@@ -1,6 +1,8 @@
 # Salidas a campo: entrega, consumo, devolución y cierre de materiales
 
-> Plan, 2026-10-28. **Nada de esto está construido todavía.**
+> Plan, 2026-10-28. **Fases 1 a 4 construidas el mismo día, en la rama `salidas-campo`, sin desplegar:**
+> falta correr `docs/sql/migration_salidas_campo.sql` y, después, `docs/sql/seed_salida_piloto_guajira.sql`
+> (ver «Estado» al final). La fase 5 es la prueba con el piloto, con los datos que carga ese seed.
 > Pedido de la Dirección Financiera y Administrativa (correo del 2026-10-23, después de conciliar a mano el
 > primer piloto de siembra en tres predios de Morelia). Su hoja de conciliación —hojas «Resumen» y
 > «Conciliación»— es el formato que este módulo tiene que producir solo.
@@ -146,3 +148,33 @@ Pruebas: la migración se corre dos veces en PGlite y las funciones se prueban c
 - **App de campo en uso:** los cambios a `campo_*` son aditivos; no se quita ni se renombra nada que lea el celular.
 - **Fechas:** `hoyColombia()` en las rutas y `(now() AT TIME ZONE 'America/Bogota')::date` en SQL.
 - **Actas:** bucket privado, URL firmada desde el servidor y compresión del escaneo antes de subirlo.
+
+
+## Estado (2026-10-28)
+
+**Hecho, en la rama `salidas-campo` (Intranet-AE) y `salidas-clase` (actividades_monitoreo_campo), sin desplegar:**
+
+| Pieza | Dónde |
+|---|---|
+| Migración completa (clase, trabajadores, salidas, actas, motivo, vista de conciliación, 8 funciones, `campo_datos`) | `docs/sql/migration_salidas_campo.sql`, probada en PGlite: dos corridas, ciclo completo y permisos de `anon` (49 casos) |
+| Carga del piloto con la hoja de Logística (46 elementos, 3 actas) | `docs/sql/seed_salida_piloto_guajira.sql`, probada sobre una copia del estado de producción |
+| API | `/api/administrativa/salidas`, `salidas/[id]`, `salidas/[id]/actas/[actaId]`, `trabajadores`; `insumos` y `catalogo` con la clase |
+| Pantalla | pestaña **Salidas a campo** de `/intranet/administrativa` (lista, ficha, trabajadores) y la clase en «Elementos y bodegas» |
+| Actas en PDF | `lib/acta-pdf.ts`, con la plantilla de la organización |
+| Excel de conciliación | `lib/salidas-excel.ts`, hojas «Resumen» y «Conciliación» |
+| App de campo | el registro de actividad solo ofrece consumibles (`ae-actividades-v5`) |
+
+**Cambios frente a lo planeado arriba:**
+- Las bodegas físicas son tipo `sede` (Florencia y Escuela Bosque, nuevas); el **vivero de Morelia ya existía** como «Vivero» y es donde vuelve lo devuelto. No se crea una «Morelia» aparte.
+- Un solo catálogo: la pestaña «Insumos y bodegas» pasó a «Elementos y bodegas».
+- El cierre **no se bloquea por actas sin firma** (sí por saldo sin explicar y por devoluciones sin contar): avisa y pide confirmar, para poder cerrar mientras se consiguen los escaneos.
+- Las salidas y las bodegas «a cargo de» no aparecen en el saldo general de Inventario, ni como destino de facturas: tienen su pestaña.
+
+**Falta:**
+1. Correr la migración y el seed (los corre el usuario). Antes del seed, editar `v_fecha` con la fecha de las actas 001 y 02.
+2. Poner el responsable, a dónde vuelve y los predios de la salida cargada (botón *Editar*; los predios todavía no tienen pantalla).
+3. Que Logística resuelva lo que el seed deja en rojo (ver `seed_salida_piloto_guajira.sql`): impermeables, EPP sin devolución, devueltos de más o sin registro de entrega, Bosplant, Becano, Hormitek, avena hormiguera, termo y conteo de postes.
+4. Registrar las facturas que faltan (10-30-10 FVE 45169, alambre de púas adicional, 310 postes adicionales): el seed las dejó como ajustes por conteo en Recepción, que se anulan al registrar la factura.
+5. Fase 4 en lo que depende de SG-SST: la clase definitiva de cada elemento y el acta individual de EPP ya funcionan, falta decidir qué es dotación.
+6. Subir el escaneo de las actas originales (001, 02 y la de devolución del 21/10).
+7. Poner la pestaña en el mapa del sistema (`lib/sistema/mapa.ts`) si se quiere que figure ahí.

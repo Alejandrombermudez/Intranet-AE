@@ -1,11 +1,12 @@
 'use client'
 import { useMemo, useState } from 'react'
-import { Boxes, FileText, Package, Smartphone, Truck, Users } from 'lucide-react'
+import { Boxes, FileText, Package, Smartphone, Tent, Truck, Users } from 'lucide-react'
 import { Aviso, Boton, Cabecera, Cargando, Contenido, Pestanas, type Pestana } from '@/app/components/marca'
 import { pesos } from '@/lib/administrativa'
 import { useAccesoFinanciero, useCatalogo } from './comun'
 import Compras from './compras'
 import Inventario from './inventario'
+import SalidasCampo from './salidas'
 import CatalogoInsumos from './catalogo'
 import AppCampo from './campo'
 import Talento from './talento'
@@ -19,13 +20,14 @@ import Talento from './talento'
  *
  *   Compras     facturas electrónicas DIAN → gasto e inventario
  *   Inventario  saldo por bodega, repartir a los proyectos, kardex
+ *   Salidas a campo  entrega, consumo, devolución y cierre de materiales, herramientas y EPP, con actas
  *   App de campo  quién entra a la app de actividades y qué registró
  *   Catálogo    insumos y bodegas
  *   Flota y datos  lo que ya tenía Financiero en el tablero (carros, tratamiento de datos)
  *   Talento humano  fichas, contratos, certificados y cuentas de cobro (solo Financiero y Ejecutivo)
  */
-type Tab = 'compras' | 'inventario' | 'campo' | 'catalogo' | 'talento'
-const TABS: Tab[] = ['compras', 'inventario', 'campo', 'catalogo', 'talento']
+type Tab = 'compras' | 'inventario' | 'salidas' | 'campo' | 'catalogo' | 'talento'
+const TABS: Tab[] = ['compras', 'inventario', 'salidas', 'campo', 'catalogo', 'talento']
 
 export default function AdministrativaPage() {
   const { listo, perfil } = useAccesoFinanciero()
@@ -66,8 +68,9 @@ export default function AdministrativaPage() {
   const pestanas: Pestana[] = [
     { id: 'compras', label: 'Compras', icono: <FileText size={13} />, activa: tab === 'compras', onClick: () => cambiar('compras') },
     { id: 'inventario', label: 'Inventario', icono: <Boxes size={13} />, activa: tab === 'inventario', onClick: () => cambiar('inventario') },
+    { id: 'salidas', label: 'Salidas a campo', icono: <Tent size={13} />, activa: tab === 'salidas', onClick: () => cambiar('salidas') },
     { id: 'campo', label: 'App de campo', icono: <Smartphone size={13} />, activa: tab === 'campo', onClick: () => cambiar('campo') },
-    { id: 'catalogo', label: 'Insumos y bodegas', icono: <Package size={13} />, activa: tab === 'catalogo', onClick: () => cambiar('catalogo') },
+    { id: 'catalogo', label: 'Elementos y bodegas', icono: <Package size={13} />, activa: tab === 'catalogo', onClick: () => cambiar('catalogo') },
     ...(veTalento ? [{ id: 'talento', label: 'Talento humano', icono: <Users size={13} />, activa: tab === 'talento', onClick: () => cambiar('talento') }] : []),
     // Lo que el departamento ya tenía en el tablero general de la intranet.
     { id: 'flota', label: 'Flota y datos', icono: <Truck size={13} />, href: '/intranet?modulo=financiero' },
@@ -102,6 +105,7 @@ export default function AdministrativaPage() {
           <>
             {tab === 'compras' && <Compras cat={cat} />}
             {tab === 'inventario' && <Inventario cat={cat} recargar={recargar} />}
+            {tab === 'salidas' && <SalidasCampo cat={cat} recargar={recargar} />}
             {tab === 'campo' && <AppCampo cat={cat} recargar={recargar} />}
             {tab === 'catalogo' && <CatalogoInsumos cat={cat} recargar={recargar} />}
           </>

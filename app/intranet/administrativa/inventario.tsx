@@ -4,7 +4,7 @@ import { ArrowRight, Paperclip, Plus, Scale, Send, Trash2 } from 'lucide-react'
 import { Aviso, Boton, MarcaEstado, Seccion, Vacio } from '@/app/components/marca'
 import { fetchConSesion } from '@/lib/fetch-sesion'
 import {
-  cantidad, ESTADO_MOV, fechaCorta, hoyISO, pesos, TIPO_MOV,
+  cantidad, esBodegaFisica, ESTADO_MOV, fechaCorta, hoyISO, pesos, TIPO_MOV,
   type EstadoMovimiento, type Movimiento, type TipoMovimiento,
 } from '@/lib/administrativa'
 import { CAMPO, Campo, enviar, Mensaje, Saldo, TD, TH, useCarga, Ventana, type Catalogo } from './comun'
@@ -29,7 +29,8 @@ export default function Inventario({ cat, recargar }: { cat: Catalogo; recargar:
   const [soloConSaldo, setSoloConSaldo] = useState(true)
   const [errorAccion, setError] = useState<string | null>(null)
 
-  const bodegas = useMemo(() => cat.bodegas.filter((b) => b.activo), [cat.bodegas])
+  // Las salidas a campo y lo que tiene a cargo cada trabajador tienen su propia pestaña: aquí, las bodegas físicas.
+  const bodegas = useMemo(() => cat.bodegas.filter((b) => b.activo && esBodegaFisica(b.tipo)), [cat.bodegas])
   const insumo = (id: string) => cat.insumos.find((i) => i.id === id)
   const bodega = (id: string | null) => (id ? cat.bodegas.find((b) => b.id === id)?.nombre ?? '—' : '—')
 
@@ -243,7 +244,7 @@ export default function Inventario({ cat, recargar }: { cat: Catalogo; recargar:
 }
 
 function Repartir({ cat, onCerrar, onListo }: { cat: Catalogo; onCerrar: () => void; onListo: () => Promise<void> }) {
-  const bodegas = cat.bodegas.filter((b) => b.activo)
+  const bodegas = cat.bodegas.filter((b) => b.activo && esBodegaFisica(b.tipo))
   const central = bodegas.find((b) => b.tipo === 'central')
   const [origen, setOrigen] = useState(central?.id ?? '')
   const [destino, setDestino] = useState('')
@@ -359,7 +360,7 @@ function Ajustar({ cat, onCerrar, onListo }: { cat: Catalogo; onCerrar: () => vo
         <Campo etiqueta="Bodega">
           <select className={CAMPO} value={bodega} onChange={(e) => setBodega(e.target.value)}>
             <option value="">—</option>
-            {cat.bodegas.filter((b) => b.activo).map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}
+            {cat.bodegas.filter((b) => b.activo && esBodegaFisica(b.tipo)).map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}
           </select>
         </Campo>
         <Campo etiqueta="Insumo">
