@@ -11,29 +11,19 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-10-16  TABLAS PARALELAS en financiero — por resolver ───────────────
--- El 2026-10-16 se corrió en producción un migration_financiero.sql que NO está
--- en main (vive en la rama local respaldo/financiero-paralelo-2026-10-16): se
--- escribió sin ver que /intranet/administrativa ya existía. Creó, al lado de
--- financiero.facturas / inventario.* y sin chocar de nombre:
---   financiero.insumos · financiero.compras · financiero.compra_items ·
---   financiero.flete_compras · bucket financiero-documentos
--- y ahí quedó una primera carga de Misión 3. Ninguna pantalla las lee.
--- Ese mismo día Misión 3 se volvió a cargar donde corresponde, con
--- financiero.registrar_factura: 15 facturas ($43.461.850; 3 sin soporte) y 13
--- insumos en la bodega central Recepción, sin proyecto; 12 soportes en
--- financiero-facturas. Verificado por REST. Pendiente: correr
--- cleanup_financiero_paralelo.sql (borra las cuatro tablas paralelas y la función,
--- restaura el COMMENT ON SCHEMA; tiene una guarda que aborta si facturas no está
--- completa) y DESPUÉS vaciar y borrar a mano el bucket financiero-documentos (Storage →
--- Empty bucket → Delete). Verificado el 2026-11-04: nada en main las referencia, la misma
--- carga está en facturas (15 documentos, $43.461.850) y los 12 archivos son idénticos
--- (mismo ETag). Respaldo JSON fuera del repo: Documents/AE/respaldos/.
+-- (Nada pendiente: no queda SQL por correr en producción.)
 
 -- ════════════════════════════════════════════════════════════
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
+
+-- ── 2026-11-04  cleanup_financiero_paralelo.sql ────────────────────────────
+--             Corrido por el usuario; verificado por REST: las cuatro tablas
+--             paralelas ya no existen (PGRST205) y el bucket financiero-documentos
+--             tampoco; solo queda financiero-facturas. Lo real no cambió: 15
+--             facturas por $43.461.850, 18 líneas, 13 proveedores, 119 movimientos.
+--             Respaldo JSON fuera del repo: Documents/AE/respaldos/.
 
 -- ── 2026-11-04  seed_salida_piloto_guajira.sql ──────────────────────────────
 --             Corrido por el usuario; verificado por REST: 1 salida abierta, 3 actas
