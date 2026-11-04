@@ -1,6 +1,6 @@
 -- ============================================================
 -- SQL Pendiente — Intranet AE
--- Última revisión: 2026-10-21 (verificado contra BD real vía REST API)
+-- Última revisión: 2026-11-04 (verificado contra BD real vía REST API)
 --
 -- REGLA: solo están aquí cosas que NO se han podido verificar
 -- vía REST API. Una vez ejecutadas, mover al historial abajo.
@@ -11,19 +11,13 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-10-28  migration_salidas_campo.sql  y  seed_salida_piloto_guajira.sql ──────
--- Salidas a campo (docs/PLAN_SALIDAS_CAMPO.md): clase de cada elemento (consumible,
--- herramienta, EPP, dotación), trabajadores de campo (people.trabajadores_campo), salidas
--- con su bodega, actas con consecutivo y escaneo firmado (bucket inventario-actas), motivo
--- de cada justificación, la vista inventario.v_conciliacion_salida y 8 funciones (solo
--- service_role). Agrega las bodegas Florencia y Escuela Bosque. Sin datos personales.
--- `campo_datos` solo AGREGA la clase de cada insumo y esconde las bodegas «a cargo de»:
--- la app de campo instalada sigue funcionando. Probada en PGlite (dos corridas, ciclo
--- completo de una salida, permisos de anon; 49 casos). Requiere migration_financiero_inventario.sql
--- y migration_talento_humano.sql. El seed va DESPUÉS y una sola vez: carga la hoja de
--- conciliación de Logística (46 elementos) como una salida con tres actas; antes de correrlo,
--- editar v_fecha (fecha de las actas de entrega 001 y 02). Mientras no corran, la pestaña
--- «Salidas a campo» avisa que falta la migración y lo demás sigue igual.
+-- ── 2026-10-28  seed_salida_piloto_guajira.sql (opcional) ────────────────────
+-- Carga la hoja de conciliación de Logística (46 elementos) como una salida con tres
+-- actas sin firma; lo que la hoja da por entregado y la intranet no tiene entra a la
+-- bodega central como ajuste por conteo. Se corre UNA vez, después de la migración
+-- (ya corrida el 2026-11-04). Antes: editar v_fecha (fecha de las actas de entrega 001
+-- y 02) y confirmar con Logística los supuestos de unidad del encabezado. Sin datos
+-- personales: el responsable se pone desde la intranet.
 
 -- ── 2026-10-16  TABLAS PARALELAS en financiero — por resolver ───────────────
 -- El 2026-10-16 se corrió en producción un migration_financiero.sql que NO está
@@ -41,56 +35,26 @@
 -- tienen nada que no esté en facturas/inventario), y restaurar el COMMENT ON
 -- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
 
--- ── 2026-10-30  migration_consentimientos_menor.sql ─────────────────────────
--- Columnas public.consentimientos.autoriza_menor (boolean, default false),
--- menor_nombre, menor_documento y parentesco (text, NULL) + CHECK
--- consentimientos_menor_completo: la persona adulta que autoriza por un menor a su cargo
--- en /consentimiento. CORRERLA ANTES de publicar el cambio: el formulario ya envía los
--- campos y sin las columnas el guardado falla. Los registros anteriores quedan en false.
-
--- ── 2026-10-28  migration_consentimientos_firma.sql ─────────────────────────
--- Columna public.consentimientos.firma (text, NULL): la firma con el dedo o el mouse
--- del formulario /consentimiento, como PNG en base64. CORRERLA ANTES de publicar el
--- cambio: el formulario ya la envía y sin la columna el guardado falla. Los registros
--- anteriores quedan en NULL.
-
--- ── 2026-10-28  migration_consentimientos_cesion_imagen.sql ─────────────────
--- Columna public.consentimientos.acepta_cesion (boolean, default false): la
--- tercera aceptación del formulario /consentimiento (autorización de datos y uso
--- de imagen). CORRERLA ANTES de publicar el cambio: el formulario ya la envía y
--- sin la columna el guardado falla. Los registros anteriores quedan en false.
-
--- ── 2026-10-21  migration_sitios_proyecto.sql ──────────────────────────────
--- Tipo de proyecto por sitio (ley_arbol | mercado_carbono | ganaderia_sostenible;
--- nombres corregidos por el usuario el 2026-10-27, antes de correrla; traduce los
--- 'conexion'/'pastoreo' que guardó la app del 21 al 27) y capa de apoyo
--- que campo trabaja: geo.zona_revision + proyecto y capa_apoyo_id; RPC
--- geo.anotar_revision_campo (anon), geo.capa_apoyo_revision +
--- geo.revisar_capa_apoyo (anon, motivo obligatorio) y
--- geo.decisiones_capa_apoyo_campo() (anon). Ninguna función existente cambia de
--- firma. Sin datos. Probada en PGlite (dos corridas, permisos, 16 casos; con los
--- nombres nuevos, 11 casos el 2026-10-27: trabajo_elegibilidad_ldh/scripts/pgtest/
--- test_sitios_proyecto.mjs).
--- Mientras no corra: la app sube las geometrías igual y guarda el proyecto y
--- los rechazos en el celular (se reintentan); la intranet no muestra el proyecto.
--- DESPUÉS (independiente, fuera del repo): trabajo_elegibilidad_ldh/sql/
--- 04_capa_ganaderia_ldh.sql — 32 áreas «No elegible: Cobertura o zonificación»
--- (Ganadería sostenible, 332,5 ha en 32 predios) como capa de apoyo, GS-n. El
--- archivo del 21 (04_capa_pastoreo) se perdió sin correr; se rehízo el 27 con
--- scripts/genera_04_ganaderia.py, mismas reglas que el 01 (probado en PGlite).
--- 05_crear_predios_faltantes_ldh.sql (2026-10-27, pedido del usuario): crea en
--- jurídica las 17 fincas del SHP sin predio (dueño existente o nuevo con documento
--- provisional S/D-LDH-…, predio, expediente en jurídica, límite y áreas de apoyo) y
--- cierra sus alertas «sin_predio». Probado en PGlite. Va después del 01–04.
-
--- Antes del 2026-09-17 no quedaba ninguna migración de esquema pendiente
--- (verificado por REST el 2026-08-12).
-
+-- ── DESPUÉS de migration_sitios_proyecto.sql (independiente, fuera del repo) ──
+-- trabajo_elegibilidad_ldh/sql/04_capa_ganaderia_ldh.sql — 32 áreas «No elegible:
+-- Cobertura o zonificación» (Ganadería sostenible, 332,5 ha en 32 predios) como capa de
+-- apoyo, GS-n. Se rehízo el 2026-10-27 con scripts/genera_04_ganaderia.py, mismas reglas
+-- que el 01 (probado en PGlite). Verificar por REST antes de correrlo.
 
 -- ════════════════════════════════════════════════════════════
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
+
+-- ── 2026-11-04  migration_salidas_campo.sql, consentimientos (cesión de imagen, firma,
+--             menor de edad) y migration_sitios_proyecto.sql ────────────────────────
+--             Verificado por REST, solo lectura: existen inventario.insumos.clase,
+--             inventario.salidas / actas / v_conciliacion_salida (vacías),
+--             people.trabajadores_campo, consentimientos.firma / acepta_cesion /
+--             autoriza_menor y geo.zona_revision.proyecto / capa_apoyo_id +
+--             geo.capa_apoyo_revision. `campo_titulos` sigue respondiendo (la app de
+--             campo entra). No verificado por REST: que anon no pueda leer las tablas
+--             nuevas (cae en la prueba de la migración).
 
 -- ── 2026-10-21  migration_alertas_juridica.sql + Elegibilidad LDH sql/02 y 03 ─
 --             Verificado por REST el mismo día, solo lectura:

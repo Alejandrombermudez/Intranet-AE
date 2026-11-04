@@ -127,12 +127,12 @@ mano: en septiembre de 2026, `ARQUITECTURA_DATOS.md` §4.2 daba `ras.arboles_sem
 fecha o no lo pongas.
 
 `docs/sql/pending.sql` lleva la lista de migraciones que **aún no se han corrido** en producción.
-Al **2026-10-21** no queda ninguna de esquema pendiente: `migration_campo_primero.sql` y
-`migration_alertas_juridica.sql` corrieron ese día (antes, el 2026-10-14, las de geovisor, financiero/inventario,
-talento humano y `fix_fechas_hora_colombia.sql`), todas verificadas por REST, igual que la carga de Elegibilidad
-LDH (`01`–`03`, fuera del repo). Queda **`migration_sitios_proyecto.sql`** (tipo de proyecto por sitio y capa de
-apoyo que campo trabaja, escrita el 2026-10-21, tipos corregidos el 27; después, el `04` de ganadería sostenible,
-fuera del repo) y la limpieza de las
+Al **2026-11-04** no queda ninguna de esquema pendiente: ese día se verificó por REST que corrieron
+`migration_salidas_campo.sql`, las tres de consentimientos (cesión de imagen, firma, menor de edad) y
+`migration_sitios_proyecto.sql` (antes, el 2026-10-21, `migration_campo_primero.sql` y
+`migration_alertas_juridica.sql`; el 2026-10-14, las de geovisor, financiero/inventario, talento humano y
+`fix_fechas_hora_colombia.sql`; la carga de Elegibilidad LDH `01`–`03` está fuera del repo). Quedan: el seed
+opcional `seed_salida_piloto_guajira.sql`, el `04` de ganadería sostenible (fuera del repo) y la limpieza de las
 tablas paralelas de `financiero`.
 **Fechas «de hoy»:** `CURRENT_DATE` en Supabase es UTC (de 7 p. m. a medianoche ya es mañana). En SQL usar
 `(now() AT TIME ZONE 'America/Bogota')::date`; en las rutas, `hoyColombia()` de `lib/administrativa.ts`.
