@@ -31,7 +31,7 @@ decide el SIG por `geo.zona_decision`.
   propio panel arriba en «Resultados de campo» (confirmar o retirar, `geo.decidir_limite`).
 - Modelo: [`sql/migration_campo_primero.sql`](sql/migration_campo_primero.sql).
 
-## Sitios con tipo de proyecto y capa de apoyo que se trabaja (2026-10-21) — migración sin correr
+## Sitios con tipo de proyecto y capa de apoyo que se trabaja (2026-10-21) — migración corrida (verificada 2026-11-04)
 
 En la app de campo cada sitio de siembra lleva **tipo de proyecto** (Ley del Árbol, Mercado voluntario de carbono o
 Ganadería sostenible; `ley_arbol` / `mercado_carbono` / `ganaderia_sostenible`, nombres corregidos por el usuario el

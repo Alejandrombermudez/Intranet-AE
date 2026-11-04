@@ -35,6 +35,22 @@
 -- tienen nada que no esté en facturas/inventario), y restaurar el COMMENT ON
 -- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
 
+-- ── 2026-10-16  TABLAS PARALELAS en financiero — por resolver ───────────────
+-- El 2026-10-16 se corrió en producción un migration_financiero.sql que NO está
+-- en main (vive en la rama local respaldo/financiero-paralelo-2026-10-16): se
+-- escribió sin ver que /intranet/administrativa ya existía. Creó, al lado de
+-- financiero.facturas / inventario.* y sin chocar de nombre:
+--   financiero.insumos · financiero.compras · financiero.compra_items ·
+--   financiero.flete_compras · bucket financiero-documentos
+-- y ahí quedó una primera carga de Misión 3. Ninguna pantalla las lee.
+-- Ese mismo día Misión 3 se volvió a cargar donde corresponde, con
+-- financiero.registrar_factura: 15 facturas ($43.461.850; 3 sin soporte) y 13
+-- insumos en la bodega central Recepción, sin proyecto; 12 soportes en
+-- financiero-facturas. Verificado por REST. Pendiente: borrar las cuatro
+-- tablas paralelas y vaciar/borrar el bucket financiero-documentos (ya no
+-- tienen nada que no esté en facturas/inventario), y restaurar el COMMENT ON
+-- SCHEMA financiero de migration_financiero_inventario.sql, que quedó pisado.
+
 -- ── DESPUÉS de migration_sitios_proyecto.sql (independiente, fuera del repo) ──
 -- trabajo_elegibilidad_ldh/sql/04_capa_ganaderia_ldh.sql — 32 áreas «No elegible:
 -- Cobertura o zonificación» (Ganadería sostenible, 332,5 ha en 32 predios) como capa de
@@ -55,6 +71,12 @@
 --             geo.capa_apoyo_revision. `campo_titulos` sigue respondiendo (la app de
 --             campo entra). No verificado por REST: que anon no pueda leer las tablas
 --             nuevas (cae en la prueba de la migración).
+--             También verificado: el `04` de Ganadería sostenible (fuera del repo) YA
+--             estaba cargado, con fecha 2026-10-28 y created_by carga_elegibilidad_ldh:
+--             46 áreas «No elegible: Cobertura o zonificación», nombradas GS-n, en 45
+--             predios; las 32 áreas de los 32 predios del 04 suman 332,5 ha, como
+--             decía el archivo. El .sql que queda en trabajo_elegibilidad_ldh/sql es la
+--             versión vieja «pastoreo» (US-n): no correrlo, no cambiaría nada.
 
 -- ── 2026-10-21  migration_alertas_juridica.sql + Elegibilidad LDH sql/02 y 03 ─
 --             Verificado por REST el mismo día, solo lectura:
