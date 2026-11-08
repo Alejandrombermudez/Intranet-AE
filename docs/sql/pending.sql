@@ -11,34 +11,19 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-10-28  migration_monitoreo_semilleros.sql ─────────────────────────
--- La app de campo de semilleros (insumos_aves/semilleros, v1.2) guarda en la base.
--- Rol 'semilleros' en inventario.titulos_campo + título SEMILLEROS (sin clave: se la
--- pone Administrativa → App de campo); ras.monitoreos_semilleros,
--- ras.puntos_monitoreo_semilleros, ras.fotos_monitoreo_semilleros (solo service_role),
--- vista ras.v_monitoreos_semilleros y cinco RPC para anon con token:
--- ras.semilleros_titulos / _ingresar / _guardar / _guardar_foto / _estado.
--- Cambia (misma firma) inventario.campo_titulos e inventario._sesion_campo para que
--- la app de actividades no acepte títulos de semilleros. Sin datos. Probada en
--- PGlite (dos corridas, permisos, 36 casos) y con la app real en el navegador.
--- Antes de usar la app: poner SUPABASE_URL y SUPABASE_ANON_KEY (la anon) en el
--- proyecto de Vercel de insumos_aves y volver a desplegar; si faltan, el despliegue
--- no se rompe, solo no envía. «ras» ya está en Exposed schemas (GeoAE lo lee).
--- Mientras no corra: la app sigue guardando en el celular y no puede entrar.
-
--- ── 2026-11-03  migration_flota_app.sql ─────────────────────────────────────
--- La app de vehículos aparte (flota_app, repo vehiculos_app). Copia de
--- flota_app/sql/migration_flota_app.sql. fleet.conductores (PIN como huella, solo
--- service_role) + start_at/end_at/conductor_id/tarjeta_*_at en
--- fleet.vehicle_reservations (las reservas viejas pasan a horas de día completo).
--- Solo agrega: start_date/end_date siguen y /calendar y /validar-reserva de la
--- intranet siguen funcionando. Retirar ese módulo solo cuando la app nueva esté en uso.
-
+-- (Nada pendiente: no queda SQL por correr en producción.)
 
 -- ════════════════════════════════════════════════════════════
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
+
+-- ── 2026-11-08  migration_monitoreo_semilleros.sql + migration_flota_app.sql ─
+--             Corridas por el usuario; verificado por REST: ras.monitoreos_semilleros
+--             y v_monitoreos_semilleros existen (vacías), título SEMILLEROS activo y
+--             SIN clave (ponerla en Administrativa → App de campo); RPC
+--             ras.semilleros_titulos responde con la anon. fleet.conductores con 12
+--             filas; todas las reservas tienen start_at/end_at.
 
 -- ── 2026-11-04  cleanup_financiero_paralelo.sql ────────────────────────────
 --             Corrido por el usuario; verificado por REST: las cuatro tablas
