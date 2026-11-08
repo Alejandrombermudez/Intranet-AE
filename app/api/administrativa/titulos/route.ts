@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { exigirFinanciero, errorBase, esUuid, texto } from '@/lib/administrativa-api'
 
 /**
- * Títulos de acceso a la app de campo de actividades (inventario.titulos_campo).
- * No son personas: el cargo con que alguien entra ese día (BODEGA, SIEMBRA…).
+ * Títulos de acceso a las apps de campo (inventario.titulos_campo): la de actividades
+ * (roles bodega, siembra, monitoreo) y la de monitoreo fenológico de árboles semilleros
+ * (rol semilleros, funciones ras.semilleros_*). No son personas: el cargo con que
+ * alguien entra ese día (BODEGA, SIEMBRA, SEMILLEROS…).
  *
  *   POST  { nombre, rol, bodega_ids[], clave }
  *   PATCH { id, rol?, bodega_ids?, activo?, clave? }
@@ -11,7 +13,7 @@ import { exigirFinanciero, errorBase, esUuid, texto } from '@/lib/administrativa
  * La clave se guarda como huella bcrypt con inventario.fijar_clave_titulo, que
  * además cierra las sesiones abiertas con la clave anterior. No se devuelve nunca.
  */
-const ROLES = ['bodega', 'siembra', 'monitoreo']
+const ROLES = ['bodega', 'siembra', 'monitoreo', 'semilleros']
 const CLAVE_MINIMA = 6
 
 function bodegasValidas(v: unknown): string[] | null {

@@ -57,7 +57,7 @@ export default function AppCampo({ cat, recargar }: { cat: Catalogo; recargar: (
     <>
       <Seccion
         titulo="Títulos de acceso"
-        sub="Con qué se entra a la app de actividades. No son personas: el mismo celular sirve a quien haga ese trabajo ese día. Cada título descuenta solo de sus bodegas; sin bodegas asignadas ve el inventario de todas."
+        sub="Con qué se entra a las apps de campo (actividades y monitoreo de árboles semilleros). No son personas: el mismo celular sirve a quien haga ese trabajo ese día. Cada título descuenta solo de sus bodegas; sin bodegas asignadas ve el inventario de todas. El de árboles semilleros no usa bodegas."
         acciones={<>
           <Boton variante="secundario" href={URL_APP_CAMPO} icono={<ExternalLink size={13} />}>Abrir la app</Boton>
           <Boton icono={<Plus size={13} />} onClick={() => setEditando({ rol: 'siembra', bodega_ids: [] })}>Nuevo título</Boton>
@@ -76,7 +76,7 @@ export default function AppCampo({ cat, recargar }: { cat: Catalogo; recargar: (
                 <tr key={t.id} className={`border-b border-fina ${t.activo ? '' : 'opacity-50'}`}>
                   <td className={`${TD} font-medium`}>{t.nombre}</td>
                   <td className={TD}>{ROLES_CAMPO[t.rol].nombre}<span className="block text-[11px] text-tenue">{ROLES_CAMPO[t.rol].que}</span></td>
-                  <td className={`${TD} text-suave`}>{t.bodega_ids.length ? t.bodega_ids.map(bodega).join(', ') : 'Todas (solo ver)'}</td>
+                  <td className={`${TD} text-suave`}>{t.rol === 'semilleros' ? 'No aplica' : t.bodega_ids.length ? t.bodega_ids.map(bodega).join(', ') : 'Todas (solo ver)'}</td>
                   <td className={TD}>
                     {!t.activo ? <MarcaEstado color="var(--color-tenue)">Inactivo</MarcaEstado>
                       : !t.tiene_clave ? <MarcaEstado color="var(--color-ambar)">Sin clave</MarcaEstado>
@@ -159,8 +159,9 @@ function EditarTitulo({ inicial, cat, onCerrar, onListo }: { inicial: Partial<Ti
   async function guardar() {
     setOcupado(true); setError(null)
     try {
-      if (nuevo) await enviar('/api/administrativa/titulos', 'POST', { nombre, rol, bodega_ids: bodegas, clave })
-      else await enviar('/api/administrativa/titulos', 'PATCH', { id: inicial.id, rol, bodega_ids: bodegas, activo, ...(clave ? { clave } : {}) })
+      const suyas = rol === 'semilleros' ? [] : bodegas
+      if (nuevo) await enviar('/api/administrativa/titulos', 'POST', { nombre, rol, bodega_ids: suyas, clave })
+      else await enviar('/api/administrativa/titulos', 'PATCH', { id: inicial.id, rol, bodega_ids: suyas, activo, ...(clave ? { clave } : {}) })
       await onListo()
       if (clave) setEntregada(clave)
       else onCerrar()
@@ -198,16 +199,20 @@ function EditarTitulo({ inicial, cat, onCerrar, onListo }: { inicial: Partial<Ti
       </div>
       <p className="mt-2 text-[11.5px] text-tenue">{ROLES_CAMPO[rol].que}</p>
 
-      <p className="mb-2 mt-5 text-[10px] uppercase tracking-[.16em] text-tenue">Sus bodegas</p>
-      <div className="grid gap-1.5 sm:grid-cols-2">
-        {cat.bodegas.filter((b) => b.activo && b.tipo !== 'persona').map((b) => (
-          <label key={b.id} className="flex items-center gap-2 text-[12.5px] text-tinta">
-            <input type="checkbox" checked={bodegas.includes(b.id)}
-                   onChange={(e) => setBodegas(e.target.checked ? [...bodegas, b.id] : bodegas.filter((x) => x !== b.id))} />
-            {b.nombre}
-          </label>
-        ))}
-      </div>
+      {rol !== 'semilleros' && (
+        <>
+          <p className="mb-2 mt-5 text-[10px] uppercase tracking-[.16em] text-tenue">Sus bodegas</p>
+          <div className="grid gap-1.5 sm:grid-cols-2">
+            {cat.bodegas.filter((b) => b.activo && b.tipo !== 'persona').map((b) => (
+              <label key={b.id} className="flex items-center gap-2 text-[12.5px] text-tinta">
+                <input type="checkbox" checked={bodegas.includes(b.id)}
+                       onChange={(e) => setBodegas(e.target.checked ? [...bodegas, b.id] : bodegas.filter((x) => x !== b.id))} />
+                {b.nombre}
+              </label>
+            ))}
+          </div>
+        </>
+      )}
 
       <Campo etiqueta={nuevo ? 'Clave (mínimo 6 caracteres)' : 'Clave nueva (déjala vacía para no cambiarla)'} className="mt-5">
         <div className="flex gap-2">

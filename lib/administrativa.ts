@@ -49,7 +49,7 @@ export interface Proyecto {
 export interface TituloCampo {
   id: string
   nombre: string
-  rol: 'bodega' | 'siembra' | 'monitoreo'
+  rol: 'bodega' | 'siembra' | 'monitoreo' | 'semilleros'
   bodega_ids: string[]
   activo: boolean
   tiene_clave: boolean
@@ -160,6 +160,7 @@ export const ROLES_CAMPO: Record<TituloCampo['rol'], { nombre: string; que: stri
   bodega: { nombre: 'Bodega', que: 'Solo el inventario de su bodega: lo que recibe y lo que envía.' },
   siembra: { nombre: 'Siembra', que: 'Registra actividades sobre los núcleos, ve rendimientos y el inventario de sus bodegas.' },
   monitoreo: { nombre: 'Monitoreo', que: 'Lo de Siembra, más el monitoreo de lo sembrado.' },
+  semilleros: { nombre: 'Árboles semilleros', que: 'Solo entra a la app de monitoreo fenológico de semilleros (no a la de actividades, ni ve inventario).' },
 }
 
 export const TIPO_MOV: Record<TipoMovimiento, string> = {
