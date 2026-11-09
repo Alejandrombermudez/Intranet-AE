@@ -11,7 +11,11 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- (Nada pendiente: no queda SQL por correr en producción.)
+-- ── 2026-11-09  migration_vista_campo_fuente.sql ───────────────────────────
+--             Agrega core.v_predios_campo.fuente_informacion (al final, sin DROP)
+--             para el filtro «Lácteos del Hogar» de la app de campo. La app
+--             funciona sin esto; el filtro aparece cuando corra. Verificar por
+--             REST: la vista con la llave anon trae la columna (65 de 140 LDH).
 
 -- ════════════════════════════════════════════════════════════
 -- HISTORIAL — ya ejecutado en producción
