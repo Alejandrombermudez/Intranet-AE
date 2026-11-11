@@ -69,15 +69,14 @@ const CHANGELOG = [
 /**
  * Portada de la intranet. Sigue la composición de las páginas del Manual de
  * Marca: un panel en tinta con la identidad y el acceso, y la fotografía del
- * terreno a toda altura. Nada de tarjetas de vidrio ni cajas redondeadas: los
- * servicios son filas separadas por filetes, como el listado de Reporte.
+ * terreno a toda altura. Los servicios van juntos en un solo cuadro de vidrio;
+ * cada uno se sombrea al pasar el puntero.
  */
 export default function LandingPage() {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
   const [user, setUser] = useState<User | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
-  const [validarMsg, setValidarMsg] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [department, setDepartment] = useState<string | null>(null)
   const [foto, setFoto] = useState<string | null>(null)
@@ -151,6 +150,7 @@ export default function LandingPage() {
 
   const displayName = user?.user_metadata?.full_name || user?.email || 'Usuario'
   const initials = getInitials(displayName)
+  const esDeLaOrganizacion = !!user?.email?.toLowerCase().endsWith('@amazoniaemprende.com')
 
   return (
     // La talla base cuelga de aquí para que la frase sobre la fotografía crezca
@@ -233,8 +233,8 @@ export default function LandingPage() {
               <span className="font-titulo text-[1.06em] font-light italic tracking-[-0.01em]">corporativa</span>
             </h1>
             <p className="mt-[clamp(0.75rem,2vh,2.25rem)] text-[1em] font-light leading-relaxed text-hueso/75">
-              Aquí el equipo reserva vehículos, registra las inspecciones de recepción y devolución,
-              y sigue los predios en restauración y las familias en conservación.
+              Aquí el equipo sigue los predios en restauración y las familias en conservación,
+              y gestiona su información y sus documentos.
             </p>
 
             {/* ── Acceso ── */}
@@ -303,13 +303,13 @@ export default function LandingPage() {
               )}
             </div>
 
-            {/* ── Servicios ── */}
-            {!authLoading && (
+            {/* ── Servicios ── un solo cuadro de vidrio; cada opción se sombrea al pasar el puntero. */}
+            {!authLoading && user && (esDeLaOrganizacion || isAdmin || !!department) && (
               <nav className="mt-[clamp(0.625rem,1.7vh,3rem)]" aria-label="Servicios">
                 <p className="mb-2 text-[0.715em] uppercase tracking-[.2em] text-taupe">Servicios</p>
-                <div className="space-y-[clamp(0.3rem,0.7vh,0.6rem)]">
+                <div className="vidrio-oscuro flex flex-col gap-1 rounded-2xl p-1.5">
                   {/* Intranet — admins y usuarios con departamento */}
-                  {user && (isAdmin || !!department) && (
+                  {(isAdmin || !!department) && (
                     <Fila
                       href="/intranet"
                       titulo="Intranet"
@@ -319,44 +319,13 @@ export default function LandingPage() {
                   )}
 
                   {/* Mi espacio — toda cuenta de la organización, tenga o no departamento */}
-                  {user?.email?.toLowerCase().endsWith('@amazoniaemprende.com') && (
+                  {esDeLaOrganizacion && (
                     <Fila
                       href="/intranet/mi-perfil"
                       titulo="Mi espacio"
                       sub="Mi área, mi información, contratos, certificados y cuentas de cobro"
                       destacada={!isAdmin && !department}
                     />
-                  )}
-
-                  {/* Calendario — siempre visible */}
-                  <Fila href="/calendar" titulo="Calendario de vehículos" sub="Qué vehículos están libres" />
-
-                  {/* Validar Reserva */}
-                  {user ? (
-                    <Fila
-                      href="/validar-reserva"
-                      titulo="Validar mi reserva"
-                      sub="Inspección de recepción y devolución"
-                    />
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setValidarMsg(v => !v)}
-                        className="vidrio-oscuro flex w-full items-center gap-4 rounded-2xl px-[1.1em] py-[clamp(0.45rem,0.95vh,1.1rem)] text-left opacity-70"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[1.07em] font-semibold text-hueso/60">Validar mi reserva</p>
-                          <p className="text-[0.82em] font-light leading-tight text-hueso/35">Requiere inicio de sesión</p>
-                        </div>
-                        <ArrowRight className="h-[1.07em] w-[1.07em] shrink-0 text-hueso/20" />
-                      </button>
-                      {validarMsg && (
-                        <p className="vidrio-oscuro rounded-xl px-3.5 py-2.5 text-[0.857em] font-light text-hueso/80">
-                          Debes iniciar sesión primero para acceder a este servicio.
-                        </p>
-                      )}
-                    </>
                   )}
                 </div>
               </nav>
@@ -416,7 +385,7 @@ export default function LandingPage() {
   )
 }
 
-/** Un servicio: nombre, para qué sirve y una flecha, en una tarjeta de vidrio. */
+/** Un servicio: nombre, para qué sirve y una flecha. Vive dentro del cuadro de vidrio y se sombrea al pasar el puntero. */
 function Fila({
   href,
   titulo,
@@ -429,7 +398,7 @@ function Fila({
   destacada?: boolean
 }) {
   return (
-    <Link href={href} className="vidrio-oscuro group flex items-center gap-4 rounded-2xl px-[1.1em] py-[clamp(0.45rem,0.95vh,1.1rem)] transition-colors hover:bg-white/[.13]">
+    <Link href={href} className="group flex items-center gap-4 rounded-xl px-[1.1em] py-[clamp(0.5rem,1.1vh,1.2rem)] transition-all duration-200 hover:bg-white/[.13] hover:shadow-[0_8px_22px_-8px_rgb(0_0_0/0.6),inset_0_1px_0_rgb(255_255_255/0.14)]">
       {destacada && <i className="h-[2.3em] w-[3px] shrink-0 rounded-full bg-ambar" />}
       <div className="min-w-0 flex-1">
         <p className="text-[1.07em] font-semibold text-white">{titulo}</p>

@@ -1,6 +1,6 @@
 'use client'
 import { useMemo, useState } from 'react'
-import { Boxes, FileText, Package, Smartphone, Tent, Truck, Users } from 'lucide-react'
+import { Boxes, FileText, Package, ShieldCheck, Smartphone, Tent, Users } from 'lucide-react'
 import { Aviso, Boton, Cabecera, Cargando, Contenido, Pestanas, type Pestana } from '@/app/components/marca'
 import { pesos } from '@/lib/administrativa'
 import { useAccesoFinanciero, useCatalogo } from './comun'
@@ -23,7 +23,7 @@ import Talento from './talento'
  *   Salidas a campo  entrega, consumo, devolución y cierre de materiales, herramientas y EPP, con actas
  *   App de campo  quién entra a la app de actividades y qué registró
  *   Catálogo    insumos y bodegas
- *   Flota y datos  lo que ya tenía Financiero en el tablero (carros, tratamiento de datos)
+ *   Tratamiento de datos  lo que ya tenía Financiero en el tablero
  *   Talento humano  fichas, contratos, certificados y cuentas de cobro (solo Financiero y Ejecutivo)
  */
 type Tab = 'compras' | 'inventario' | 'salidas' | 'campo' | 'catalogo' | 'talento'
@@ -73,7 +73,7 @@ export default function AdministrativaPage() {
     { id: 'catalogo', label: 'Elementos y bodegas', icono: <Package size={13} />, activa: tab === 'catalogo', onClick: () => cambiar('catalogo') },
     ...(veTalento ? [{ id: 'talento', label: 'Talento humano', icono: <Users size={13} />, activa: tab === 'talento', onClick: () => cambiar('talento') }] : []),
     // Lo que el departamento ya tenía en el tablero general de la intranet.
-    { id: 'flota', label: 'Flota y datos', icono: <Truck size={13} />, href: '/intranet?modulo=financiero' },
+    { id: 'flota', label: 'Tratamiento de datos', icono: <ShieldCheck size={13} />, href: '/intranet?modulo=financiero' },
   ]
 
   return (

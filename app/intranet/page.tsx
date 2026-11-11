@@ -8,7 +8,6 @@ import type { UserProfile } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 import { MisSesiones } from '@/app/components/MisSesiones'
 import { Cabecera, Cargando, Pestanas, Seccion, type Pestana } from '@/app/components/marca'
-import { VEHICLES } from '@/lib/vehicles'
 import { NOMBRES_DEPARTAMENTO, RUTA_MODULO } from '@/lib/departamentos'
 import {
   ShieldCheck, Shield, Pencil, Check, X,
@@ -24,33 +23,6 @@ import {
 } from 'recharts'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
-
-interface InspectionStat {
-  id: string
-  inspection_type: 'recepcion' | 'devolucion'
-  submitted_at: string
-  cat1_status: string; cat1_issues: string[]
-  cat2_status: string; cat2_issues: string[]
-  cat3_status: string; cat3_issues: string[]
-  cat4_status: string; cat4_issues: string[]
-  cat5_status: string; cat5_issues: string[]
-  cat6_status: string; cat6_issues: string[]
-  photo_frontal: string | null
-  photo_posterior: string | null
-  photo_lateral_izq: string | null
-  photo_lateral_der: string | null
-  photo_tablero: string | null
-  kilometraje: number | null
-  vehicle_reservations: { vehicle_id: string; vehicle_name: string; user_name: string | null; user_email: string | null } | null
-}
-
-interface VehicleDoc {
-  vehicle_id: string
-  vehicle_name: string
-  soat_expiry: string | null
-  tecnomecanica_expiry: string | null
-  updated_by: string | null
-}
 
 interface Consentimiento {
   id: string
@@ -72,16 +44,6 @@ interface Consentimiento {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const CAT_NAMES = [
-  'Presentación', 'Niveles y Líquidos',
-  'Tablero y Eléctrico', 'Seguridad Activa', 'Llantas', 'Kit & Docs',
-]
-
-const PHOTO_KEYS: (keyof InspectionStat)[] = [
-  'photo_frontal', 'photo_posterior', 'photo_lateral_izq', 'photo_lateral_der', 'photo_tablero',
-]
-const PHOTO_LABELS = ['Frontal', 'Posterior', 'Lat. Izq.', 'Lat. Der.', 'Tablero']
-
 const PRIMARY = '#2f3f32'
 const PRIMARY_DARK = '#222e25'
 
@@ -101,21 +63,8 @@ function formatDate(iso: string): string {
   )
 }
 
-function daysUntil(dateStr: string | null): number | null {
-  if (!dateStr) return null
-  const exp = new Date(dateStr + 'T12:00:00').getTime()
-  const now = new Date(); now.setHours(12, 0, 0, 0)
-  return Math.ceil((exp - now.getTime()) / 86400000)
-}
-
 function formatShortDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function hasIssues(insp: InspectionStat): boolean {
-  return [1, 2, 3, 4, 5, 6].some(
-    (n) => insp[`cat${n}_status` as keyof InspectionStat] === 'issues'
-  )
 }
 
 
@@ -251,554 +200,6 @@ function UserRow({ profile, isSelf, onEdit }: UserRowProps) {
         </button>
       </td>
     </tr>
-  )
-}
-
-// ─── PhotoGrid: miniaturas de una inspección ──────────────────────────────────
-
-function PhotoGrid({ insp }: { insp: InspectionStat | undefined }) {
-  if (!insp) {
-    return (
-      <div className="flex flex-col items-center justify-center h-36 rounded-xl border-2 border-dashed border-stone-200 bg-stone-50 text-stone-400 gap-2">
-        <ImageOff size={22} />
-        <p className="text-xs font-semibold">Sin registro</p>
-      </div>
-    )
-  }
-
-  const issues = [1, 2, 3, 4, 5, 6]
-    .filter((n) => insp[`cat${n}_status` as keyof InspectionStat] === 'issues')
-    .flatMap((n) => insp[`cat${n}_issues` as keyof InspectionStat] as string[])
-
-  return (
-    <div className="space-y-2">
-      <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mb-1">
-        {formatShortDate(insp.submitted_at)}
-      </p>
-      <div className="grid grid-cols-5 gap-1">
-        {PHOTO_KEYS.map((key, i) => {
-          const url = insp[key] as string | null
-          return url ? (
-            <div key={key} className="relative group">
-              <img src={url} alt={PHOTO_LABELS[i]}
-                className="w-full h-16 object-cover rounded-lg border border-stone-200 group-hover:border-primary transition-colors cursor-zoom-in"
-                onClick={() => window.open(url, '_blank')}
-              />
-              <p className="text-[9px] text-center text-stone-400 mt-0.5 truncate">{PHOTO_LABELS[i]}</p>
-            </div>
-          ) : (
-            <div key={key} className="w-full h-16 bg-stone-100 rounded-lg border border-dashed border-stone-200 flex items-center justify-center">
-              <ImageOff size={12} className="text-stone-300" />
-            </div>
-          )
-        })}
-      </div>
-      {issues.length > 0 ? (
-        <div className="flex flex-wrap gap-1 mt-1">
-          {issues.slice(0, 4).map((iss, i) => (
-            <span key={i} className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded font-medium">{iss}</span>
-          ))}
-          {issues.length > 4 && (
-            <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-medium">+{issues.length - 4} más</span>
-          )}
-        </div>
-      ) : (
-        <p className="text-[10px] text-emerald-600 font-semibold mt-1">Sin problemas reportados</p>
-      )}
-    </div>
-  )
-}
-
-// ─── Tab Estadísticas ─────────────────────────────────────────────────────────
-
-function EstadisticasTab({ inspections, loading }: { inspections: InspectionStat[]; loading: boolean }) {
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all')
-  const [vehicleDocs, setVehicleDocs] = useState<VehicleDoc[]>([])
-  const [editingDocs, setEditingDocs] = useState<Record<string, { soat: string; tecno: string; saving: boolean }>>({})
-
-  useEffect(() => {
-    fetch('/api/vehicle-documents')
-      .then((r) => r.json())
-      .then((d: VehicleDoc[]) => setVehicleDocs(Array.isArray(d) ? d : []))
-      .catch(() => {/* no-op */})
-  }, [])
-
-  const saveDoc = async (vehicleId: string, vehicleName: string) => {
-    const entry = editingDocs[vehicleId]
-    if (!entry) return
-    setEditingDocs((prev) => ({ ...prev, [vehicleId]: { ...entry, saving: true } }))
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token ?? ''
-      const res = await fetch('/api/vehicle-documents', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          vehicle_id: vehicleId,
-          vehicle_name: vehicleName,
-          soat_expiry: entry.soat || null,
-          tecnomecanica_expiry: entry.tecno || null,
-        }),
-      })
-      if (res.ok) {
-        const updated: VehicleDoc = await res.json()
-        setVehicleDocs((prev) => {
-          const idx = prev.findIndex((d) => d.vehicle_id === vehicleId)
-          return idx >= 0
-            ? prev.map((d) => d.vehicle_id === vehicleId ? updated : d)
-            : [...prev, updated]
-        })
-        setEditingDocs((prev) => { const n = { ...prev }; delete n[vehicleId]; return n })
-      }
-    } catch {/* no-op */}
-    setEditingDocs((prev) => ({ ...prev, [vehicleId]: { ...prev[vehicleId], saving: false } }))
-  }
-
-  const filtered = selectedVehicleId === 'all'
-    ? inspections
-    : inspections.filter((i) => i.vehicle_reservations?.vehicle_id === selectedVehicleId)
-
-  const stats = useMemo(() => {
-    if (!filtered.length) return null
-
-    const total = filtered.length
-    const withIssuesCount = filtered.filter(hasIssues).length
-    const recepciones = filtered.filter((i) => i.inspection_type === 'recepcion').length
-    const devoluciones = filtered.filter((i) => i.inspection_type === 'devolucion').length
-
-    const pieData = [
-      { name: 'Con problemas', value: withIssuesCount, color: '#ef4444' },
-      { name: 'Sin problemas', value: total - withIssuesCount, color: '#22c55e' },
-    ]
-
-    const catBarData = CAT_NAMES.map((name, i) => ({
-      name,
-      Problemas: filtered.filter((ins) => ins[`cat${i + 1}_status` as keyof InspectionStat] === 'issues').length,
-    }))
-
-    // Top 10 issues frecuentes
-    const issueCount: Record<string, number> = {}
-    for (const insp of filtered)
-      for (let c = 1; c <= 6; c++)
-        for (const iss of ((insp[`cat${c}_issues` as keyof InspectionStat] as string[]) ?? []))
-          issueCount[iss] = (issueCount[iss] ?? 0) + 1
-    const topIssues = Object.entries(issueCount)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 10)
-      .map(([issue, count]) => ({ issue, count }))
-
-    // Última recepción / devolución por vehículo
-    const latestByVehicle: Record<string, { recepcion?: InspectionStat; devolucion?: InspectionStat }> = {}
-    for (const insp of filtered) {
-      const vId = insp.vehicle_reservations?.vehicle_id
-      if (!vId) continue
-      if (!latestByVehicle[vId]) latestByVehicle[vId] = {}
-      const key = insp.inspection_type as 'recepcion' | 'devolucion'
-      if (!latestByVehicle[vId][key]) latestByVehicle[vId][key] = insp
-    }
-
-    return { total, withIssuesCount, recepciones, devoluciones, pieData, catBarData, topIssues, latestByVehicle }
-  }, [filtered])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center">
-          <Loader2 size={36} className="text-primary animate-spin mx-auto mb-3" />
-          <p className="text-stone-500 font-semibold text-sm">Cargando estadísticas…</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!inspections.length) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-stone-400">
-        <BarChart2 size={48} className="mb-4 opacity-40" />
-        <p className="font-bold text-stone-500">No hay inspecciones completadas aún.</p>
-        <p className="text-sm mt-1">Las estadísticas aparecerán cuando se completen formularios.</p>
-      </div>
-    )
-  }
-
-  const selectedVehicleName = VEHICLES.find((v) => v.id === selectedVehicleId)?.name ?? 'Todos los vehículos'
-
-  if (!stats) return null
-
-  const pct = stats.total > 0 ? Math.round((stats.withIssuesCount / stats.total) * 100) : 0
-
-  // Compute alerts for docs expiring soon
-  const docAlerts = VEHICLES.flatMap((v) => {
-    const doc = vehicleDocs.find((d) => d.vehicle_id === v.id)
-    const alerts: { vehicle: string; field: string; days: number | null }[] = []
-    const soatDays = daysUntil(doc?.soat_expiry ?? null)
-    const tecnoDays = daysUntil(doc?.tecnomecanica_expiry ?? null)
-    if (soatDays !== null && soatDays <= 30) alerts.push({ vehicle: v.name, field: 'SOAT', days: soatDays })
-    if (tecnoDays !== null && tecnoDays <= 30) alerts.push({ vehicle: v.name, field: 'Tecnomecánica', days: tecnoDays })
-    return alerts
-  })
-
-  return (
-    <div className="space-y-8">
-
-      {/* ── Alerta documentación vehicular ── */}
-      {docAlerts.length > 0 && (
-        <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={20} />
-            <div>
-              <p className="font-bold text-amber-900 mb-1">Documentación vehicular próxima a vencer</p>
-              <ul className="space-y-0.5">
-                {docAlerts.map((a, i) => (
-                  <li key={i} className={`text-sm font-semibold ${a.days !== null && a.days <= 7 ? 'text-red-700' : 'text-amber-800'}`}>
-                    {a.vehicle} — {a.field}:{' '}
-                    {a.days !== null && a.days <= 0 ? 'VENCIDO' : `vence en ${a.days} día(s)`}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Documentación Vehicular ── */}
-      <div>
-        <h3 className="text-lg font-black text-stone-900 mb-4 flex items-center gap-2">
-          Documentación Vehicular
-          <span className="text-xs font-medium text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">SOAT y Tecnomecánica</span>
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {VEHICLES.map((v) => {
-            const doc = vehicleDocs.find((d) => d.vehicle_id === v.id)
-            const VehicleIcon = v.icon
-            const editing = editingDocs[v.id]
-            const soatDays = daysUntil(doc?.soat_expiry ?? null)
-            const tecnoDays = daysUntil(doc?.tecnomecanica_expiry ?? null)
-
-            const colorClass = (days: number | null) =>
-              days === null ? 'text-stone-400' :
-              days <= 7 ? 'text-red-600 font-bold' :
-              days <= 30 ? 'text-amber-600 font-bold' :
-              'text-emerald-600 font-semibold'
-
-            return (
-              <div key={v.id} className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <VehicleIcon size={20} style={{ color: v.color }} />
-                  <p className="font-black text-stone-900">{v.name}</p>
-                  {!editing && (
-                    <button
-                      onClick={() => setEditingDocs((prev) => ({ ...prev, [v.id]: { soat: doc?.soat_expiry ?? '', tecno: doc?.tecnomecanica_expiry ?? '', saving: false } }))}
-                      className="ml-auto text-stone-400 hover:text-primary transition-colors"
-                      title="Editar fechas"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  )}
-                </div>
-                {editing ? (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-1">Vencimiento SOAT</label>
-                      <input type="date" value={editing.soat}
-                        onChange={(e) => setEditingDocs((p) => ({ ...p, [v.id]: { ...p[v.id], soat: e.target.value } }))}
-                        className="w-full px-3 py-2 border-2 border-stone-200 rounded-lg text-sm font-medium focus:border-primary focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-1">Vencimiento Tecnomecánica</label>
-                      <input type="date" value={editing.tecno}
-                        onChange={(e) => setEditingDocs((p) => ({ ...p, [v.id]: { ...p[v.id], tecno: e.target.value } }))}
-                        className="w-full px-3 py-2 border-2 border-stone-200 rounded-lg text-sm font-medium focus:border-primary focus:outline-none" />
-                    </div>
-                    <div className="flex gap-2 pt-1">
-                      <button onClick={() => saveDoc(v.id, v.name)} disabled={editing.saving}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-white bg-primary hover:bg-primary-dark disabled:opacity-50 transition-all">
-                        {editing.saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-                        Guardar
-                      </button>
-                      <button onClick={() => setEditingDocs((p) => { const n = { ...p }; delete n[v.id]; return n })}
-                        className="px-4 py-2 rounded-lg text-xs font-bold border border-stone-200 text-stone-500 hover:bg-stone-50 transition-all">
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-stone-50 rounded-xl p-3">
-                      <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-1">SOAT</p>
-                      <p className={`text-sm ${colorClass(soatDays)}`}>
-                        {doc?.soat_expiry ? new Date(doc.soat_expiry + 'T12:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : <span className="text-stone-300 font-normal">Sin fecha</span>}
-                      </p>
-                      {soatDays !== null && (
-                        <p className={`text-xs mt-0.5 ${colorClass(soatDays)}`}>
-                          {soatDays <= 0 ? 'VENCIDO' : `${soatDays}d restantes`}
-                        </p>
-                      )}
-                    </div>
-                    <div className="bg-stone-50 rounded-xl p-3">
-                      <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-1">Tecnomecánica</p>
-                      <p className={`text-sm ${colorClass(tecnoDays)}`}>
-                        {doc?.tecnomecanica_expiry ? new Date(doc.tecnomecanica_expiry + 'T12:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : <span className="text-stone-300 font-normal">Sin fecha</span>}
-                      </p>
-                      {tecnoDays !== null && (
-                        <p className={`text-xs mt-0.5 ${colorClass(tecnoDays)}`}>
-                          {tecnoDays <= 0 ? 'VENCIDO' : `${tecnoDays}d restantes`}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* ── Selector de vehículo ── */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2 text-stone-500">
-          <Filter size={15} />
-          <span className="text-sm font-bold">Filtrar por vehículo:</span>
-        </div>
-        <div className="relative">
-          <select
-            value={selectedVehicleId}
-            onChange={(e) => setSelectedVehicleId(e.target.value)}
-            className="appearance-none pl-3 pr-8 py-2 text-sm font-semibold border-2 border-stone-200 rounded-xl focus:outline-none focus:border-primary bg-white text-stone-800 transition-colors cursor-pointer"
-          >
-            <option value="all">Todos los vehículos ({inspections.length})</option>
-            {VEHICLES.map((v) => {
-              const count = inspections.filter((i) => i.vehicle_reservations?.vehicle_id === v.id).length
-              return (
-                <option key={v.id} value={v.id}>{v.name} ({count})</option>
-              )
-            })}
-          </select>
-          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
-        </div>
-        {selectedVehicleId !== 'all' && (
-          <button
-            onClick={() => setSelectedVehicleId('all')}
-            className="text-xs font-bold text-stone-400 hover:text-red-500 transition-colors flex items-center gap-1"
-          >
-            <X size={12} /> Quitar filtro
-          </button>
-        )}
-      </div>
-
-      {/* ── Cards resumen ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Inspecciones totales', value: stats.total, color: 'text-stone-900' },
-          { label: 'Con problemas', value: `${stats.withIssuesCount} (${pct}%)`, color: 'text-red-600' },
-          { label: 'Recepciones', value: stats.recepciones, color: 'text-primary' },
-          { label: 'Devoluciones', value: stats.devoluciones, color: 'text-emerald-600' },
-        ].map((card) => (
-          <div key={card.label} className="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm">
-            <p className="text-xs text-stone-400 font-bold uppercase tracking-wider mb-1">{card.label}</p>
-            <p className={`text-3xl font-black ${card.color}`}>{card.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Gráficos fila 1: Pie + BarChart categorías ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* PieChart */}
-        <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
-          <h3 className="text-base font-black text-stone-900 mb-4">Inspecciones con/sin problemas</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={stats.pieData} dataKey="value" nameKey="name"
-                cx="50%" cy="50%" outerRadius={80} innerRadius={40}
-                label={({ name, percent }) => `${name}: ${Math.round((percent ?? 0) * 100)}%`}
-                labelLine={false}>
-                {stats.pieData.map((entry) => (
-                  <Cell key={entry.name} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v) => [`${v ?? 0} inspecciones`, '']} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* BarChart categorías */}
-        <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
-          <h3 className="text-base font-black text-stone-900 mb-4">Problemas por categoría</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={stats.catBarData} margin={{ top: 0, right: 8, left: -20, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-25} textAnchor="end" interval={0} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => [`${v ?? 0} inspecciones`, 'Problemas']} />
-              <Bar dataKey="Problemas" fill={PRIMARY} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* ── BarChart horizontal: Top 10 problemas ── */}
-      {stats.topIssues.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
-          <h3 className="text-base font-black text-stone-900 mb-4">Top {stats.topIssues.length} problemas más frecuentes</h3>
-          <ResponsiveContainer width="100%" height={Math.max(240, stats.topIssues.length * 36)}>
-            <BarChart data={stats.topIssues} layout="vertical" margin={{ top: 0, right: 30, left: 8, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" horizontal={false} />
-              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-              <YAxis dataKey="issue" type="category" width={260} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => [`${v ?? 0} veces`, 'Frecuencia']} />
-              <Bar dataKey="count" fill={PRIMARY_DARK} radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 11, fill: '#78716c' }} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* ── Historial de formularios ── */}
-      <div>
-        <h3 className="text-lg font-black text-stone-900 mb-4 flex items-center gap-2">
-          <CalendarDays size={18} className="text-primary" />
-          Historial de formularios
-          <span className="text-xs font-medium text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
-            {selectedVehicleId === 'all' ? `Todos · ${filtered.length}` : `${selectedVehicleName} · ${filtered.length}`}
-          </span>
-        </h3>
-
-        {filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-stone-200 p-8 text-center text-stone-400">
-            <BarChart2 size={32} className="mx-auto mb-2 opacity-40" />
-            <p className="text-sm font-semibold">Sin formularios para este vehículo.</p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="bg-stone-50 border-b border-stone-200">
-                    {['Vehículo', 'Usuario', 'Tipo', 'Fecha', 'Km', 'Categorías con problemas'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-[11px] font-bold text-stone-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.slice(0, 50).map((insp) => {
-                    const issuesCats = CAT_NAMES.filter((_, i) =>
-                      insp[`cat${i + 1}_status` as keyof InspectionStat] === 'issues'
-                    )
-                    return (
-                      <tr key={insp.id} className="border-b border-stone-100 hover:bg-stone-50 transition-colors">
-                        <td className="px-4 py-3 font-semibold text-stone-800 whitespace-nowrap">
-                          {insp.vehicle_reservations?.vehicle_name ?? <span className="text-stone-300">—</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          {insp.vehicle_reservations?.user_name ? (
-                            <div>
-                              <p className="text-xs font-semibold text-stone-800 whitespace-nowrap">
-                                {insp.vehicle_reservations.user_name}
-                              </p>
-                              {insp.vehicle_reservations.user_email && (
-                                <p className="text-[11px] text-stone-400 truncate max-w-[180px]">
-                                  {insp.vehicle_reservations.user_email}
-                                </p>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-stone-300 text-xs">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
-                            insp.inspection_type === 'recepcion'
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : 'bg-blue-50 text-blue-700'
-                          }`}>
-                            {insp.inspection_type === 'recepcion' ? 'Recepción' : 'Devolución'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-stone-500 whitespace-nowrap text-xs">
-                          {new Date(insp.submitted_at).toLocaleDateString('es-CO', {
-                            day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-                          })}
-                        </td>
-                        <td className="px-4 py-3 text-stone-700 text-xs font-medium whitespace-nowrap">
-                          {insp.kilometraje != null ? insp.kilometraje.toLocaleString('es-CO') + ' km' : <span className="text-stone-300">—</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          {issuesCats.length === 0 ? (
-                            <span className="text-xs text-emerald-600 font-semibold">Sin novedades</span>
-                          ) : (
-                            <div className="flex flex-wrap gap-1">
-                              {issuesCats.map((cat) => (
-                                <span key={cat} className="inline-flex px-2 py-0.5 bg-red-50 text-red-700 rounded-full text-[10px] font-bold whitespace-nowrap">
-                                  {cat}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {filtered.length > 50 && (
-              <p className="text-xs text-stone-400 text-center py-3 border-t border-stone-100">
-                Mostrando los primeros 50 de {filtered.length} registros
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── Comparación fotográfica por vehículo ── */}
-      <div>
-        <h3 className="text-lg font-black text-stone-900 mb-4 flex items-center gap-2">
-          Comparación fotográfica por vehículo
-          <span className="text-xs font-medium text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
-            Última recepción vs. última devolución
-          </span>
-        </h3>
-
-        <div className="space-y-4">
-          {VEHICLES.map((vehicle) => {
-            const VehicleIcon = vehicle.icon
-            const vehicleData = stats.latestByVehicle[vehicle.id]
-
-            return (
-              <div key={vehicle.id} className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-                {/* Header vehículo */}
-                <div className="flex items-center gap-3 px-5 py-3 border-b border-stone-100"
-                  style={{ backgroundColor: `${vehicle.color}10` }}>
-                  <VehicleIcon size={20} style={{ color: vehicle.color }} />
-                  <span className="font-black text-stone-800">{vehicle.name}</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-0 divide-x divide-stone-100">
-                  {/* Última recepción */}
-                  <div className="p-5">
-                    <p className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-                      Última Recepción
-                    </p>
-                    <PhotoGrid insp={vehicleData?.recepcion} />
-                  </div>
-
-                  {/* Última devolución */}
-                  <div className="p-5">
-                    <p className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
-                      Última Devolución
-                    </p>
-                    <PhotoGrid insp={vehicleData?.devolucion} />
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-    </div>
   )
 }
 
@@ -1191,47 +592,6 @@ function ConsentimientosTab() {
   )
 }
 
-// ─── FinancieroModule: wrapper con sub-tabs ────────────────────────────────────
-
-function FinancieroModule({ inspections, loading }: { inspections: InspectionStat[]; loading: boolean }) {
-  const [subTab, setSubTab] = useState<'estadisticas' | 'consentimientos'>('estadisticas')
-
-  return (
-    <div>
-      {/* Sub-tabs */}
-      <div className="flex gap-1 mb-7 bg-white rounded-xl p-1 shadow-sm border border-stone-200 w-fit">
-        <button
-          onClick={() => setSubTab('estadisticas')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-            subTab === 'estadisticas'
-              ? 'text-white shadow-sm'
-              : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
-          }`}
-          style={subTab === 'estadisticas' ? { backgroundColor: PRIMARY } : {}}>
-          <BarChart3 size={14} /> Estadísticas de Carros
-        </button>
-        <button
-          onClick={() => setSubTab('consentimientos')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-            subTab === 'consentimientos'
-              ? 'text-white shadow-sm'
-              : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
-          }`}
-          style={subTab === 'consentimientos' ? { backgroundColor: PRIMARY } : {}}>
-          <ShieldCheck size={14} /> Tratamiento de Datos
-        </button>
-      </div>
-
-      {subTab === 'estadisticas' && (
-        <EstadisticasTab inspections={inspections} loading={loading} />
-      )}
-      {subTab === 'consentimientos' && (
-        <ConsentimientosTab />
-      )}
-    </div>
-  )
-}
-
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function IntranetPage() {
@@ -1244,11 +604,20 @@ export default function IntranetPage() {
   const [toast, setToast] = useState<{ type: 'ok' | 'error'; msg: string } | null>(null)
   const [activeTab, setActiveTab] = useState<'usuarios' | 'modulo' | 'mis-sesiones'>('usuarios')
   const [token, setToken] = useState<string | null>(null)
-  const [inspections, setInspections] = useState<InspectionStat[]>([])
-  const [statsLoading, setStatsLoading] = useState(false)
-  const [statsLoaded, setStatsLoaded] = useState(false)
-  /** Se abrió con ?modulo=financiero (desde «Flota y datos» del módulo administrativo). */
+  /** Se abrió con ?modulo=financiero (desde «Tratamiento de datos» del módulo administrativo). */
   const [verFinanciero, setVerFinanciero] = useState(false)
+
+  const loadUsers = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return
+    const res = await fetch('/api/users', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setUsers(data ?? [])
+    }
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -1272,8 +641,8 @@ export default function IntranetPage() {
       setMyProfile({ id: profile.id, is_admin: profile.is_admin, department: profile.department ?? null })
 
       // ?modulo=financiero: lo que Financiero tenía aquí antes de tener módulo
-      // propio (estadísticas de los carros, tratamiento de datos). Se llega
-      // desde la pestaña «Flota y datos» de /intranet/administrativa.
+      // propio (el tratamiento de datos). Se llega desde la pestaña
+      // «Tratamiento de datos» de /intranet/administrativa.
       const verModuloAqui = new URLSearchParams(window.location.search).get('modulo') === 'financiero'
         && (profile.department === 'Financiero' || profile.is_admin)
       if (verModuloAqui) { setActiveTab('modulo'); setVerFinanciero(true) }
@@ -1291,40 +660,6 @@ export default function IntranetPage() {
     }
     init()
   }, [router])
-
-  // Carga perezosa de stats: solo para el módulo Financiero
-  useEffect(() => {
-    if (activeTab === 'modulo' && (myProfile?.department === 'Financiero' || verFinanciero) && !statsLoaded && currentUser?.email) {
-      loadStats()
-    }
-  }, [activeTab, currentUser, myProfile, verFinanciero])
-
-  const loadUsers = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) return
-    const res = await fetch('/api/users', {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    })
-    if (res.ok) {
-      const data = await res.json()
-      setUsers(data ?? [])
-    }
-  }
-
-  const loadStats = async () => {
-    if (statsLoaded || !currentUser?.email) return
-    setStatsLoading(true)
-    try {
-      const res = await fetchConSesion('/api/intranet/stats')
-      if (res.ok) {
-        const body = await res.json()
-        setInspections(body.inspections ?? [])
-      }
-    } finally {
-      setStatsLoaded(true)
-      setStatsLoading(false)
-    }
-  }
 
   const showToast = (type: 'ok' | 'error', msg: string) => {
     setToast({ type, msg })
@@ -1446,7 +781,7 @@ export default function IntranetPage() {
 
         {/* ── Tab módulo: contenido según departamento ── */}
         {activeTab === 'modulo' && (myProfile?.department === 'Financiero' || verFinanciero) && (
-          <FinancieroModule inspections={inspections} loading={statsLoading} />
+          <ConsentimientosTab />
         )}
         {activeTab === 'modulo' && !verFinanciero && myProfile?.department === 'RAS' && (
           <ModuloRAS />

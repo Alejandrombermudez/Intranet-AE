@@ -22,6 +22,13 @@
 -- ════════════════════════════════════════════════════════════
 
 
+-- ── PENDIENTE (2026-11-11)  migration_vehiculos.sql ─────────────────────────
+--             /vehiculos dentro de la intranet: fleet.vehiculos (foto, tarjeta de
+--             propiedad, SOAT, tecnomecánica), PIN de una sola vez
+--             (conductores.pin_temporal), tomado_at/devuelto_at en las reservas y el
+--             bucket privado «flota». Sin esto /vehiculos deja entrar pero no carga
+--             los vehículos. Verificar con las consultas del final del archivo.
+
 -- ── 2026-11-08  migration_monitoreo_semilleros.sql + migration_flota_app.sql ─
 --             Corridas por el usuario; verificado por REST: ras.monitoreos_semilleros
 --             y v_monitoreos_semilleros existen (vacías), título SEMILLEROS activo y

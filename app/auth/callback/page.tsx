@@ -118,12 +118,12 @@ function AuthCallbackContent() {
   useEffect(() => {
     if (!entro || !saludoListo) return
     // Si se salió a Microsoft desde una página de la intranet (por ejemplo «Traer
-    // de Microsoft 365» en Mi perfil), se vuelve a ella; si no, al inicio.
+    // de Microsoft 365» en Mi perfil) o desde /vehiculos, se vuelve a ella; si no, al inicio.
     let destino = '/'
     try {
       const s = sessionStorage.getItem('ae:siguiente')
       sessionStorage.removeItem('ae:siguiente')
-      if (s && /^\/intranet\/[\w\-/?=&]*$/.test(s)) destino = s
+      if (s && /^\/(intranet\/|vehiculos(?:$|[/?]))[\w\-/?=&]*$/.test(s)) destino = s
     } catch { /* sin storage: al inicio */ }
     const t = setTimeout(() => router.push(destino), MS_ANTES_DE_ENTRAR)
     return () => clearTimeout(t)

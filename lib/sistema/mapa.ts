@@ -94,7 +94,7 @@ export const DOMINIOS: Dominio[] = [
     nombre: 'Soporte · Administración',
     resumen:
       'Lo que hace funcionar la operación pero no es ni siembra ni conservación: usuarios y permisos, ' +
-      'vehículos, sesiones del equipo ejecutivo, consentimientos de tratamiento de datos.',
+      'compras e inventario, sesiones del equipo ejecutivo, consentimientos de tratamiento de datos.',
     color: '#b8a28e',
   },
 ]
@@ -706,17 +706,17 @@ export const PIEZAS: Pieza[] = [
   {
     id: 'soporte',
     dominio: 'soporte',
-    nombre: 'Usuarios, compras, flota y ejecutivo',
+    nombre: 'Usuarios, compras y ejecutivo',
     que:
       'Quién puede entrar y a qué; las compras con factura electrónica y el inventario de las bodegas; ' +
-      'los vehículos con sus inspecciones y documentos; las sesiones del equipo ejecutivo; los ' +
+      'las sesiones del equipo ejecutivo; los ' +
       'consentimientos de tratamiento de datos.',
     datos: [
       { nombre: 'people.user_profiles', que: 'Usuarios, área y permisos de acceso.', etiqueta: 'Usuarios', pulso: 'usuarios' },
       { nombre: 'financiero.*', que: 'Proveedores y facturas de compra, leídas del XML de la DIAN.', etiqueta: 'Compras' },
       { nombre: 'inventario.*', que: 'Insumos, bodegas por proyecto y kardex. Lo descuenta la app de actividades.', etiqueta: 'Inventario' },
       { nombre: 'people.personas', que: 'La ficha de talento humano de cada persona, sus contratos y cuentas de cobro.', etiqueta: 'Talento humano' },
-      { nombre: 'fleet.*', que: 'Reservas, inspecciones y documentos de los vehículos.', etiqueta: 'Vehículos' },
+      { nombre: 'fleet.*', que: 'Vehículos, reservas por horas, recepción y devolución, y quién maneja (con o sin correo). Se usan en /vehiculos, aparte del resto de la intranet.', etiqueta: 'Vehículos' },
       { nombre: 'ejecutivo.*', que: 'Sesiones e indicaciones del equipo directivo.', etiqueta: 'Sesiones ejecutivas' },
       { nombre: 'public.consentimientos', que: 'Autorización de tratamiento de datos.', etiqueta: 'Consentimientos' },
     ],

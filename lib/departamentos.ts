@@ -81,13 +81,13 @@ export const DEPARTAMENTOS: Departamento[] = [
     // equipo (María Fernanda, Katys…): un solo departamento y un solo módulo con
     // pestañas por tarea. El id sigue siendo «Financiero» porque así está
     // guardado en la base; cambiarlo dejaría sin módulo a quien ya lo tiene.
-    // Lo que el departamento ya veía en el tablero general (estadísticas de los
-    // carros y tratamiento de datos) sigue en /intranet?modulo=financiero, con
-    // enlace desde la pestaña «Flota y datos» del módulo.
+    // Lo que el departamento ya veía en el tablero general (tratamiento de datos)
+    // sigue en /intranet?modulo=financiero, con enlace desde la pestaña
+    // «Tratamiento de datos» del módulo.
     id: 'Financiero',
     nombre: 'Administrativa y financiera',
     ruta: '/intranet/administrativa',
-    que: 'Compras con factura electrónica, inventario y bodegas por proyecto, accesos de la app de campo, talento humano; flota y tratamiento de datos.',
+    que: 'Compras con factura electrónica, inventario y bodegas por proyecto, accesos de la app de campo, talento humano y tratamiento de datos.',
   },
 ]
 

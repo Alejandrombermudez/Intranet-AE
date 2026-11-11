@@ -136,6 +136,8 @@ node _query.mjs
 
 ## Schema `fleet` — Flota vehicular
 
+> Desde 2026-11-05 la intranet ya no lee ni escribe `fleet.*`; las usa la app de flota aparte (`flota_app`, repo `vehiculos_app`).
+
 ### `fleet.vehicle_reservations` — Reservas (30 filas)
 | Columna | Tipo | Notas |
 |---------|------|-------|
@@ -838,8 +840,6 @@ FK `predio_id` → **core.predios**. Banderas (falsa_tradicion, procesos_judicia
 
 | Ruta | Tabla(s) |
 |------|----------|
-| `/calendar` | `fleet.vehicle_reservations` |
-| `/validar-reserva` | `fleet.vehicle_inspections`, `fleet.vehicle_reservations` |
 | `/consentimiento` | `public.consentimientos` |
 | `/intranet` | `people.user_profiles`, stats |
 | `/intranet/ras/siembra` | `siembra.familias`, `siembra.predios` |

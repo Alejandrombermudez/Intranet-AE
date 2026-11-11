@@ -13,7 +13,7 @@
 import { useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
-  ArrowRight, Camera, CalendarDays, CarFront, Check, FileSignature, FileText, FolderOpen, LayoutGrid, Receipt,
+  ArrowRight, Camera, Check, FileSignature, FileText, FolderOpen, LayoutGrid, Receipt,
   RefreshCw, UserRound,
 } from 'lucide-react'
 import { Aviso, Boton, Cabecera, Contenido, Pestanas, type Pestana } from '@/app/components/marca'
@@ -263,8 +263,6 @@ function MiArea({ exp, departamento, esAdmin, pendientes, onTab, esContratista }
           <div className="grid gap-3 sm:grid-cols-2">
             <Acceso icono={<FileText size={16} />} titulo="Certificado laboral" sub="Generarlo al momento" onClick={() => onTab('certificados')} />
             {esContratista && <Acceso icono={<Receipt size={16} />} titulo="Cuenta de cobro" sub="Pasarla con tus datos ya puestos" onClick={() => onTab('cuentas')} />}
-            <Acceso icono={<CalendarDays size={16} />} titulo="Calendario de vehículos" sub="Qué vehículo está libre" href="/calendar" />
-            <Acceso icono={<CarFront size={16} />} titulo="Validar mi reserva" sub="Inspección de recepción y devolución" href="/validar-reserva" />
           </div>
         </section>
       </div>
