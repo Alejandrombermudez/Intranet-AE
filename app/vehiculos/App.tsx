@@ -67,7 +67,7 @@ export default function App() {
       }
       qrPendiente.current = null
       if (t.accion === 'recepcion' && t.reserva.tomado_at) {
-        setAviso(`${t.vehiculo.nombre}: tomado a las ${hora12(horaBogota(t.reserva.tomado_at))}. Completa la recepción.`)
+        setAviso(`${t.vehiculo.nombre}: tomado a las ${hora12(horaBogota(t.reserva.tomado_at))}. Ahora completa la recepción`)
       }
       setInspeccion({ r: aMiReserva(t.reserva), tipo: t.accion })
     } catch (e) {
@@ -249,14 +249,9 @@ export default function App() {
       </main>
 
       {hueco !== undefined && (
-        <>
-          {aviso && qrPendiente.current && (
-            <div className="aviso recordatorio" style={{ position: 'fixed', top: 70, left: 16, right: 16, zIndex: 70, maxWidth: 520, margin: '0 auto' }}>{aviso}</div>
-          )}
-          <ModalReserva vehiculos={vehiculos} hueco={hueco}
-            onCerrar={() => { setHueco(undefined); qrPendiente.current = null; setAviso('') }}
-            onHecho={reservaHecha} />
-        </>
+        <ModalReserva vehiculos={vehiculos} hueco={hueco} aviso={qrPendiente.current ? aviso : ''}
+          onCerrar={() => { setHueco(undefined); qrPendiente.current = null; setAviso('') }}
+          onHecho={reservaHecha} />
       )}
       {verDetalle}
     </>

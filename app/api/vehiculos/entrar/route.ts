@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       bloqueado_hasta: bloquear ? new Date(Date.now() + BLOQUEO_MIN * 60000).toISOString() : null,
     }).eq('id', c.id)
     return NextResponse.json(
-      { error: bloquear ? `PIN incorrecto. Bloqueado ${BLOQUEO_MIN} min.` : `PIN incorrecto. Te quedan ${MAX_INTENTOS - intentos} intentos.` },
+      { error: bloquear ? `PIN incorrecto. Bloqueado ${BLOQUEO_MIN} min.` : `PIN incorrecto. Te ${MAX_INTENTOS - intentos === 1 ? 'queda 1 intento' : `quedan ${MAX_INTENTOS - intentos} intentos`}.` },
       { status: 401 },
     )
   }

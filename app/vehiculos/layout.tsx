@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: 'Vehículos — Amazonía Emprende',
   description: 'Reserva, recepción y devolución de los vehículos de Amazonía Emprende.',
   manifest: '/vehiculos.webmanifest',
+  icons: { icon: '/vehiculos/icon-192.png', apple: '/vehiculos/icon-180.png' },
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Vehículos AE' },
 }
 

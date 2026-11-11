@@ -1,14 +1,17 @@
 {
-  "name": "Vehículos Amazonía Emprende",
+  "id": "/vehiculos",
+  "name": "Vehículos — Amazonía Emprende",
   "short_name": "Vehículos AE",
-  "description": "Reserva, recepción y devolución de vehículos",
+  "description": "Reserva, recepción y devolución de los vehículos de Amazonía Emprende.",
+  "lang": "es",
   "start_url": "/vehiculos",
   "scope": "/vehiculos",
   "display": "standalone",
   "background_color": "#efe9db",
   "theme_color": "#2f3f32",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    { "src": "/vehiculos/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/vehiculos/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/vehiculos/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

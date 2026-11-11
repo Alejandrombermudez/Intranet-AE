@@ -10,7 +10,7 @@ function sumarMinutos(hhmm: string, min: number): string {
   return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
 }
 
-export default function ModalReserva({ vehiculos, hueco, onCerrar, onHecho }: { vehiculos: Vehiculo[]; hueco: Hueco | null; onCerrar: () => void; onHecho: () => void }) {
+export default function ModalReserva({ vehiculos, hueco, aviso, onCerrar, onHecho }: { vehiculos: Vehiculo[]; hueco: Hueco | null; aviso?: string; onCerrar: () => void; onHecho: () => void }) {
   const ahoraHHMM = horaBogota(new Date())
   const inicioPorDefecto = hueco?.hora ?? sumarMinutos(`${ahoraHHMM.slice(0, 2)}:00`, 60)
   const [vehicleId, setVehicleId] = useState(hueco?.vehicleId ?? '')
@@ -41,6 +41,7 @@ export default function ModalReserva({ vehiculos, hueco, onCerrar, onHecho }: { 
     <div className="velo" onClick={onCerrar}>
       <div className="ventana" onClick={(e) => e.stopPropagation()}>
         <h2>Nueva reserva</h2>
+        {aviso && <div className="aviso recordatorio">{aviso}</div>}
 
         <div className="elegir-vehiculo">
           {vehiculos.map((v) => (
