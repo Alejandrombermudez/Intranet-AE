@@ -85,6 +85,13 @@ export default function App() {
     }
   }, [cargarFlota, leerQr, qr, router])
 
+  // Service worker propio de /vehiculos: es lo que deja instalarla en el celular aparte de la intranet.
+  useEffect(() => {
+    if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
+      navigator.serviceWorker.register('/vehiculos-sw.js', { scope: '/vehiculos' }).catch(() => { /* sin SW: la página funciona igual */ })
+    }
+  }, [])
+
   // Al abrir: ¿este dispositivo ya entró? Si no, y hay sesión de Microsoft de la intranet, se usa esa.
   useEffect(() => {
     let vivo = true
