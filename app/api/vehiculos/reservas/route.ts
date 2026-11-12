@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirConductor, fleet } from '@/lib/vehiculos/sesion'
-import { aInstante, diaSemanaBogota, diasDelRango, fechaBogota, sumarDias } from '@/lib/vehiculos/horas'
-import { FOTON_ID, unirMotivo } from '@/lib/vehiculos/cliente'
+import { aInstante, sumarDias } from '@/lib/vehiculos/horas'
+import { crearReserva } from '@/lib/vehiculos/reservar'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,62 +32,23 @@ export async function GET(req: NextRequest) {
   })
 }
 
-/** POST /api/vehiculos/reservas — reservar un vehículo por horas. */
+/** POST /api/vehiculos/reservas — reservar un vehículo por horas (reglas en lib/vehiculos/reservar.ts). */
 export async function POST(req: NextRequest) {
   const s = await exigirConductor()
   if (!s.ok) return s.respuesta
-  const yo = s.yo
-
   const b = await req.json().catch(() => null)
-  const db = fleet()
-  const { data: vehiculo } = await db.from('vehiculos').select('id, nombre').eq('id', String(b?.vehicleId ?? '')).eq('activo', true).maybeSingle()
-  if (!vehiculo) return NextResponse.json({ error: 'Elige un vehículo.' }, { status: 400 })
   if (!FECHA.test(b?.fechaInicio ?? '') || !HORA.test(b?.horaInicio ?? '') || !FECHA.test(b?.fechaFin ?? '') || !HORA.test(b?.horaFin ?? '')) {
     return NextResponse.json({ error: 'Faltan las fechas y horas.' }, { status: 400 })
   }
-  const actividad = String(b?.actividad ?? '').trim().slice(0, 100)
-  const proyecto = String(b?.proyecto ?? '').trim().slice(0, 50)
-  if (!actividad) return NextResponse.json({ error: 'Cuéntanos la actividad.' }, { status: 400 })
-
-  const ini = aInstante(b.fechaInicio, b.horaInicio)
-  const fin = aInstante(b.fechaFin, b.horaFin)
-  if (isNaN(ini.getTime()) || isNaN(fin.getTime())) return NextResponse.json({ error: 'Fecha u hora inválida.' }, { status: 400 })
-  if (fin <= ini) return NextResponse.json({ error: 'La hora de regreso tiene que ser después de la de salida.' }, { status: 400 })
-  if (fin <= new Date()) return NextResponse.json({ error: 'Ese horario ya pasó.' }, { status: 400 })
-
-  // La Foton es de uso interno los lunes y martes (regla que ya tenía la intranet).
-  if (vehiculo.id === FOTON_ID && diasDelRango(ini, fin).some((d) => [1, 2].includes(diaSemanaBogota(aInstante(d, '12:00'))))) {
-    return NextResponse.json({ error: 'La Foton no se reserva los lunes ni los martes (uso interno).' }, { status: 409 })
-  }
-
-  const { data: choques, error: eChoque } = await db
-    .from('vehicle_reservations')
-    .select('user_name')
-    .eq('vehicle_id', vehiculo.id)
-    .lt('start_at', fin.toISOString())
-    .gt('end_at', ini.toISOString())
-    .limit(1)
-  if (eChoque) return NextResponse.json({ error: eChoque.message }, { status: 500 })
-  if (choques?.length) return NextResponse.json({ error: `Ese horario se cruza con una reserva de ${choques[0].user_name}.` }, { status: 409 })
-
-  const { data, error } = await db
-    .from('vehicle_reservations')
-    .insert({
-      vehicle_id: vehiculo.id,
-      vehicle_name: vehiculo.nombre,
-      user_name: yo.nombre,
-      user_email: yo.email ?? '',
-      conductor_id: yo.id,
-      start_date: fechaBogota(ini),
-      end_date: fechaBogota(new Date(fin.getTime() - 1)),
-      start_at: ini.toISOString(),
-      end_at: fin.toISOString(),
-      purpose: unirMotivo(proyecto, actividad),
-    })
-    .select('id')
-    .single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ id: data.id })
+  const r = await crearReserva(s.yo, {
+    vehicleId: String(b?.vehicleId ?? ''),
+    ini: aInstante(b.fechaInicio, b.horaInicio),
+    fin: aInstante(b.fechaFin, b.horaFin),
+    actividad: String(b?.actividad ?? ''),
+    proyecto: String(b?.proyecto ?? '').trim().slice(0, 50),
+  })
+  if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status })
+  return NextResponse.json({ id: r.id })
 }
 
 /** DELETE /api/vehiculos/reservas?id= — cancelar: la propia (o cualquiera, administración) y solo si no se ha tomado. */

@@ -3,7 +3,10 @@ import { BUCKET_INSPECCION, exigirConductor, fleet, storage } from '@/lib/vehicu
 import { CATEGORIAS, FOTOS, type ClaveCategoria } from '@/lib/vehiculos/inspeccion'
 import { fechaBogota } from '@/lib/vehiculos/horas'
 
-const MAX_POR_TIPO = 2 // inspecciones completas con fotos que se conservan por vehículo y tipo (como antes)
+// Fotos que se guardan: las de las últimas MAX_CON_FOTOS inspecciones por vehículo y tipo. El registro
+// (hora, kilometraje, novedades) se queda siempre, para el historial de Administrar → Registros;
+// hasta el 2026-11-11 se borraba la inspección entera pasadas 2.
+const MAX_CON_FOTOS = 10
 
 function rutaEnBucket(url: string | null | undefined): string | null {
   if (!url) return null
@@ -67,7 +70,7 @@ export async function POST(req: NextRequest) {
   if (tipo === 'recepcion' && !r.tomado_at) await db.from('vehicle_reservations').update({ tomado_at: ahora }).eq('id', reservaId)
   if (tipo === 'devolucion') await db.from('vehicle_reservations').update({ devuelto_at: ahora }).eq('id', reservaId)
 
-  // Se conservan las últimas MAX_POR_TIPO inspecciones con fotos por vehículo y tipo. No bloquea la respuesta.
+  // Fotos de las inspecciones más viejas: se borran los archivos y se vacían las columnas. No bloquea la respuesta.
   try {
     const { data: hechos } = await db
       .from('vehicle_inspections')
@@ -75,14 +78,15 @@ export async function POST(req: NextRequest) {
       .eq('vehicle_reservations.vehicle_id', r.vehicle_id)
       .eq('inspection_type', tipo)
       .not('submitted_at', 'is', null)
-      .order('submitted_at', { ascending: true })
-    if (hechos && hechos.length > MAX_POR_TIPO) {
-      for (const viejo of hechos.slice(0, hechos.length - MAX_POR_TIPO)) {
-        const rutas = [viejo.photo_frontal, viejo.photo_posterior, viejo.photo_lateral_izq, viejo.photo_lateral_der, viejo.photo_tablero]
-          .map(rutaEnBucket).filter((p): p is string => p !== null)
-        if (rutas.length) await storage().from(BUCKET_INSPECCION).remove(rutas)
-        await db.from('vehicle_inspections').delete().eq('id', viejo.id)
-      }
+      .order('submitted_at', { ascending: false })
+    for (const viejo of (hechos ?? []).slice(MAX_CON_FOTOS)) {
+      const rutas = [viejo.photo_frontal, viejo.photo_posterior, viejo.photo_lateral_izq, viejo.photo_lateral_der, viejo.photo_tablero]
+        .map(rutaEnBucket).filter((p): p is string => p !== null)
+      if (!rutas.length) continue
+      await storage().from(BUCKET_INSPECCION).remove(rutas)
+      await db.from('vehicle_inspections').update({
+        photo_frontal: null, photo_posterior: null, photo_lateral_izq: null, photo_lateral_der: null, photo_tablero: null,
+      }).eq('id', viejo.id)
     }
   } catch (e) {
     console.error('[vehiculos/inspeccion] limpieza de fotos', e)

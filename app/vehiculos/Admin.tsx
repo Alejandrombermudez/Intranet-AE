@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { enviar, llamar, type Vehiculo } from '@/lib/vehiculos/cliente'
+import { fechaBogota, fechaCorta, hora12, horaBogota } from '@/lib/vehiculos/horas'
 import { comprimir } from './Inspeccion'
 
 interface Fila { id: string; nombre: string; email: string | null; esAdmin: boolean; activo: boolean; pin: 'sin' | 'inicial' | 'propio'; bloqueado: boolean }
@@ -10,14 +11,17 @@ const ESTADO_PIN = { sin: 'Sin PIN', inicial: 'PIN inicial (aún no lo cambia)',
 
 /** Administración (quien entra con Microsoft siendo admin de la intranet o de Financiero). */
 export default function Admin({ yoId, vehiculos, onCambio }: { yoId: string; vehiculos: Vehiculo[]; onCambio: () => void }) {
-  const [vista, setVista] = useState<'personas' | 'vehiculos'>('personas')
+  const [vista, setVista] = useState<'registros' | 'personas' | 'vehiculos'>('registros')
   return (
     <div>
       <div className="pestanas">
+        <button className={`pestana ${vista === 'registros' ? 'activa' : ''}`} onClick={() => setVista('registros')}>Recepciones y devoluciones</button>
         <button className={`pestana ${vista === 'personas' ? 'activa' : ''}`} onClick={() => setVista('personas')}>Personas y PIN</button>
         <button className={`pestana ${vista === 'vehiculos' ? 'activa' : ''}`} onClick={() => setVista('vehiculos')}>Vehículos y QR</button>
       </div>
-      {vista === 'personas' ? <Personas yoId={yoId} onCambio={onCambio} /> : <Vehiculos vehiculos={vehiculos} onCambio={onCambio} />}
+      {vista === 'registros' && <Registros vehiculos={vehiculos} />}
+      {vista === 'personas' && <Personas yoId={yoId} onCambio={onCambio} />}
+      {vista === 'vehiculos' && <Vehiculos vehiculos={vehiculos} onCambio={onCambio} />}
     </div>
   )
 }
@@ -56,7 +60,7 @@ function Personas({ yoId, onCambio }: { yoId: string; onCambio: () => void }) {
     } catch (e) { setError((e as Error).message) }
   }
 
-  const activar = async (f: Fila, accion: 'activar' | 'desactivar') => {
+  const activar = async (f: Fila, accion: 'activar' | 'desactivar' | 'hacer-admin' | 'quitar-admin') => {
     try { await enviar('/api/vehiculos/admin/personas', 'PATCH', { id: f.id, accion }); hecho('') } catch (e) { setError((e as Error).message) }
   }
 
@@ -92,6 +96,12 @@ function Personas({ yoId, onCambio }: { yoId: string; onCambio: () => void }) {
                     {f.pin === 'sin' ? 'Poner PIN inicial' : 'Reiniciar PIN'}
                   </button>
                 </>
+              )}
+              {f.activo && f.id !== yoId && (
+                <button className="btn suave chico" onClick={() => activar(f, f.esAdmin ? 'quitar-admin' : 'hacer-admin')}
+                  title="Administrar: ver recepciones y devoluciones, personas y vehículos">
+                  {f.esAdmin ? 'Quitar acceso a Administrar' : 'Dar acceso a Administrar'}
+                </button>
               )}
               {f.activo
                 ? f.id !== yoId && <button className="btn peligro chico" onClick={() => activar(f, 'desactivar')}>Desactivar</button>
@@ -209,6 +219,90 @@ function Vehiculos({ vehiculos, onCambio }: { vehiculos: Vehiculo[]; onCambio: (
         </div>
       </div>
       <style>{'@media print { .vh .imprimible { display: block !important; } }'}</style>
+    </div>
+  )
+}
+
+interface Registro {
+  id: string; vehicle_id: string; user_name: string; start_at: string; end_at: string; purpose: string | null
+  tomado_at: string | null; devuelto_at: string | null
+  inspecciones: { tipo: 'recepcion' | 'devolucion'; cuando: string; km: number | null; novedades: string[]; fotos: string[] }[]
+}
+
+/** Quién tomó qué vehículo y cuándo, con kilometraje, novedades y fotos de cada inspección. */
+function Registros({ vehiculos }: { vehiculos: Vehiculo[] }) {
+  const [dias, setDias] = useState(30)
+  const [lista, setLista] = useState<Registro[] | null>(null)
+  const [error, setError] = useState('')
+  const [solo, setSolo] = useState<'todos' | 'usados'>('usados')
+  const [foto, setFoto] = useState<string | null>(null)
+  const V = Object.fromEntries(vehiculos.map((v) => [v.id, v]))
+
+  useEffect(() => {
+    llamar<{ registros: Registro[] }>(`/api/vehiculos/admin/registros?dias=${dias}`)
+      .then((d) => { setLista(d.registros); setError('') })
+      .catch((e: Error) => setError(e.message))
+  }, [dias])
+
+  const cuando = (iso: string) => `${fechaCorta(fechaBogota(iso))} ${hora12(horaBogota(iso))}`
+  const filas = (lista ?? []).filter((r) => solo === 'todos' || r.tomado_at || r.inspecciones.length)
+
+  return (
+    <div>
+      <div className="barra-cal">
+        <div className="grupo">
+          <button className={solo === 'usados' ? 'on' : ''} onClick={() => setSolo('usados')}>Con recepción</button>
+          <button className={solo === 'todos' ? 'on' : ''} onClick={() => setSolo('todos')}>Todas las reservas</button>
+        </div>
+        <select value={dias} onChange={(e) => setDias(Number(e.target.value))} style={{ width: 'auto' }}>
+          <option value={7}>Últimos 7 días</option>
+          <option value={30}>Últimos 30 días</option>
+          <option value={90}>Últimos 90 días</option>
+          <option value={365}>Último año</option>
+        </select>
+      </div>
+      {error && <div className="aviso error">{error}</div>}
+      {!lista ? <p className="cargando">Cargando…</p> : filas.length === 0 ? <div className="vacio">No hay registros en ese periodo.</div> : (
+        <div className="lista">
+          {filas.map((r) => {
+            const v = V[r.vehicle_id]
+            const sinDevolver = r.tomado_at && !r.devuelto_at
+            return (
+              <div key={r.id} className="registro" style={{ borderLeftColor: v?.color }}>
+                <div className="linea-r">
+                  <b>{v?.nombre ?? r.vehicle_id} · {r.user_name}</b>
+                  <span className="tenue">Reserva {cuando(r.start_at)} → {cuando(r.end_at)}</span>
+                </div>
+                {r.purpose && <p className="tenue">{r.purpose}</p>}
+                <div className="linea-r" style={{ marginTop: 6 }}>
+                  <span>{r.tomado_at ? `Tomado ${cuando(r.tomado_at)}` : 'Sin tomar'}</span>
+                  <span>{r.devuelto_at ? `Devuelto ${cuando(r.devuelto_at)}` : sinDevolver ? <span className="etiqueta roja">Sin devolver</span> : null}</span>
+                </div>
+                {[...r.inspecciones].sort((a, b) => a.cuando.localeCompare(b.cuando)).map((i) => (
+                  <div key={i.tipo} style={{ marginTop: 10 }}>
+                    <span className={`etiqueta ${i.tipo === 'devolucion' ? 'ambar' : ''}`}>{i.tipo === 'recepcion' ? 'Recepción' : 'Devolución'}</span>
+                    <span className="tenue"> · {i.km != null ? `${i.km.toLocaleString('es-CO')} km` : 'sin km'} · {i.novedades.length ? `${i.novedades.length} novedad${i.novedades.length > 1 ? 'es' : ''}` : 'sin novedades'}</span>
+                    {i.novedades.length > 0 && <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: 13 }}>{i.novedades.map((n) => <li key={n}>{n}</li>)}</ul>}
+                    {i.fotos.length > 0 && (
+                      <div className="mini-fotos">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- fotos de la inspección */}
+                        {i.fotos.map((f) => <img key={f} src={f} alt="" onClick={() => setFoto(f)} />)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {foto && (
+        <div className="visor" onClick={() => setFoto(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- foto de la inspección */}
+          <img src={foto} alt="" />
+          <button className="btn blanco" onClick={() => setFoto(null)}>Cerrar</button>
+        </div>
+      )}
     </div>
   )
 }

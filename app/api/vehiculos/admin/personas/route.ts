@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
  * PATCH /api/vehiculos/admin/personas { id, accion, pin? }
  *   pin         → pone un PIN inicial (de una sola vez): para el primer ingreso o si lo olvidó.
  *   desactivar / activar
+ *   hacer-admin / quitar-admin → quién entra a Administrar (registros, personas, vehículos)
  */
 export async function PATCH(req: NextRequest) {
   const s = await exigirConductor(true)
@@ -68,6 +69,13 @@ export async function PATCH(req: NextRequest) {
       break
     case 'activar':
       cambios.activo = true
+      break
+    case 'hacer-admin':
+      cambios.es_admin = true
+      break
+    case 'quitar-admin':
+      if (id === s.yo.id) return NextResponse.json({ error: 'No puedes quitarte el acceso a ti mismo.' }, { status: 409 })
+      cambios.es_admin = false
       break
     default:
       return NextResponse.json({ error: 'Acción desconocida.' }, { status: 400 })

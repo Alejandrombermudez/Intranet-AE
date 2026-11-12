@@ -1,8 +1,8 @@
 'use client'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { fechaBogota, fechaCorta, hoyBogota, hora12, horaBogota } from '@/lib/vehiculos/horas'
+import { fechaBogota, fechaCorta, hora12, horaBogota } from '@/lib/vehiculos/horas'
 import { enviar, llamar, separarMotivo, type MiReserva, type Persona, type Reserva, type Vehiculo, type Yo } from '@/lib/vehiculos/cliente'
 import Ingreso, { SIN_AUTO_MICROSOFT } from './Ingreso'
 import Inicio from './Inicio'
@@ -11,24 +11,9 @@ import ModalReserva from './ModalReserva'
 import Inspeccion from './Inspeccion'
 import Flota from './Flota'
 import Admin from './Admin'
+import Simple from './Simple'
 
 type Vista = 'inicio' | 'calendario' | 'vehiculos' | 'admin'
-
-interface FilaReserva { id: string; vehicle_id: string; start_at: string; end_at: string; purpose: string | null; tomado_at: string | null; devuelto_at: string | null }
-type Tomar =
-  | { accion: 'recepcion' | 'devolucion'; vehiculo: { id: string; nombre: string }; reserva: FilaReserva }
-  | { accion: 'sin-reserva'; vehiculo: { id: string; nombre: string } }
-
-const aMiReserva = (r: FilaReserva): MiReserva => ({
-  id: r.id, vehicle_id: r.vehicle_id, start_at: r.start_at, end_at: r.end_at, motivo: r.purpose,
-  tomado_at: r.tomado_at, devuelto_at: r.devuelto_at, checkInHecho: false, checkOutHecho: false,
-})
-
-/** La hora de ahora, redondeada hacia abajo a 15 minutos («08:45»). */
-function horaAhora(): string {
-  const [h, m] = horaBogota(new Date()).split(':').map(Number)
-  return `${String(h).padStart(2, '0')}:${String(Math.floor(m / 15) * 15).padStart(2, '0')}`
-}
 
 export default function App() {
   const router = useRouter()
@@ -44,7 +29,10 @@ export default function App() {
   const [hueco, setHueco] = useState<Hueco | null | undefined>(undefined) // undefined = cerrado
   const [detalle, setDetalle] = useState<Reserva | null>(null)
   const [inspeccion, setInspeccion] = useState<{ r: MiReserva; tipo: 'recepcion' | 'devolucion' } | null>(null)
-  const qrPendiente = useRef<string | null>(null)
+  // Un administrador puede ver la app como la ve cualquier persona. El QR leído con la cámara
+  // del celular (fuera de la app) también abre esta vista: quien lo lee va a tomar un vehículo.
+  const [comoUsuario, setComoUsuario] = useState(!!qr)
+  const [qrActivo, setQrActivo] = useState<string | null>(qr)
 
   const refrescar = useCallback(() => setRecarga((n) => n + 1), [])
 
@@ -55,35 +43,13 @@ export default function App() {
     } catch (e) { setError((e as Error).message) }
   }, [])
 
-  /** Lo que pasa al leer el QR del vehículo: registra la hora y abre lo que toca. */
-  const leerQr = useCallback(async (vehiculoId: string) => {
-    try {
-      const t = await enviar<Tomar>('/api/vehiculos/tomar', 'POST', { vehiculoId })
-      if (t.accion === 'sin-reserva') {
-        qrPendiente.current = vehiculoId
-        setAviso(`No tienes reserva de ${t.vehiculo.nombre} para hoy. Resérvalo desde ahora y queda registrado que lo tomaste.`)
-        setHueco({ vehicleId: vehiculoId, fecha: hoyBogota(), hora: horaAhora() })
-        return
-      }
-      qrPendiente.current = null
-      if (t.accion === 'recepcion' && t.reserva.tomado_at) {
-        setAviso(`${t.vehiculo.nombre}: tomado a las ${hora12(horaBogota(t.reserva.tomado_at))}. Ahora completa la recepción`)
-      }
-      setInspeccion({ r: aMiReserva(t.reserva), tipo: t.accion })
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }, [])
-
   const entro = useCallback(async (u: Yo) => {
     setYo(u)
     setVista('inicio')
     await cargarFlota()
-    if (qr) {
-      router.replace('/vehiculos')
-      await leerQr(qr)
-    }
-  }, [cargarFlota, leerQr, qr, router])
+  }, [cargarFlota])
+
+  const qrUsado = useCallback(() => { setQrActivo(null); router.replace('/vehiculos') }, [router])
 
   // Service worker propio de /vehiculos: es lo que deja instalarla en el celular aparte de la intranet.
   useEffect(() => {
@@ -144,18 +110,6 @@ export default function App() {
     }
   }
 
-  const reservaHecha = async () => {
-    setHueco(undefined)
-    refrescar()
-    // Si se reservó desde el QR, se toma de una vez.
-    if (qrPendiente.current) {
-      const id = qrPendiente.current
-      qrPendiente.current = null
-      setAviso('')
-      await leerQr(id)
-    }
-  }
-
   if (!cargado) return <p className="cargando">Cargando…</p>
 
   const cabecera = (
@@ -200,6 +154,24 @@ export default function App() {
     )
   }
 
+  // Quien no administra (o un admin mirando «como usuario»): la vista sencilla, blanca.
+  if (!yo.esAdmin || comoUsuario) {
+    return (
+      <>
+        <header className="cabecera blanca">
+          <div className="marca"><b>Vehículos</b><span>Amazonía Emprende</span></div>
+          <button className="salir" onClick={cambiarUsuario} title="Salir de este dispositivo y entrar con otra persona">Cambiar usuario</button>
+        </header>
+        {yo.esAdmin && (
+          <div className="banda-vista">Así ve la app quien no administra.<button onClick={() => { setComoUsuario(false); refrescar() }}>Volver a administrar</button></div>
+        )}
+        <Simple nombre={yo.nombre} yoId={yo.id} vehiculos={vehiculos} qr={qrActivo} recarga={recarga}
+          onQrUsado={qrUsado}
+          onInspeccion={(r, tipo, texto) => { setAviso(texto ? `${texto} · completa la recepción` : ''); setInspeccion({ r, tipo }) }} />
+      </>
+    )
+  }
+
   const verDetalle = detalle && (() => {
     const v = vehiculos.find((x) => x.id === detalle.vehicle_id)
     const { proyecto, actividad } = separarMotivo(detalle.motivo)
@@ -228,6 +200,9 @@ export default function App() {
     <>
       {cabecera}
       <main className="pagina">
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+          <button className="btn suave chico" onClick={() => setComoUsuario(true)}>Ver como usuario</button>
+        </div>
         <div className="pestanas">
           <button className={`pestana ${vista === 'inicio' ? 'activa' : ''}`} onClick={() => setVista('inicio')}>Inicio</button>
           <button className={`pestana ${vista === 'calendario' ? 'activa' : ''}`} onClick={() => setVista('calendario')}>Calendario</button>
@@ -236,7 +211,6 @@ export default function App() {
         </div>
 
         {error && <div className="aviso error" onClick={() => setError('')}>{error}</div>}
-        {aviso && hueco === undefined && <div className="aviso info" onClick={() => setAviso('')}>{aviso}</div>}
 
         {vista === 'inicio' && (
           <Inicio vehiculos={vehiculos} recarga={recarga} onReservar={() => setHueco(null)}
@@ -256,9 +230,9 @@ export default function App() {
       </main>
 
       {hueco !== undefined && (
-        <ModalReserva vehiculos={vehiculos} hueco={hueco} aviso={qrPendiente.current ? aviso : ''}
-          onCerrar={() => { setHueco(undefined); qrPendiente.current = null; setAviso('') }}
-          onHecho={reservaHecha} />
+        <ModalReserva vehiculos={vehiculos} hueco={hueco}
+          onCerrar={() => setHueco(undefined)}
+          onHecho={() => { setHueco(undefined); refrescar() }} />
       )}
       {verDetalle}
     </>
