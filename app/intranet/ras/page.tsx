@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  Leaf, ShieldCheck, ChevronRight, Loader2, Pencil, ClipboardCheck, CheckCircle2, CalendarDays,
+  Leaf, ShieldCheck, ChevronRight, Loader2, Pencil, ClipboardCheck, CheckCircle2, CalendarDays, Flower2,
 } from 'lucide-react'
 import { Cabecera, Cargando } from '@/app/components/marca'
 import { MisSesiones } from '@/app/components/MisSesiones'
@@ -227,6 +227,23 @@ export default function RASHubPage() {
               </div>
               <div className="flex items-center gap-1 text-sm font-bold transition-colors text-stone-400 group-hover:text-primary">
                 Ver familias <ChevronRight size={15} />
+              </div>
+            </Link>
+
+            <Link href="/intranet/ras/fenologia"
+              className="group bg-white rounded-2xl border-2 border-stone-200 shadow-md hover:border-primary hover:shadow-xl transition-all p-8 flex flex-col gap-5">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: '#2f3f3215' }}>
+                <Flower2 size={28} style={{ color: PRIMARY }} />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-black text-stone-900 mb-1">Fenología</h2>
+                <p className="text-sm text-stone-500 leading-relaxed">
+                  Calendarios de floración y fructificación de los árboles semilleros: ventanas de cosecha, ficha por especie, predios, índices y clima.
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-sm font-bold transition-colors text-stone-400 group-hover:text-primary">
+                Ver calendarios <ChevronRight size={15} />
               </div>
             </Link>
 

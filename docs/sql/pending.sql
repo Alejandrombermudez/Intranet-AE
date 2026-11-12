@@ -11,6 +11,17 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
+-- ── 2026-11-12  migration_fenologia_intranet.sql + seed (fuera del repo) ─────
+--             Módulo /intranet/ras/fenologia: ras.arboles_monitoreo (base de
+--             árboles de la app de semilleros), ras.clima_referencia y
+--             ras.clima_mensual (solo service_role). Después, el seed
+--             insumos_aves/docs-internos/semilleros/seed_fenologia_solano.sql
+--             (gitignorado: lleva nombres de propietarios): 273 árboles y los
+--             1 329 monitoreos de Kobo con origen='kobo'. Ambos idempotentes.
+--             Probado en PGlite (dos corridas, anon sin acceso). Verificar:
+--             SELECT origen, count(*) FROM ras.monitoreos_semilleros GROUP BY 1;
+--             SELECT count(*) FROM ras.arboles_monitoreo;   -- 273
+
 -- ── 2026-11-09  migration_vista_campo_fuente.sql ───────────────────────────
 --             Agrega core.v_predios_campo.fuente_informacion (al final, sin DROP)
 --             para el filtro «Lácteos del Hogar» de la app de campo. La app
