@@ -109,16 +109,32 @@ export type Arbol = {
 export type Foto = { id: string; monitoreo_id: string; organo: 'flor' | 'fruto'; aceptada: boolean; borrosa: boolean; tomada_en: string | null }
 
 export type MesClima = { mes: number; precip_mm: number | null; temp_c: number | null }
-export type Clima = {
-  nucleo: string
-  fuente: string | null
-  estacion: string | null
-  periodo: string | null
-  umbral_lluvia_mm: number | null
-  notas: string | null
-  updated_by?: string | null
-  updated_at?: string | null
-  meses: MesClima[]
+
+/**
+ * Clima de Open-Meteo por celda de la cuadrícula del reanálisis (~7 km en
+ * Solano). Lo arma /api/ras/fenologia/clima con la coordenada de cada árbol:
+ * los árboles de la misma celda comparten clima.
+ */
+export type CeldaClima = {
+  id: string
+  lat: number
+  lon: number
+  elevacion: number | null
+  /** Promedio mensual del periodo de referencia (12 meses). */
+  normal: MesClima[]
+  /** Totales/medias mes a mes recientes; `completo` = false para el mes en curso. */
+  reciente: { mes: string; precip_mm: number | null; temp_c: number | null; completo: boolean }[]
+  /** Claves `nucleo|codigo` de los árboles que caen en la celda. */
+  arboles: string[]
+}
+export type ClimaAbierto = {
+  fuente: string
+  periodo: string
+  celdas: CeldaClima[]
+  /** Árboles sin coordenada a los que se les puso la del centro de su predio. */
+  aproximados: string[]
+  /** Árboles sin coordenada ni predio con coordenadas: quedan fuera. */
+  sinUbicar: string[]
 }
 
 // ─── Básicos ─────────────────────────────────────────────────────────────────
@@ -282,27 +298,91 @@ export function sincronia(ms: Monitoreo[], s: Serie): number | null {
 
 // ─── Clima ───────────────────────────────────────────────────────────────────
 
-export function mesesClima(c: Clima | null | undefined): MesClima[] {
-  return Array.from({ length: 12 }, (_, i) => c?.meses.find((m) => m.mes === i + 1) ?? { mes: i + 1, precip_mm: null, temp_c: null })
+/** Celda de cada árbol (`nucleo|codigo` → celda). */
+export function indiceCeldas(c: ClimaAbierto | null): Map<string, CeldaClima> {
+  const m = new Map<string, CeldaClima>()
+  for (const celda of c?.celdas ?? []) for (const k of celda.arboles) m.set(k, celda)
+  return m
 }
 
-export function climaCompleto(c: Clima | null | undefined) {
-  const ms = mesesClima(c)
-  return !!c && ms.every((m) => m.precip_mm !== null) && ms.some((m) => m.temp_c !== null)
-}
-
-/** Meses lluviosos (0–11): sobre el umbral declarado o, si no hay, sobre la mediana anual. */
-export function mesesLluviosos(c: Clima | null | undefined): { meses: number[]; criterio: string } {
-  const ms = mesesClima(c)
-  const ps = ms.map((m) => m.precip_mm).filter((v): v is number => v !== null)
-  if (ps.length < 12) return { meses: [], criterio: '' }
-  if (c?.umbral_lluvia_mm !== null && c?.umbral_lluvia_mm !== undefined) {
-    const u = Number(c.umbral_lluvia_mm)
-    return { meses: ms.flatMap((m, i) => (m.precip_mm! > u ? [i] : [])), criterio: `precipitación > ${u} mm` }
+/**
+ * Clima de un grupo de árboles: el promedio de sus celdas, pesado por cuántos
+ * árboles del grupo caen en cada una. Así el climograma de una especie es el
+ * de donde están sus árboles, no el de todo el núcleo.
+ */
+export function climaPonderado(indice: Map<string, CeldaClima>, claves: Iterable<string>): { meses: MesClima[]; celdas: CeldaClima[]; arboles: number } | null {
+  const peso = new Map<CeldaClima, number>()
+  for (const k of claves) {
+    const c = indice.get(k)
+    if (c) peso.set(c, (peso.get(c) ?? 0) + 1)
   }
+  const total = [...peso.values()].reduce((a, b) => a + b, 0)
+  if (!total) return null
+  const meses = Array.from({ length: 12 }, (_, i) => {
+    let p = 0, t = 0, wp = 0, wt = 0
+    for (const [c, w] of peso) {
+      const m = c.normal[i]
+      if (m?.precip_mm !== null && m?.precip_mm !== undefined) { p += m.precip_mm * w; wp += w }
+      if (m?.temp_c !== null && m?.temp_c !== undefined) { t += m.temp_c * w; wt += w }
+    }
+    return { mes: i + 1, precip_mm: wp ? p / wp : null, temp_c: wt ? t / wt : null }
+  })
+  return { meses, celdas: [...peso.keys()], arboles: total }
+}
+
+/** Lo mismo, para la lluvia real mes a mes ('YYYY-MM' → mm). */
+export function lluviaRecientePonderada(indice: Map<string, CeldaClima>, claves: Iterable<string>): Map<string, { precip_mm: number; completo: boolean }> {
+  const peso = new Map<CeldaClima, number>()
+  for (const k of claves) {
+    const c = indice.get(k)
+    if (c) peso.set(c, (peso.get(c) ?? 0) + 1)
+  }
+  const acc = new Map<string, { s: number; w: number; completo: boolean }>()
+  for (const [c, w] of peso) {
+    for (const r of c.reciente) {
+      if (r.precip_mm === null) continue
+      const a = acc.get(r.mes) ?? { s: 0, w: 0, completo: true }
+      a.s += r.precip_mm * w
+      a.w += w
+      a.completo = a.completo && r.completo
+      acc.set(r.mes, a)
+    }
+  }
+  return new Map([...acc].map(([k, a]) => [k, { precip_mm: a.s / a.w, completo: a.completo }]))
+}
+
+/**
+ * Meses lluviosos (0–11): sobre la mediana anual. En Solano llueve todo el año
+ * (ningún mes baja de ~150 mm), así que «lluvioso» aquí es «más lluvioso que
+ * la mitad del año», no lo contrario de seco. El pie de figura lo dice.
+ */
+export function mesesLluviosos(meses: MesClima[] | null | undefined): { meses: number[]; criterio: string } {
+  const ps = (meses ?? []).map((m) => m.precip_mm).filter((v): v is number => v !== null)
+  if (!meses || ps.length < 12) return { meses: [], criterio: '' }
   const ord = [...ps].sort((a, b) => a - b)
   const med = (ord[5] + ord[6]) / 2
-  return { meses: ms.flatMap((m, i) => (m.precip_mm! > med ? [i] : [])), criterio: `precipitación sobre la mediana anual (${Math.round(med)} mm)` }
+  return { meses: meses.flatMap((m, i) => (m.precip_mm! > med ? [i] : [])), criterio: `lluvia sobre la mediana anual (${Math.round(med)} mm)` }
+}
+
+// ─── Estado en la última ronda ───────────────────────────────────────────────
+
+export type Estado = 'maduro' | 'verde' | 'flor' | 'nada' | 'sin'
+export const ESTADOS: { k: Estado; n: string; color: string }[] = [
+  { k: 'maduro', n: 'Con fruto maduro', color: COLOR.frutoLineal },
+  { k: 'verde', n: 'Con fruto verde', color: '#7fae8a' },
+  { k: 'flor', n: 'En flor', color: COLOR.florLineal },
+  { k: 'nada', n: 'Sin flor ni fruto', color: '#b9b3a6' },
+  { k: 'sin', n: 'Sin visita en la última ronda', color: '#d9d6cf' },
+]
+
+/** Lo más avanzado que tenía al menos un árbol del grupo en la ronda dada. */
+export function estadoEn(ms: Monitoreo[], ronda: string | undefined): Estado {
+  const l = ms.filter((m) => m.ronda === ronda)
+  if (!l.length) return 'sin'
+  if (l.some((m) => (m.fruto_maduro ?? 0) > 0)) return 'maduro'
+  if (l.some((m) => (m.fruto_inmaduro ?? 0) > 0)) return 'verde'
+  if (l.some((m) => (valor(m, 'flor') ?? 0) > 0)) return 'flor'
+  return 'nada'
 }
 
 // ─── Exportación tabular (formato largo del criterio técnico §2.1) ───────────

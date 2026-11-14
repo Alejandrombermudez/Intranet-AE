@@ -13,6 +13,7 @@ import {
 } from '@/lib/fenologia'
 
 const FUENTE = 'Poppins, Arial, sans-serif'
+const TODOS = Array.from({ length: 12 }, (_, i) => i)
 
 // ─── Exportar ────────────────────────────────────────────────────────────────
 
@@ -81,13 +82,39 @@ function mezclar(a: string, b: string, t: number) {
 
 const fmt = (n: number, d = 0) => n.toLocaleString('es-CO', { maximumFractionDigits: d, minimumFractionDigits: d })
 
+/** Parte el pie de figura en líneas que quepan en `ancho` px (letra de 9 px). */
+function partir(texto: string | undefined, ancho: number): string[] {
+  if (!texto) return []
+  const max = Math.max(40, Math.floor(ancho / 4.7))
+  const out: string[] = []
+  let linea = ''
+  for (const p of texto.split(/\s+/)) {
+    if (linea && (linea + ' ' + p).length > max) { out.push(linea); linea = p } else linea = linea ? `${linea} ${p}` : p
+  }
+  if (linea) out.push(linea)
+  return out
+}
+
+/** Las líneas del pie, terminando en `yFinal`. */
+function Pie({ lineas, x, yFinal }: { lineas: string[]; x: number; yFinal: number }) {
+  return (
+    <text x={x} y={yFinal - (lineas.length - 1) * 12} fontSize="9" fontFamily={FUENTE} fill={COLOR.tenue}>
+      {lineas.map((l, i) => <tspan key={i} x={x} dy={i ? 12 : 0}>{l}</tspan>)}
+    </text>
+  )
+}
+
 // ─── Climograma (panel) ──────────────────────────────────────────────────────
 
-/** Barras de lluvia (eje izquierdo) y línea de temperatura (eje derecho), dentro de un <g>. */
+/**
+ * Barras de lluvia (eje izquierdo) y línea de temperatura (eje derecho), dentro
+ * de un <g>. `meses` puede ser un subconjunto (los meses monitoreados);
+ * `lluviosos` son posiciones dentro de `meses`.
+ */
 function PanelClima({
   meses, x0, ancho, y0, alto, lluviosos,
 }: { meses: MesClima[]; x0: number; ancho: number; y0: number; alto: number; lluviosos: number[] }) {
-  const col = ancho / 12
+  const col = ancho / Math.max(1, meses.length)
   const pmax = Math.max(100, ...meses.map((m) => m.precip_mm ?? 0))
   const escP = Math.ceil(pmax / 100) * 100
   const ts = meses.map((m) => m.temp_c).filter((v): v is number => v !== null)
@@ -149,36 +176,60 @@ export function Climograma({
 
 // ─── Calendario lineal multiespecie (§3.1 y §4.3) ────────────────────────────
 
+export type GrupoEspecies = { titulo?: string; especies: ResumenEspecie[] }
+
 export function CalendarioLineal({
-  especies, intensidad, clima, lluviosos, svgRef, pie,
+  grupos, meses = TODOS, intensidad, clima, lluviosos, svgRef, pie,
 }: {
-  especies: ResumenEspecie[]
+  grupos: GrupoEspecies[]
+  /** Meses (0–11) que se dibujan: todos, o solo los monitoreados. */
+  meses?: number[]
   intensidad: boolean
+  /** Los 12 meses; se recortan a `meses`. */
   clima: MesClima[] | null
+  /** Índices 0–11. */
   lluviosos: number[]
   svgRef?: Ref<SVGSVGElement>
   pie?: string
 }) {
   const trama = useId().replace(/:/g, '')
-  const W = 1000, IZQ = 270, DER = 40, ancho = W - IZQ - DER, col = ancho / 12
-  const FILA = 26, FRANJA = 10
+  const W = 1000, IZQ = 270, DER = 40, ancho = W - IZQ - DER, col = ancho / meses.length
+  const FILA = 26, FRANJA = 10, CABEZA = 30
   const altoClima = clima ? 150 : 0
   const yCal = 20 + altoClima + (clima ? 24 : 0) + 22
-  const H = yCal + especies.length * FILA + 70 + (pie ? 18 : 0)
+  const filas: ({ t: 'g'; titulo: string; n: number } | { t: 'e'; e: ResumenEspecie })[] = grupos.flatMap((g) => [
+    ...(g.titulo ? [{ t: 'g' as const, titulo: g.titulo, n: g.especies.length }] : []),
+    ...g.especies.map((e) => ({ t: 'e' as const, e })),
+  ])
+  const altos = filas.map((f) => (f.t === 'g' ? CABEZA : FILA))
+  const ys = altos.map((_, r) => yCal + altos.slice(0, r).reduce((a, b) => a + b, 0))
+  const alto = altos.reduce((a, b) => a + b, 0)
+  const pies = partir(pie, W - 40)
+  const H = yCal + alto + 70 + (pies.length ? 6 + 12 * pies.length : 0)
+  const pos = (i: number) => meses.indexOf(i)
+  const lluvPos = lluviosos.map(pos).filter((p) => p >= 0)
   return (
     <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label="Calendario fenológico lineal">
       <defs><Trama id={trama} /></defs>
       <rect width={W} height={H} fill="#fff" />
-      {clima && <PanelClima meses={clima} x0={IZQ} ancho={ancho} y0={30} alto={altoClima - 10} lluviosos={lluviosos} />}
+      {clima && <PanelClima meses={meses.map((i) => clima[i])} x0={IZQ} ancho={ancho} y0={30} alto={altoClima - 10} lluviosos={lluvPos} />}
       {/* franja de meses lluviosos también sobre el calendario */}
-      {lluviosos.map((i) => (
-        <rect key={i} x={IZQ + col * i} y={yCal - 4} width={col} height={especies.length * FILA + 4} fill={COLOR.lluvia} opacity={0.15} />
+      {lluvPos.map((p) => (
+        <rect key={p} x={IZQ + col * p} y={yCal - 4} width={col} height={alto + 4} fill={COLOR.lluvia} opacity={0.15} />
       ))}
-      {MESES.map((m, i) => (
-        <text key={m} x={IZQ + col * (i + 0.5)} y={yCal - 10} fontSize="11" fontWeight={600} textAnchor="middle" fontFamily={FUENTE} fill={COLOR.tinta}>{m}</text>
+      {meses.map((i, p) => (
+        <text key={i} x={IZQ + col * (p + 0.5)} y={yCal - 10} fontSize="11" fontWeight={600} textAnchor="middle" fontFamily={FUENTE} fill={COLOR.tinta}>{MESES[i]}</text>
       ))}
-      {especies.map((e, r) => {
-        const y = yCal + r * FILA
+      {filas.map((f, r) => {
+        const y = ys[r]
+        if (f.t === 'g') return (
+          <g key={`g${f.titulo}`} fontFamily={FUENTE}>
+            <text x={20} y={y + 20} fontSize="11" fontWeight={700} fill={COLOR.tinta} letterSpacing="0.4">{f.titulo.toUpperCase()}
+              <tspan fontWeight={400} fill={COLOR.tenue} letterSpacing="0">{`   ${f.n} especie${f.n === 1 ? '' : 's'}`}</tspan></text>
+            <line x1={20} x2={IZQ + ancho} y1={y + CABEZA - 3} y2={y + CABEZA - 3} stroke="#d9d6cf" />
+          </g>
+        )
+        const e = f.e
         return (
           <g key={e.especie} fontFamily={FUENTE}>
             <text x={IZQ - 10} y={y + 13} fontSize="11" textAnchor="end" fontStyle={e.especie.startsWith('(') ? 'normal' : 'italic'} fill={COLOR.tinta}>
@@ -188,20 +239,23 @@ export function CalendarioLineal({
             {(['flor', 'fruto'] as const).map((s, k) => {
               const cs = s === 'flor' ? e.flor : e.fruto
               const color = s === 'flor' ? COLOR.florLineal : COLOR.frutoLineal
-              return cs.map((c, i) => (
-                <rect key={`${s}${i}`} x={IZQ + col * i + 1} y={y + 2 + k * (FRANJA + 1)} width={col - 2} height={FRANJA}
-                  fill={!c ? `url(#${trama})` : c.media > 0 ? color : '#f1efea'} opacity={c && c.media > 0 ? alfa(c, intensidad) : 1}>
-                  <title>{`${e.especie} · ${MESES[i]} · ${s === 'flor' ? 'Floración' : 'Fructificación'}: ${c ? `Fournier ${fmt(c.media)} % · ${fmt(c.activos)} % de árboles en fase · ${c.arboles} árbol(es)` : 'sin monitoreo'}`}</title>
-                </rect>
-              ))
+              return meses.map((i, p) => {
+                const c = cs[i]
+                return (
+                  <rect key={`${s}${i}`} x={IZQ + col * p + 1} y={y + 2 + k * (FRANJA + 1)} width={col - 2} height={FRANJA}
+                    fill={!c ? `url(#${trama})` : c.media > 0 ? color : '#f1efea'} opacity={c && c.media > 0 ? alfa(c, intensidad) : 1}>
+                    <title>{`${e.especie} · ${MESES[i]} · ${s === 'flor' ? 'Floración' : 'Fructificación'}: ${c ? `Fournier ${fmt(c.media)} % · ${fmt(c.activos)} % de árboles en fase · ${c.arboles} árbol(es)` : 'sin monitoreo'}`}</title>
+                  </rect>
+                )
+              })
             })}
             <line x1={IZQ} x2={IZQ + ancho} y1={y + FILA - 1.5} y2={y + FILA - 1.5} stroke="#f0ede6" />
           </g>
         )
       })}
-      <Leyenda x={IZQ} y={yCal + especies.length * FILA + 22} trama={trama} intensidad={intensidad}
+      <Leyenda x={IZQ} y={yCal + alto + 22} trama={trama} intensidad={intensidad}
         items={[{ c: COLOR.florLineal, t: 'Floración (botón floral o flor)' }, { c: COLOR.frutoLineal, t: 'Fructificación (fruto inmaduro o maduro)' }]} />
-      {pie && <text x={20} y={H - 12} fontSize="9" fontFamily={FUENTE} fill={COLOR.tenue}>{pie}</text>}
+      <Pie lineas={pies} x={20} yFinal={H - 12} />
     </svg>
   )
 }
@@ -229,8 +283,9 @@ function Leyenda({ x, y, items, trama, intensidad }: { x: number; y: number; ite
 // ─── Mapa de calor (§3.2) ────────────────────────────────────────────────────
 
 export function MapaCalor({
-  filas, paneles, svgRef, pie,
+  filas, paneles, meses = TODOS, svgRef, pie,
 }: {
+  meses?: number[]
   filas: { especie: string; n: number }[]
   /** Un panel por serie: título y, por fila, las 12 celdas. */
   paneles: { titulo: string; celdas: (Celda | null)[][] }[]
@@ -238,11 +293,13 @@ export function MapaCalor({
   pie?: string
 }) {
   const trama = useId().replace(/:/g, '')
-  const IZQ = 250, CEL = 22, SEP = 30, FILA = 18
-  const anchoPanel = CEL * 12
+  const IZQ = 250, SEP = 30, FILA = 18
+  const CEL = meses.length < 12 ? 34 : 22
+  const anchoPanel = CEL * meses.length
   const W = IZQ + paneles.length * anchoPanel + (paneles.length - 1) * SEP + 30
   const y0 = 56
-  const H = y0 + filas.length * FILA + 70 + (pie ? 16 : 0)
+  const pies = partir(pie, W - 28)
+  const H = y0 + filas.length * FILA + 70 + (pies.length ? 4 + 12 * pies.length : 0)
   return (
     <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label="Mapa de calor fenológico">
       <defs><Trama id={trama} /></defs>
@@ -258,11 +315,11 @@ export function MapaCalor({
           return (
             <g key={p.titulo}>
               <text x={px + anchoPanel / 2} y={20} fontSize="12" fontWeight={600} textAnchor="middle" fill={COLOR.tinta}>{p.titulo}</text>
-              {MESES.map((m, i) => (
-                <text key={m} x={px + CEL * (i + 0.5)} y={y0 - 8} fontSize="8.5" textAnchor="middle" fill={COLOR.tenue}>{m[0]}</text>
+              {meses.map((i, q) => (
+                <text key={i} x={px + CEL * (q + 0.5)} y={y0 - 8} fontSize="8.5" textAnchor="middle" fill={COLOR.tenue}>{meses.length < 12 ? MESES[i] : MESES[i][0]}</text>
               ))}
-              {p.celdas.map((fila, r) => fila.map((c, i) => (
-                <rect key={`${r}-${i}`} x={px + CEL * i + 0.5} y={y0 + r * FILA + 0.5} width={CEL - 1} height={FILA - 1}
+              {p.celdas.map((fila, r) => meses.map((i, q) => ({ c: fila[i], i, q })).map(({ c, i, q }) => (
+                <rect key={`${r}-${i}`} x={px + CEL * q + 0.5} y={y0 + r * FILA + 0.5} width={CEL - 1} height={FILA - 1}
                   fill={c ? mezclar(COLOR.calorBajo, COLOR.calorAlto, c.media / 100) : `url(#${trama})`}>
                   <title>{`${filas[r].especie} · ${MESES[i]} · ${p.titulo}: ${c ? `Fournier ${fmt(c.media)} % (${fmt(c.media / 25, 1)} de 4) · ${c.arboles} árbol(es)` : 'sin monitoreo'}`}</title>
                 </rect>
@@ -282,7 +339,7 @@ export function MapaCalor({
           <rect x={180} y={16} width={14} height={9} fill={`url(#${trama})`} stroke="#e2ded5" />
           <text x={198} y={24}>Sin monitoreo</text>
         </g>
-        {pie && <text x={14} y={H - 10} fontSize="9" fill={COLOR.tenue}>{pie}</text>}
+        <Pie lineas={pies} x={14} yFinal={H - 10} />
       </g>
     </svg>
   )
@@ -322,7 +379,8 @@ export function CalendarioCircular({
   const rEtq = clima ? rP0 + largoP + 22 : R.ext + 20
   const W = 2 * rEtq + 70
   const cx = W / 2, cy = 120 + rEtq
-  const H = cy + rEtq + 84 + (pie ? 14 : 0)
+  const pies = partir(pie, W - 28)
+  const H = cy + rEtq + 84 + (pies.length ? 2 + 12 * pies.length : 0)
   // Escala fija de 20 a 30 °C: estirarla al mínimo y máximo del año pinta
   // 2 °C de diferencia como de fresco a muy cálido (criterio §5.2).
   const tono = (t: number) => (t - 20) / 10
@@ -386,9 +444,9 @@ export function CalendarioCircular({
           <rect x={190} width={14} height={14} fill={COLOR.frutoAnillo} /><text x={210} y={11}>Fructificación (interior)</text>
           <rect x={375} width={14} height={14} fill={COLOR.sinActividad} /><text x={395} y={11}>Sin actividad</text>
           <rect y={22} width={14} height={14} fill={`url(#${trama})`} stroke="#ddd" /><text x={20} y={33}>Sin monitoreo</text>
-          {clima && <text x={190} y={33} fill={COLOR.tenue}>Anillo: temperatura media (°C, escala 20–30). Barras: lluvia (mm); punteado = {fmt(escP)} mm.</text>}
+          {clima && <text x={190} y={33} fill={COLOR.tenue}>Anillo: temperatura (°C, 20–30). Barras: lluvia; punteado = {fmt(escP)} mm.</text>}
         </g>
-        {pie && <text x={14} y={H - 10} fontSize="9" fill={COLOR.tenue}>{pie}</text>}
+        <Pie lineas={pies} x={14} yFinal={H - 10} />
       </g>
     </svg>
   )
@@ -436,17 +494,99 @@ export function CurvasRonda({
   )
 }
 
-/** Doce casillas pequeñas para una fila de tabla (ventana de cosecha, árbol). */
-export function TiraMeses({ celdas, color }: { celdas: (Celda | null)[]; color: string }) {
+/** Casillas pequeñas, una por mes, para una fila de tabla o una tarjeta. */
+export function TiraMeses({ celdas, color, meses = TODOS, grande }: { celdas: (Celda | null)[]; color: string; meses?: number[]; grande?: boolean }) {
   return (
-    <span className="inline-flex gap-[2px] align-middle">
-      {celdas.map((c, i) => (
-        <span key={i} title={`${MESES[i]}: ${c ? `${fmt(c.media)} %` : 'sin monitoreo'}`}
-          className="inline-block h-3.5 w-3 rounded-[3px]"
-          style={c
-            ? { background: c.media > 0 ? color : COLOR.sinActividad, opacity: c.media > 0 ? Math.max(0.3, c.media / 100) : 1 }
-            : { background: 'repeating-linear-gradient(45deg,#fafaf8 0 2px,#dedad2 2px 3px)' }} />
-      ))}
+    <span className={`${grande ? 'flex w-full' : 'inline-flex'} gap-[3px] align-middle`}>
+      {meses.map((i) => {
+        const c = celdas[i]
+        return (
+          <span key={i} title={`${MESES[i]}: ${c ? `${fmt(c.media)} % de copa · ${fmt(c.activos)} % de árboles` : 'sin monitoreo'}`}
+            className={`inline-block rounded-[3px] ${grande ? 'h-3.5 flex-1' : 'h-3.5 w-3'}`}
+            style={c
+              // Opacidad 0,5–1: con copas de 5–25 % en promedio, una escala lineal
+              // dejaba casi todo al mínimo, muy cerca del gris de «sin actividad».
+              ? { background: c.media > 0 ? color : COLOR.sinActividad, opacity: c.media > 0 ? 0.5 + 0.5 * Math.min(1, c.media / 50) : 1 }
+              : { background: 'repeating-linear-gradient(45deg,#fafaf8 0 2px,#dedad2 2px 3px)' }} />
+        )
+      })}
     </span>
+  )
+}
+
+// ─── Lluvia real de cada ronda frente a la normal ────────────────────────────
+
+/**
+ * Por ronda: la lluvia que cayó ese mes (barra azul) junto a la normal del mes
+ * (barra clara), y el % de árboles en flor y con fruto (líneas, eje derecho).
+ * Deja ver si una ronda fue más seca o más lluviosa de lo normal; no prueba
+ * causa (criterio §5.1).
+ */
+export function LluviaRondas({
+  rondas, real, normal, flor, fruto, svgRef, pie,
+}: {
+  rondas: string[]
+  real: (number | null)[]
+  normal: (number | null)[]
+  flor: (number | null)[]
+  fruto: (number | null)[]
+  svgRef?: Ref<SVGSVGElement>
+  pie?: string
+}) {
+  const W = 760, x0 = 50, ancho = W - x0 - 60, y0 = 24, altoG = 210
+  const pies = partir(pie, W - 28)
+  const H = y0 + altoG + 76 + (pies.length ? 2 + 12 * pies.length : 0)
+  const col = ancho / Math.max(1, rondas.length)
+  const pmax = Math.max(100, ...real.map((v) => v ?? 0), ...normal.map((v) => v ?? 0))
+  const escP = Math.ceil(pmax / 100) * 100
+  const yP = (v: number) => y0 + altoG - (v / escP) * altoG
+  const yA = (v: number) => y0 + altoG - (v / 100) * altoG
+  const linea = (vs: (number | null)[], color: string, nombre: string) => {
+    const pts = vs.map((v, i) => (v === null ? null : [x0 + col * (i + 0.5), yA(v)] as const))
+    return (
+      <g>
+        <polyline points={pts.filter(Boolean).map((p) => p!.join(',')).join(' ')} fill="none" stroke={color} strokeWidth={2} />
+        {pts.map((p, i) => p && <circle key={i} cx={p[0]} cy={p[1]} r={3} fill={color}><title>{`${nombre} · ${rondas[i]}: ${fmt(vs[i]!)} %`}</title></circle>)}
+      </g>
+    )
+  }
+  return (
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label="Lluvia de cada ronda frente a la normal">
+      <rect width={W} height={H} fill="#fff" />
+      <g fontFamily={FUENTE} fontSize="9.5" fill={COLOR.tenue}>
+        {[0, 0.5, 1].map((t) => (
+          <g key={t}>
+            <line x1={x0} x2={x0 + ancho} y1={y0 + altoG - t * altoG} y2={y0 + altoG - t * altoG} stroke="#eeeae2" />
+            <text x={x0 - 6} y={y0 + altoG - t * altoG + 3} textAnchor="end" fill="#4f7fa0">{fmt(escP * t)}</text>
+            <text x={x0 + ancho + 6} y={y0 + altoG - t * altoG + 3}>{fmt(100 * t)} %</text>
+          </g>
+        ))}
+        <text x={x0 - 6} y={y0 - 8} textAnchor="end" fill="#4f7fa0">mm</text>
+        <text x={x0 + ancho + 6} y={y0 - 8}>árboles</text>
+        {rondas.map((r, i) => {
+          const cx = x0 + col * i
+          const n = normal[i], v = real[i]
+          return (
+            <g key={r}>
+              {n !== null && <rect x={cx + col * 0.18} y={yP(n)} width={col * 0.3} height={y0 + altoG - yP(n)} fill={COLOR.lluvia} opacity={0.3} rx={2}><title>{`Normal de ${MESES[Number(r.slice(5, 7)) - 1]}: ${fmt(n)} mm`}</title></rect>}
+              {v !== null && <rect x={cx + col * 0.52} y={yP(v)} width={col * 0.3} height={y0 + altoG - yP(v)} fill={COLOR.lluvia} rx={2}><title>{`Lluvia de ${r}: ${fmt(v)} mm`}</title></rect>}
+              {v !== null && n !== null && n > 0 && (
+                <text x={cx + col * 0.67} y={yP(v) - 4} textAnchor="middle" fontSize="9" fill={v >= n ? '#4f7fa0' : '#a0522d'}>{`${v >= n ? '+' : ''}${fmt((100 * (v - n)) / n)} %`}</text>
+              )}
+              <text x={cx + col / 2} y={y0 + altoG + 16} textAnchor="middle" fontSize="10.5" fill={COLOR.tinta}>{`${MESES[Number(r.slice(5, 7)) - 1]} ${r.slice(2, 4)}`}</text>
+            </g>
+          )
+        })}
+        {linea(flor, COLOR.florLineal, 'Árboles en flor')}
+        {linea(fruto, COLOR.frutoLineal, 'Árboles con fruto')}
+        <g transform={`translate(${x0}, ${y0 + altoG + 40})`}>
+          <rect width={10} height={9} fill={COLOR.lluvia} opacity={0.3} /><text x={14} y={8}>Lluvia normal del mes</text>
+          <rect x={140} width={10} height={9} fill={COLOR.lluvia} /><text x={154} y={8}>Lluvia del mes de la ronda (± frente a la normal)</text>
+          <line x1={420} x2={436} y1={5} y2={5} stroke={COLOR.florLineal} strokeWidth={2} /><text x={440} y={8}>% árboles en flor</text>
+          <line x1={540} x2={556} y1={5} y2={5} stroke={COLOR.frutoLineal} strokeWidth={2} /><text x={560} y={8}>% árboles con fruto</text>
+        </g>
+        <Pie lineas={pies} x={14} yFinal={H - 8} />
+      </g>
+    </svg>
   )
 }

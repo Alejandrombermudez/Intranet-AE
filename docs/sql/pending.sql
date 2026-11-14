@@ -11,17 +11,6 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-11-12  migration_fenologia_intranet.sql + seed (fuera del repo) ─────
---             Módulo /intranet/ras/fenologia: ras.arboles_monitoreo (base de
---             árboles de la app de semilleros), ras.clima_referencia y
---             ras.clima_mensual (solo service_role). Después, el seed
---             insumos_aves/docs-internos/semilleros/seed_fenologia_solano.sql
---             (gitignorado: lleva nombres de propietarios): 273 árboles y los
---             1 329 monitoreos de Kobo con origen='kobo'. Ambos idempotentes.
---             Probado en PGlite (dos corridas, anon sin acceso). Verificar:
---             SELECT origen, count(*) FROM ras.monitoreos_semilleros GROUP BY 1;
---             SELECT count(*) FROM ras.arboles_monitoreo;   -- 273
-
 -- ── 2026-11-09  migration_vista_campo_fuente.sql ───────────────────────────
 --             Agrega core.v_predios_campo.fuente_informacion (al final, sin DROP)
 --             para el filtro «Lácteos del Hogar» de la app de campo. La app
@@ -32,6 +21,13 @@
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
 
+
+-- ── HECHO (2026-11-13)  migration_fenologia_intranet.sql + seed ─────────────
+--             Verificado por REST: ras.arboles_monitoreo con 273 árboles,
+--             ras.monitoreos_semilleros con los 1 329 de Kobo, anon sin acceso.
+--             Ese mismo día el clima pasó a Open-Meteo por coordenada de árbol
+--             (lib/clima-abierto.ts): ras.clima_referencia y ras.clima_mensual
+--             quedaron vacías y sin uso; se pueden borrar cuando se quiera.
 
 -- ── PENDIENTE (2026-11-11)  migration_vehiculos.sql ─────────────────────────
 --             /vehiculos dentro de la intranet: fleet.vehiculos (foto, tarjeta de
