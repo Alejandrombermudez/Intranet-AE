@@ -19,7 +19,7 @@ export const ETIQUETAS: Record<string, string> = {
   fuente_agua: 'Fuente de agua', senal_telefonica: 'Señal telefónica',
 
   // ── Vivienda ──
-  material_techo: 'Material del techo', material_paredes: 'Material de las paredes',
+  estructura_vivienda: 'Estructura de la vivienda', material_techo: 'Material del techo', material_paredes: 'Material de las paredes',
   material_piso: 'Material del piso', num_habitaciones: 'Habitaciones',
   personas_vivienda: 'Personas en la vivienda', tipo_cocina: 'Tipo de cocina',
   tipo_bano: 'Baño', disposicion_excretas: 'Disposición de excretas',
@@ -42,6 +42,10 @@ export const ETIQUETAS: Record<string, string> = {
   nivel_ingresos: 'Nivel de ingresos', medio_transporte_produccion: 'Transporte de la producción',
   transporte_propio: 'Transporte propio', valor_transporte: 'Costo del transporte',
   problemas_mercado: 'Problemas de mercado',
+  // Preguntas revisadas con Sebastián (2026-11-13)
+  dificultades_venta: 'Dificultades para vender', dificultad_venta_otra: 'Otra dificultad para vender',
+  leche_vendida_mes_litros: 'Leche vendida al mes (L)', fuente_ingreso_principal: 'Fuente principal de ingreso',
+  otras_fuentes_ingreso: 'Otras fuentes de ingreso', otra_fuente_ingreso_cual: 'Otra fuente de ingreso',
 
   // ── Cultivos ──
   cultivo: 'Cultivo', area_ha: 'Área (ha)', densidad: 'Densidad',
@@ -56,6 +60,7 @@ export const ETIQUETAS: Record<string, string> = {
   sistema_alimentacion_ganado: 'Sistema de alimentación', especies_forrajeras: 'Especies forrajeras',
   uso_fertilizacion_ganado: 'Fertilización', manejo_praderas: 'Manejo de praderas',
   infraestructura_ganadera: 'Infraestructura', material_postes: 'Material de postes',
+  inversion_wwf: 'Inversión de WWF en el predio',
   ha_pasto_ultimo_anio: 'Pasto sembrado el último año', origen_nuevos_pastos: 'Origen de los pastos',
   pastoreo_rotacional: 'Pastoreo rotacional', diversificacion_forrajera: 'Diversificación forrajera',
   cercas_vivas: 'Cercas vivas', sistemas_silvopastoriles: 'Sistemas silvopastoriles',
@@ -101,7 +106,7 @@ export const ETIQUETAS: Record<string, string> = {
   cobertura_dominante: 'Cobertura dominante', pct_cobertura_boscosa: 'Cobertura boscosa',
   densidad_rastrojo: 'Densidad del rastrojo', especies_arboreas_alturas: 'Especies arbóreas y alturas',
   regeneracion_natural: 'Regeneración natural', defaunacion: 'Defaunación',
-  requiere_proteccion: 'Requiere protección',
+  requiere_proteccion: 'Requiere protección', requiere_aislamiento: 'Aislar el sitio con cerca',
 
   // ── Evaluación biofísica: logística ──
   medio_acceso_zonas: 'Medio de acceso', tiempo_predio_zona: 'Tiempo del predio a la zona',
@@ -121,6 +126,7 @@ export const ETIQUETAS: Record<string, string> = {
   evaluador_1: 'Evaluador 1', evaluador_2: 'Evaluador 2', fecha_visita: 'Fecha de la visita',
   senal_celular: 'Señal celular', operador_celular: 'Operador', codigo_formato: 'Código del formato',
   tiempo_desde_via: 'Tiempo desde la vía', version: 'Versión del formato',
+  centro_urbano: 'Centro urbano más cercano', tiempo_desde_centro_urbano: 'Tiempo desde el centro urbano',
 
   // ── Jurídica ──
   estado: 'Estado', semaforo: 'Semáforo', estado_folio: 'Estado del folio',
@@ -147,7 +153,7 @@ export const CAMPOS_LARGOS = new Set([
   'especies_fauna_predio', 'especies_variedades', 'especies_forrajeras', 'tiempo_predio_zona',
   'cuales_restricciones', 'manifestacion_observaciones', 'puesto_salud', 'razon_llegada',
   'ajustes_poligono', 'procesos_judiciales_desc', 'medidas_cautelares_desc',
-  'otros_riesgos', 'tiempo_desde_via', 'lugar_deposito_material',
+  'otros_riesgos', 'tiempo_desde_via', 'lugar_deposito_material', 'estructura_vivienda',
   'liquidaciones_desc', 'sucesiones_desc', 'especies_afectadas',
 ])
 
