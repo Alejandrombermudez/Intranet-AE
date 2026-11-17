@@ -11,15 +11,16 @@
 -- PENDIENTE — ejecutar en Supabase → SQL Editor
 -- ════════════════════════════════════════════════════════════
 
--- ── 2026-11-09  migration_vista_campo_fuente.sql ───────────────────────────
---             Agrega core.v_predios_campo.fuente_informacion (al final, sin DROP)
---             para el filtro «Lácteos del Hogar» de la app de campo. La app
---             funciona sin esto; el filtro aparece cuando corra. Verificar por
---             REST: la vista con la llave anon trae la columna (65 de 140 LDH).
+-- (Nada pendiente de la app de campo.)
 
 -- ════════════════════════════════════════════════════════════
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
+
+-- ── HECHO (2026-11-13)  migration_vista_campo_fuente.sql ────────────────────
+--             Verificado por REST con la llave anon: core.v_predios_campo trae
+--             fuente_informacion; 140 predios, 65 lacteos_del_hogar, 3
+--             reporte_carbono_2026, 72 sin fuente. Filtro LDH de la app de campo activo.
 
 
 -- ── HECHO (2026-11-13)  migration_fenologia_intranet.sql + seed ─────────────
