@@ -107,3 +107,21 @@ export async function enlaceFirmado(ruta: string | null | undefined): Promise<st
   const { data } = await storage().from(BUCKET_FLOTA).createSignedUrl(ruta, 3600)
   return data?.signedUrl ?? null
 }
+
+export interface Documento { url: string; pdf: boolean }
+
+/**
+ * SOAT y tecnomecánica del vehículo (foto o PDF). No tienen columna: son el archivo más reciente
+ * `<id>/soat-<ms>.<ext>` y `<id>/tecno-<ms>.<ext>` del bucket privado. Enlaces firmados de 1 hora.
+ */
+export async function documentosExtra(vehiculoId: string): Promise<{ soat: Documento | null; tecno: Documento | null }> {
+  const { data } = await storage().from(BUCKET_FLOTA).list(vehiculoId, { limit: 100 })
+  const ultimo = async (prefijo: string): Promise<Documento | null> => {
+    const f = (data ?? []).filter((x) => x.name.startsWith(`${prefijo}-`)).sort((a, b) => b.name.localeCompare(a.name))[0]
+    if (!f) return null
+    const url = await enlaceFirmado(`${vehiculoId}/${f.name}`)
+    return url ? { url, pdf: f.name.toLowerCase().endsWith('.pdf') } : null
+  }
+  const [soat, tecno] = await Promise.all([ultimo('soat'), ultimo('tecno')])
+  return { soat, tecno }
+}

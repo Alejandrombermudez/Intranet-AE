@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { enlaceFirmado, exigirConductor, fleet } from '@/lib/vehiculos/sesion'
+import { documentosExtra, enlaceFirmado, exigirConductor, fleet } from '@/lib/vehiculos/sesion'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * GET /api/vehiculos/flota — los vehículos con su foto y la foto de la tarjeta de propiedad
+ * GET /api/vehiculos/flota — los vehículos con su foto, la tarjeta de propiedad, el SOAT y la tecnomecánica
  * (enlaces firmados de 1 hora: el bucket es privado) y los vencimientos del SOAT y la
  * tecnomecánica. La tarjeta se muestra desde el celular si la piden en la vía.
  */
@@ -18,11 +18,14 @@ export async function GET() {
     .order('orden')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const vehiculos = await Promise.all((data ?? []).map(async (v) => ({
+  const vehiculos = await Promise.all((data ?? []).map(async (v) => {
+    const extra = await documentosExtra(v.id)
+    return {
     id: v.id, nombre: v.nombre, corto: v.corto, placa: v.placa, tipo: v.tipo, color: v.color,
     soat_vence: v.soat_vence, tecnomecanica_vence: v.tecnomecanica_vence,
     foto: await enlaceFirmado(v.foto_path),
     tarjeta: await enlaceFirmado(v.tarjeta_path),
-  })))
+    soat_doc: extra.soat, tecno_doc: extra.tecno,
+  }}))
   return NextResponse.json({ vehiculos })
 }

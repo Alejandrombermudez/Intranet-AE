@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { diasHasta, type Vehiculo } from '@/lib/vehiculos/cliente'
 import { fechaCorta } from '@/lib/vehiculos/horas'
+import Documentos from './Documentos'
 
 function Vence({ etiqueta, fecha }: { etiqueta: string; fecha: string | null }) {
   const d = diasHasta(fecha)
@@ -34,22 +35,13 @@ export default function Flota({ vehiculos }: { vehiculos: Vehiculo[] }) {
               {v.placa && <p className="tenue">Placa {v.placa}</p>}
               <Vence etiqueta="SOAT" fecha={v.soat_vence} />
               <Vence etiqueta="Tecnomecánica" fecha={v.tecnomecanica_vence} />
-              <button className="btn" disabled={!v.tarjeta} onClick={() => setVer(v)}>
-                {v.tarjeta ? 'Ver tarjeta de propiedad' : 'Tarjeta sin cargar'}
-              </button>
+              <button className="btn" onClick={() => setVer(v)}>Documentos del vehículo</button>
             </div>
           </div>
         ))}
       </div>
 
-      {ver?.tarjeta && (
-        <div className="visor" onClick={() => setVer(null)}>
-          <p>Tarjeta de propiedad · {ver.nombre}{ver.placa ? ` · ${ver.placa}` : ''}</p>
-          {/* eslint-disable-next-line @next/next/no-img-element -- enlace firmado del bucket privado */}
-          <img src={ver.tarjeta} alt={`Tarjeta de propiedad de ${ver.nombre}`} />
-          <button className="btn blanco" onClick={() => setVer(null)}>Cerrar</button>
-        </div>
-      )}
+      {ver && <Documentos v={{ ...ver, soat: ver.soat_doc, tecno: ver.tecno_doc }} onCerrar={() => setVer(null)} />}
     </div>
   )
 }

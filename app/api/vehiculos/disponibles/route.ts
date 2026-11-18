@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { enlaceFirmado, exigirConductor, fleet } from '@/lib/vehiculos/sesion'
+import { documentosExtra, enlaceFirmado, exigirConductor, fleet } from '@/lib/vehiculos/sesion'
 import { fechaBogota } from '@/lib/vehiculos/horas'
 
 export const dynamic = 'force-dynamic'
@@ -21,7 +21,7 @@ export async function GET() {
   const hoy = fechaBogota(new Date())
 
   const [{ data: vehiculos }, { data: tomados }, { data: futuras }] = await Promise.all([
-    db.from('vehiculos').select('id, nombre, corto, placa, tipo, color, foto_path, tarjeta_path').eq('activo', true).order('orden'),
+    db.from('vehiculos').select('id, nombre, corto, placa, tipo, color, foto_path, tarjeta_path, soat_vence, tecnomecanica_vence').eq('activo', true).order('orden'),
     db.from('vehicle_reservations').select('id, vehicle_id, conductor_id, user_name, tomado_at, end_at, start_at, purpose, devuelto_at')
       .not('tomado_at', 'is', null).is('devuelto_at', null),
     db.from('vehicle_reservations').select('id, vehicle_id, conductor_id, user_name, start_at, end_at, tomado_at')
@@ -52,7 +52,10 @@ export async function GET() {
     vehiculos: lista,
     miEnUso: mio && v ? {
       reserva: { id: mio.id, vehicle_id: mio.vehicle_id, start_at: mio.start_at, end_at: mio.end_at, purpose: mio.purpose, tomado_at: mio.tomado_at, devuelto_at: null },
-      vehiculo: { id: v.id, nombre: v.nombre, placa: v.placa, tarjeta: await enlaceFirmado(v.tarjeta_path) },
+      vehiculo: {
+        id: v.id, nombre: v.nombre, placa: v.placa, tarjeta: await enlaceFirmado(v.tarjeta_path),
+        soat_vence: v.soat_vence, tecnomecanica_vence: v.tecnomecanica_vence, ...(await documentosExtra(v.id)),
+      },
     } : null,
   })
 }

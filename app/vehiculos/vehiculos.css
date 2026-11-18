@@ -240,3 +240,8 @@
 .vh .registro .linea-r { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
 .vh .registro .mini-fotos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .vh .registro .mini-fotos img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; cursor: zoom-in; }
+
+/* Documentos del vehículo */
+.vh .docs { display: grid; gap: 8px; }
+.vh .doc { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--linea); border-radius: 14px; background: #fff; text-align: left; }
+.vh .doc b { font-weight: 600; font-size: 15px; }

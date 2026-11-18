@@ -5,6 +5,7 @@ import { enviar, llamar, type MiReserva, type Vehiculo } from '@/lib/vehiculos/c
 import Calendario, { type Hueco } from './Calendario'
 import ModalReserva from './ModalReserva'
 import Escaner from './Escaner'
+import Documentos, { type DocsVehiculo } from './Documentos'
 
 /**
  * Lo que ve quien no administra: blanco, centrado, dos botones.
@@ -22,7 +23,7 @@ interface Disponible {
 interface FilaReserva { id: string; vehicle_id: string; start_at: string; end_at: string; purpose: string | null; tomado_at: string | null; devuelto_at: string | null }
 interface Estado {
   vehiculos: Disponible[]
-  miEnUso: { reserva: FilaReserva; vehiculo: { id: string; nombre: string; placa: string | null; tarjeta: string | null } } | null
+  miEnUso: { reserva: FilaReserva; vehiculo: DocsVehiculo & { id: string } } | null
 }
 type Tomar =
   | { accion: Tipo; vehiculo: { id: string; nombre: string }; reserva: FilaReserva }
@@ -57,7 +58,7 @@ export default function Simple({
   const [proximas, setProximas] = useState<MiReserva[]>([])
   const [error, setError] = useState('')
   const [trabajando, setTrabajando] = useState(false)
-  const [verTarjeta, setVerTarjeta] = useState(false)
+  const [verDocs, setVerDocs] = useState(false)
   // «Hasta» de una toma sin reserva
   const [elegido, setElegido] = useState<Disponible | { id: string; nombre: string; libreHasta?: string | null } | null>(null)
   const [hastaHora, setHastaHora] = useState('')
@@ -216,7 +217,7 @@ export default function Simple({
             Devolución
             <small>{enUso.vehiculo.nombre} · desde las {hora12(horaBogota(enUso.reserva.tomado_at!))}</small>
           </button>
-          {enUso.vehiculo.tarjeta && <button className="btn suave grande" onClick={() => setVerTarjeta(true)}>Ver tarjeta de propiedad</button>}
+          <button className="btn suave grande" onClick={() => setVerDocs(true)}>Documentos del vehículo</button>
         </>
       ) : (
         <button className="principal recibir" onClick={() => { setError(''); setPantalla('elegir') }} disabled={trabajando}>
@@ -242,14 +243,7 @@ export default function Simple({
         </div>
       )}
 
-      {verTarjeta && enUso?.vehiculo.tarjeta && (
-        <div className="visor" onClick={() => setVerTarjeta(false)}>
-          <p>Tarjeta de propiedad · {enUso.vehiculo.nombre}{enUso.vehiculo.placa ? ` · ${enUso.vehiculo.placa}` : ''}</p>
-          {/* eslint-disable-next-line @next/next/no-img-element -- enlace firmado del bucket privado */}
-          <img src={enUso.vehiculo.tarjeta} alt="Tarjeta de propiedad" />
-          <button className="btn blanco" onClick={() => setVerTarjeta(false)}>Cerrar</button>
-        </div>
-      )}
+      {verDocs && enUso && <Documentos v={enUso.vehiculo} onCerrar={() => setVerDocs(false)} />}
     </div>
   )
 }

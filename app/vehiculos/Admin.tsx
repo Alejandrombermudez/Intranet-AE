@@ -7,6 +7,9 @@ import { comprimir } from './Inspeccion'
 
 interface Fila { id: string; nombre: string; email: string | null; esAdmin: boolean; activo: boolean; pin: 'sin' | 'inicial' | 'propio'; bloqueado: boolean }
 
+type Cual = 'foto' | 'tarjeta' | 'soat' | 'tecno'
+const NOMBRE_ARCHIVO: Record<Cual, string> = { foto: 'foto del vehículo', tarjeta: 'tarjeta de propiedad', soat: 'SOAT', tecno: 'tecnomecánica' }
+
 const ESTADO_PIN = { sin: 'Sin PIN', inicial: 'PIN inicial (aún no lo cambia)', propio: 'Ya creó su PIN' }
 
 /** Administración (quien entra con Microsoft siendo admin de la intranet o de Financiero). */
@@ -136,7 +139,7 @@ function Vehiculos({ vehiculos, onCambio }: { vehiculos: Vehiculo[]; onCambio: (
     } catch (e) { setError((e as Error).message) }
   }
 
-  const subir = async (v: Vehiculo, cual: 'foto' | 'tarjeta', archivo: File | undefined) => {
+  const subir = async (v: Vehiculo, cual: Cual, archivo: File | undefined) => {
     if (!archivo) return
     setSubiendo(`${v.id}:${cual}`); setError('')
     try {
@@ -144,11 +147,13 @@ function Vehiculos({ vehiculos, onCambio }: { vehiculos: Vehiculo[]; onCambio: (
       fd.append('id', v.id)
       fd.append('cual', cual)
       // La tarjeta se deja más grande para que se lea la letra menuda.
-      fd.append('archivo', await comprimir(archivo, cual === 'tarjeta' ? 2000 : 1280, 0.85), `${cual}.jpg`)
+      // Los PDF van tal cual; las fotos se reducen (los documentos más grandes, para que se lea la letra menuda).
+      if (archivo.type === 'application/pdf') fd.append('archivo', archivo, `${cual}.pdf`)
+      else fd.append('archivo', await comprimir(archivo, cual === 'foto' ? 1280 : 2000, 0.85), `${cual}.jpg`)
       const res = await fetch('/api/vehiculos/admin/vehiculos', { method: 'POST', body: fd })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'No se pudo subir.')
-      setAviso(`${v.nombre}: ${cual === 'foto' ? 'foto' : 'tarjeta de propiedad'} actualizada.`)
+      setAviso(`${v.nombre}: ${NOMBRE_ARCHIVO[cual]} actualizado.`)
       onCambio()
     } catch (e) { setError((e as Error).message) } finally { setSubiendo(null) }
   }
@@ -179,14 +184,16 @@ function Vehiculos({ vehiculos, onCambio }: { vehiculos: Vehiculo[]; onCambio: (
               <button className="btn chico" onClick={() => guardar(v)}>Guardar datos</button>
 
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '14px 0' }}>
-                {(['foto', 'tarjeta'] as const).map((cual) => (
-                  <label key={cual} className="btn suave chico" style={{ cursor: 'pointer' }}>
-                    {subiendo === `${v.id}:${cual}` ? 'Subiendo…' : cual === 'foto'
-                      ? (v.foto ? 'Cambiar foto del vehículo' : 'Subir foto del vehículo')
-                      : (v.tarjeta ? 'Cambiar tarjeta de propiedad' : 'Subir tarjeta de propiedad')}
-                    <input type="file" accept="image/*" hidden onChange={(e) => { subir(v, cual, e.target.files?.[0]); e.target.value = '' }} />
-                  </label>
-                ))}
+                {(['foto', 'tarjeta', 'soat', 'tecno'] as const).map((cual) => {
+                  const hay = cual === 'foto' ? v.foto : cual === 'tarjeta' ? v.tarjeta : cual === 'soat' ? v.soat_doc : v.tecno_doc
+                  return (
+                    <label key={cual} className="btn suave chico" style={{ cursor: 'pointer' }}>
+                      {subiendo === `${v.id}:${cual}` ? 'Subiendo…' : `${hay ? 'Cambiar' : 'Subir'} ${NOMBRE_ARCHIVO[cual]}`}
+                      <input type="file" accept={cual === 'soat' || cual === 'tecno' ? 'image/*,application/pdf' : 'image/*'} hidden
+                        onChange={(e) => { subir(v, cual, e.target.files?.[0]); e.target.value = '' }} />
+                    </label>
+                  )
+                })}
               </div>
 
               {qrs[v.id] && (

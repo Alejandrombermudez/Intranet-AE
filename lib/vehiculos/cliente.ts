@@ -22,7 +22,11 @@ export interface Vehiculo {
   tarjeta: string | null   // enlace firmado, vence en 1 hora
   soat_vence: string | null
   tecnomecanica_vence: string | null
+  soat_doc: Documento | null   // foto o PDF del SOAT
+  tecno_doc: Documento | null  // foto o PDF de la tecnomecánica
 }
+
+export interface Documento { url: string; pdf: boolean }
 
 export interface Reserva {
   id: string
