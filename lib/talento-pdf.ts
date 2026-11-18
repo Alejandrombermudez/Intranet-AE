@@ -93,10 +93,26 @@ export async function plantilla(doc: Doc, { org, tipo, referencia, legal }: {
   // Isotipo y organización
   const xTexto = iso ? MARGEN + 12 : MARGEN
   if (iso) doc.addImage(iso, 'PNG', MARGEN, 13, 8.4, 10.4, 'isotipo', 'FAST')
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...rgb(MARCA.bosque))
-  doc.text(razon.toUpperCase(), xTexto, 18, { charSpace: 0.7 })
+  // La razón social no puede pisar el tipo de documento de la derecha: si es
+  // larga («Academia de Innovación para la Sostenibilidad SAS BIC») se achica
+  // y, si aun así no cabe, va en dos líneas.
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5)
+  const libre = ANCHO - MARGEN - anchoEspaciado(doc, tipo.toUpperCase(), 1) - 8 - xTexto
+  const RAZON = razon.toUpperCase()
+  doc.setTextColor(...rgb(MARCA.bosque))
+  let yNit = 22.5
+  const formas: [number, number][] = [[10, 0.7], [10, 0.3], [9, 0.2], [8, 0.1]]
+  const cabe = formas.find(([t, e]) => { doc.setFontSize(t); return anchoEspaciado(doc, RAZON, e) <= libre })
+  if (cabe) {
+    doc.setFontSize(cabe[0]); doc.text(RAZON, xTexto, 18, { charSpace: cabe[1] })
+  } else {
+    doc.setFontSize(8.5)
+    const lineas: string[] = doc.splitTextToSize(RAZON, libre)
+    lineas.slice(0, 2).forEach((l, i) => doc.text(l, xTexto, 15.5 + i * 3.8))
+    yNit = 24.5
+  }
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...rgb(MARCA.oliva))
-  doc.text(org.nit ? `NIT ${org.nit}` : 'NIT por registrar', xTexto, 22.5)
+  doc.text(org.nit ? `NIT ${org.nit}` : 'NIT por registrar', xTexto, yNit)
 
   // Tipo de documento y referencia, a la derecha
   doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...rgb(MARCA.musgo))
@@ -157,7 +173,13 @@ export function rotulo(doc: Doc, texto: string, y: number) {
 
 export function firma(doc: Doc, y: number, imagen: string | null, lineas: string[]): number {
   if (imagen && /^data:image\/(png|jpe?g)/.test(imagen)) {
-    try { doc.addImage(imagen, imagen.includes('png') ? 'PNG' : 'JPEG', MARGEN, y - 2, 50, 18, undefined, 'FAST') } catch { /* imagen dañada: va sin firma */ }
+    try {
+      // Cabe en 60 × 15 mm sin deformarse, apoyada sobre la línea.
+      const { width, height } = doc.getImageProperties(imagen)
+      let w = 60, h = (w * height) / width
+      if (h > 15) { h = 15; w = (h * width) / height }
+      doc.addImage(imagen, imagen.includes('png') ? 'PNG' : 'JPEG', MARGEN, y + 16 - h, w, h, undefined, 'FAST')
+    } catch { /* imagen dañada: va sin firma */ }
   }
   doc.setDrawColor(...rgb(MARCA.tinta)); doc.setLineWidth(0.3)
   doc.line(MARGEN, y + 17, MARGEN + 70, y + 17)
@@ -177,20 +199,23 @@ const sinTildes = (s: string) => s.normalize('NFD').replace(DIACRITICOS, '').rep
 
 // ─── Cuenta de cobro ──────────────────────────────────────────────────────────
 
-export async function pdfCuentaCobro(c: Pick<CuentaCobro, 'consecutivo' | 'fecha' | 'periodo_desde' | 'periodo_hasta' | 'concepto' | 'valor' | 'datos' | 'id'>): Promise<Blob> {
+export async function pdfCuentaCobro(c: Pick<CuentaCobro, 'consecutivo' | 'fecha' | 'periodo_desde' | 'periodo_hasta' | 'concepto' | 'valor' | 'datos' | 'id' | 'proyecto' | 'municipio' | 'origen'>): Promise<Blob> {
   const { persona: p, contrato: k, organizacion: o } = c.datos
   const doc = await nuevoDoc()
   const numero = `N.º ${String(c.consecutivo).padStart(3, '0')}`
+  const cuando = new Date(c.datos.radicada).toLocaleString('es-CO', { timeZone: 'America/Bogota' })
   let y = await plantilla(doc, {
     org: o, tipo: 'Cuenta de cobro', referencia: numero,
-    legal: `Radicada en la intranet de ${o.razon_social || 'Amazonía Emprende'} el ${new Date(c.datos.radicada).toLocaleString('es-CO')} por ${p.email}. Referencia ${c.id.slice(0, 8).toUpperCase()}.`,
+    legal: c.origen === 'enlace' || !p.email
+      ? `Radicada por ${p.nombres} ${p.apellidos} en el formulario de cuentas de cobro de ${o.razon_social || 'Amazonía Emprende'} el ${cuando}. Referencia ${c.id.slice(0, 8).toUpperCase()}.`
+      : `Radicada en la intranet de ${o.razon_social || 'Amazonía Emprende'} el ${cuando} por ${p.email}. Referencia ${c.id.slice(0, 8).toUpperCase()}.`,
   })
   const nombre = `${p.nombres} ${p.apellidos}`.toUpperCase()
 
   doc.setFont('helvetica', 'bold'); doc.setFontSize(21); doc.setTextColor(...rgb(MARCA.bosque))
   doc.text('Cuenta de cobro', MARGEN, y)
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...rgb(MARCA.tinta))
-  doc.text(`${o.ciudad || 'Florencia'}, ${fechaLarga(c.fecha)}`, MARGEN, y + 7)
+  doc.text(`${c.municipio || o.ciudad || 'Florencia'}, ${fechaLarga(c.fecha)}`, MARGEN, y + 7)
 
   y += 21; rotulo(doc, o.razon_social || 'Amazonía Emprende', y)
   y = parrafo(doc, o.nit ? `NIT ${o.nit}` : 'NIT por registrar', y + 5, { tam: 10 })
@@ -211,21 +236,42 @@ export async function pdfCuentaCobro(c: Pick<CuentaCobro, 'consecutivo' | 'fecha
   y += 26
 
   rotulo(doc, 'Por concepto de', y)
-  const contrato = k.numero ? `según el contrato de prestación de servicios N.º ${k.numero}` : 'según el contrato de prestación de servicios'
+  const contrato = !k ? '' : k.numero ? `, según el contrato de prestación de servicios N.º ${k.numero}` : ', según el contrato de prestación de servicios'
   const periodo = c.periodo_desde && c.periodo_hasta ? `, correspondiente al periodo del ${fechaLarga(c.periodo_desde)} al ${fechaLarga(c.periodo_hasta)}` : ''
-  y = parrafo(doc, `${c.concepto.trim().replace(/\.$/, '')}, ${contrato}${periodo}.`, y + 5.5)
+  y = parrafo(doc, `${c.concepto.trim().replace(/\.$/, '')}${contrato}${periodo}.`, y + 5.5)
 
-  y += 7; rotulo(doc, 'Favor consignar en', y)
-  y = parrafo(doc, `Cuenta ${TIPO_CUENTA[p.tipo_cuenta ?? '']?.toLowerCase() ?? ''} N.º ${p.numero_cuenta} de ${p.banco}, a nombre de ${nombre}.`, y + 5.5)
+  const proyecto = c.proyecto
+  if (proyecto) { y += 6; rotulo(doc, 'Para el proyecto', y); y = parrafo(doc, proyecto, y + 5.5) }
+
+  y += 6; rotulo(doc, 'Favor consignar en', y)
+  const tipoCta = p.tipo_cuenta === 'deposito_electronico' ? 'de depósito electrónico' : TIPO_CUENTA[p.tipo_cuenta ?? '']?.toLowerCase() ?? ''
+  y = parrafo(doc, `Cuenta ${tipoCta} N.º ${p.numero_cuenta} de ${p.banco}, a nombre de ${nombre}.`.replace(/\s+/g, ' '), y + 5.5)
 
   const declaraciones = [
     p.responsable_iva ? 'Soy responsable del impuesto sobre las ventas (IVA).' : null,
     o.texto_cuenta_cobro && p.responsable_iva ? o.texto_cuenta_cobro.replace(/^Declaro que no soy responsable del impuesto sobre las ventas \(IVA\) y que /, 'Declaro que ') : o.texto_cuenta_cobro,
   ].filter(Boolean).join(' ')
-  if (declaraciones) { y += 7; y = parrafo(doc, declaraciones, y, { tam: 8.5, interlinea: 4.3 }) }
+  if (declaraciones) { y += 5; y = parrafo(doc, declaraciones, y, { tam: 8.5, interlinea: 4.3 }) }
 
-  y = Math.max(y + 14, 200)
-  firma(doc, y, p.firma, [nombre, documentoDe(p), [p.celular, p.email].filter(Boolean).join(' · ')])
+  // El bloque de firma ocupa ~46 mm: «Atentamente», la firma, cuatro líneas y
+  // «Firmado electrónicamente». Si no cabe sobre la línea legal del pie, va a otra hoja.
+  y = Math.max(y + 5, 185)
+  if (y > ALTO - ALTO_PIE - 53) {
+    // Concepto muy largo: la firma pasa a una segunda hoja con la misma plantilla.
+    doc.addPage()
+    y = (await plantilla(doc, { org: o, tipo: 'Cuenta de cobro', referencia: `${numero} · hoja 2`, legal: '' })) + 10
+  }
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...rgb(MARCA.tinta))
+  doc.text('Atentamente,', MARGEN, y)
+  const fin = firma(doc, y + 4, p.firma, [
+    nombre, documentoDe(p),
+    [p.celular, p.email].filter(Boolean).join(' · '),
+    [p.direccion, p.municipio].filter(Boolean).join(', '),
+  ].filter(Boolean))
+  if (c.datos.firmada) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...rgb(MARCA.oliva))
+    doc.text(`Firmado electrónicamente el ${new Date(c.datos.firmada).toLocaleString('es-CO', { timeZone: 'America/Bogota' })}`, MARGEN, fin + 1.5)
+  }
   return doc.output('blob')
 }
 

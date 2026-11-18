@@ -16,6 +16,8 @@ import {
 } from '@/lib/talento'
 import { descargarBlob, nombreArchivoCertificado, nombreArchivoCuenta, pdfCertificadoLaboral, pdfCuentaCobro } from '@/lib/talento-pdf'
 import { CAMPO, Campo, Mensaje, ROTULO, TD, TH, Ventana, enviar } from '@/app/intranet/administrativa/comun'
+import { avisoValor, leerValor } from '@/lib/cuenta-cobro-valor'
+import FirmaDedo from './FirmaDedo'
 
 export type Modo = 'persona' | 'rrhh'
 
@@ -293,8 +295,9 @@ export function SeccionCertificados({ certificados, personaId, modo, hayContrato
 
 // ─── Cuentas de cobro ─────────────────────────────────────────────────────────
 
-export function SeccionCuentas({ cuentas, contratos, persona, modo, onCambio }: {
-  cuentas: CuentaCobro[]; contratos: Contrato[]; persona: Persona; modo: Modo; onCambio: () => void
+export function SeccionCuentas({ cuentas, contratos, persona, modo, proyectos = [], onCambio }: {
+  cuentas: CuentaCobro[]; contratos: Contrato[]; persona: Persona; modo: Modo
+  proyectos?: { codigo: string; nombre: string }[]; onCambio: () => void
 }) {
   const vigente = contratoVigente(contratos.filter((c) => c.vinculacion === 'contratista'))
   const [nueva, setNueva] = useState<CuentaCobro | 'nueva' | null>(null)
@@ -359,7 +362,7 @@ export function SeccionCuentas({ cuentas, contratos, persona, modo, onCambio }: 
         </div>
       )}
       {nueva && vigente && (
-        <NuevaCuenta contrato={vigente} persona={persona} corregir={nueva === 'nueva' ? null : nueva}
+        <NuevaCuenta contrato={vigente} persona={persona} corregir={nueva === 'nueva' ? null : nueva} proyectos={proyectos}
           onCerrar={() => setNueva(null)} onListo={onCambio} />
       )}
     </div>
@@ -393,29 +396,34 @@ export async function abrirFirmadaCuenta(id: string) {
  * honorarios del contrato) y el periodo (por defecto el mes en curso). Lo demás
  * —número, fecha, nombre, documento, cuenta bancaria— lo pone el sistema.
  */
-function NuevaCuenta({ contrato, persona, corregir, onCerrar, onListo }: {
-  contrato: Contrato; persona: Persona; corregir: CuentaCobro | null; onCerrar: () => void; onListo: () => void
+function NuevaCuenta({ contrato, persona, corregir, proyectos, onCerrar, onListo }: {
+  contrato: Contrato; persona: Persona; corregir: CuentaCobro | null; proyectos: { codigo: string; nombre: string }[]
+  onCerrar: () => void; onListo: () => void
 }) {
   const mes = mesDe(hoy())
   const nombreMes = new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })
   const [concepto, setConcepto] = useState(corregir?.concepto ?? `Honorarios por la prestación de servicios del mes de ${nombreMes}`)
-  const [valor, setValor] = useState<string>(String(corregir?.valor ?? contrato.valor_mensual ?? ''))
+  const [valor, setValor] = useState(() => leerValor(String(corregir?.valor ?? contrato.valor_mensual ?? '')))
   const [desde, setDesde] = useState(corregir?.periodo_desde ?? mes.desde)
   const [hasta, setHasta] = useState(corregir?.periodo_hasta ?? mes.hasta)
+  const [proyecto, setProyecto] = useState(corregir?.proyecto ?? proyectos.find((p) => p.codigo === contrato.proyecto)?.nombre ?? '')
+  const [firma, setFirma] = useState<string | null>(null)
   const [planilla, setPlanilla] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
   const faltaFicha = !persona.numero_documento || !persona.banco || !persona.numero_cuenta || !persona.nombres || !persona.apellidos
-  const n = Number(valor)
+  const n = valor.numero
+  const aviso = avisoValor(n, { desde, hasta }, { mensual: contrato.valor_mensual })
 
   async function radicar() {
+    if (aviso?.tipo === 'menos' && !confirm(`${aviso.texto}\n\n¿El valor ${valor.texto} está bien escrito?`)) return
     setOcupado(true); setError(null)
     try {
       if (corregir) {
-        await enviar(`/api/talento/cuentas/${corregir.id}`, 'PATCH', { accion: 'corregir', concepto, valor: n, periodo_desde: desde, periodo_hasta: hasta })
+        await enviar(`/api/talento/cuentas/${corregir.id}`, 'PATCH', { accion: 'corregir', concepto, valor: n, periodo_desde: desde, periodo_hasta: hasta, proyecto, firma })
       } else {
         const form = new FormData()
-        form.append('datos', JSON.stringify({ contrato_id: contrato.id, concepto, valor: n, periodo_desde: desde, periodo_hasta: hasta }))
+        form.append('datos', JSON.stringify({ contrato_id: contrato.id, concepto, valor: n, periodo_desde: desde, periodo_hasta: hasta, proyecto, firma }))
         if (planilla) form.append('planilla', planilla)
         const r = await fetchConSesion('/api/talento/cuentas', { method: 'POST', body: form })
         const j = await r.json().catch(() => ({}))
@@ -436,11 +444,26 @@ function NuevaCuenta({ contrato, persona, corregir, onCerrar, onListo }: {
       <div className="grid gap-4">
         <Campo etiqueta="Concepto"><textarea className={`${CAMPO} min-h-20`} value={concepto} onChange={(e) => setConcepto(e.target.value)} /></Campo>
         <div className="grid gap-4 sm:grid-cols-3">
-          <Campo etiqueta="Valor (COP)"><input type="number" min="0" step="1000" className={CAMPO} value={valor} onChange={(e) => setValor(e.target.value)} /></Campo>
+          <Campo etiqueta="Valor (COP)"><input inputMode="numeric" className={`${CAMPO} tabular-nums`} value={valor.texto} onChange={(e) => setValor(leerValor(e.target.value))} /></Campo>
           <Campo etiqueta="Periodo desde"><input type="date" className={CAMPO} value={desde} onChange={(e) => setDesde(e.target.value)} /></Campo>
           <Campo etiqueta="Periodo hasta"><input type="date" className={CAMPO} value={hasta} onChange={(e) => setHasta(e.target.value)} /></Campo>
         </div>
         {n > 0 && <p className="-mt-2 text-[11.5px] text-tenue">{pesosEnLetras(n)}</p>}
+        {aviso && <Aviso tono={aviso.tipo === 'menos' ? 'ambar' : 'pizarra'} className="-mt-1">{aviso.texto} Revisa que esté bien escrito.</Aviso>}
+        <Campo etiqueta="Para el proyecto">
+          <select className={CAMPO} value={proyectos.some((p) => p.nombre === proyecto) || !proyecto ? proyecto : '__otro'}
+            onChange={(e) => setProyecto(e.target.value === '__otro' ? ' ' : e.target.value)}>
+            <option value="">—</option>
+            {proyectos.map((p) => <option key={p.codigo} value={p.nombre}>{p.nombre}</option>)}
+            <option value="__otro">Otro</option>
+          </select>
+          {proyecto && !proyectos.some((p) => p.nombre === proyecto) && (
+            <input className={`${CAMPO} mt-2`} placeholder="Nombre del proyecto" value={proyecto.trimStart()} onChange={(e) => setProyecto(e.target.value || ' ')} />
+          )}
+        </Campo>
+        <Campo etiqueta="Firma">
+          <FirmaDedo onCambio={setFirma} alto={160} />
+        </Campo>
         {!corregir && (
           <Campo etiqueta="Planilla de seguridad social del periodo (PDF, opcional)">
             <input type="file" accept="application/pdf,image/jpeg,image/png" className="text-[12px]" onChange={(e) => setPlanilla(e.target.files?.[0] ?? null)} />
@@ -453,7 +476,7 @@ function NuevaCuenta({ contrato, persona, corregir, onCerrar, onListo }: {
       </div>
       <Mensaje error={error} />
       <div className="mt-5 flex gap-2">
-        <Boton disabled={ocupado || faltaFicha || !concepto.trim() || !(n > 0)} onClick={radicar}>
+        <Boton disabled={ocupado || faltaFicha || !concepto.trim() || !(n > 0) || !firma} onClick={radicar}>
           {ocupado ? 'Enviando…' : corregir ? 'Enviar corregida' : 'Radicar y descargar PDF'}
         </Boton>
         <Boton variante="fantasma" icono={<X size={13} />} onClick={onCerrar}>Cancelar</Boton>

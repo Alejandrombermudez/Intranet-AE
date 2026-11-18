@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { errorTalento, faltaMigracionTalento, sesionTalento, AVISO_MIGRACION_TALENTO } from '@/lib/talento-api'
 
@@ -28,6 +29,8 @@ export async function PATCH(req: NextRequest) {
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!b) return NextResponse.json({ error: 'Solicitud inválida.' }, { status: 400 })
   const cambios: Record<string, unknown> = { updated_by: r.s.email }
+  // Clave nueva para el enlace público de cuentas de cobro: el enlace viejo deja de servir.
+  if (b.nueva_clave === true) cambios.clave_enlace = randomBytes(8).toString('base64url').slice(0, 10)
   for (const k of CAMPOS) {
     if (!(k in b)) continue
     const v = typeof b[k] === 'string' ? (b[k] as string).trim() : null

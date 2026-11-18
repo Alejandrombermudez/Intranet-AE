@@ -188,9 +188,22 @@ function Bandeja() {
   const [msg, setMsg] = useState<{ error?: string; ok?: string }>({})
   const [ocupado, setOcupado] = useState(false)
 
-  const cuentas = data ?? []
+  const [soloAvisos, setSoloAvisos] = useState(false)
+  const todas = data ?? []
+  const cuentas = soloAvisos ? todas.filter((c) => c.avisos?.length && c.estado !== 'anulada') : todas
   const elegidas = cuentas.filter((c) => sel.has(c.id))
   const total = cuentas.filter((c) => c.estado !== 'anulada').reduce((s, c) => s + Number(c.valor), 0)
+  const suma = (est: EstadoCuenta[]) => {
+    const l = todas.filter((c) => est.includes(c.estado))
+    return { n: l.length, v: l.reduce((s, c) => s + Number(c.valor), 0) }
+  }
+  const resumen = [
+    { ...suma(['radicada', 'aprobada']), l: 'Total por pagar', fuerte: true },
+    { ...suma(['radicada']), l: 'Por revisar', fuerte: false },
+    { ...suma(['aprobada']), l: 'Aprobadas, sin pagar', fuerte: false },
+    { ...suma(['pagada']), l: 'Pagadas', fuerte: false },
+  ]
+  const conAvisos = todas.filter((c) => c.avisos?.length && !['anulada', 'pagada'].includes(c.estado)).length
   const alternar = (id: string) => setSel((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
 
   async function enLote(accion: 'aprobar' | 'pagar') {
@@ -224,7 +237,7 @@ function Bandeja() {
     try {
       const JSZip = (await import('jszip')).default
       const zip = new JSZip()
-      const filas = [['N.º', 'Fecha', 'Nombre', 'Documento', 'Banco', 'Tipo de cuenta', 'Número de cuenta', 'Concepto', 'Valor', 'Estado']]
+      const filas = [['N.º', 'Fecha', 'Nombre', 'Documento', 'Celular', 'Banco', 'Tipo de cuenta', 'Número de cuenta', 'Proyecto', 'Concepto', 'Valor', 'Estado', 'Llegó por', 'Avisos']]
       for (const c of lista) {
         const nombre = nombreArchivoCuenta(c)
         zip.file(nombre, await pdfCuentaCobro(c))
@@ -237,9 +250,11 @@ function Bandeja() {
           }
         }
         const p = c.datos.persona
-        filas.push([String(c.consecutivo), c.fecha, `${p.nombres} ${p.apellidos}`, p.numero_documento, p.banco,
-          TIPO_CUENTA[p.tipo_cuenta ?? ''] ?? '', p.numero_cuenta, c.concepto, String(c.valor), ESTADO_CUENTA[c.estado].nombre])
+        filas.push([String(c.consecutivo), c.fecha, `${p.nombres} ${p.apellidos}`, p.numero_documento, p.celular ?? '', p.banco,
+          TIPO_CUENTA[p.tipo_cuenta ?? ''] ?? '', p.numero_cuenta, c.proyecto ?? '', c.concepto, String(c.valor), ESTADO_CUENTA[c.estado].nombre,
+          c.origen === 'enlace' ? 'Enlace' : 'Intranet', (c.avisos ?? []).join(' ')])
       }
+      filas.push(['', '', 'TOTAL', '', '', '', '', '', '', '', String(lista.filter((c) => c.estado !== 'anulada').reduce((s, c) => s + Number(c.valor), 0)), '', '', ''])
       const csv = filas.map((f) => f.map((x) => /[;"\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x).join(';')).join('\n')
       zip.file(`relacion-cuentas-de-cobro_${mes || 'todas'}.csv`, '﻿' + csv)
       descargarBlob(await zip.generateAsync({ type: 'blob' }), `cuentas-de-cobro_${mes || 'todas'}.zip`)
@@ -249,6 +264,21 @@ function Bandeja() {
 
   return (
     <>
+      <div className="mb-7 grid grid-cols-2 gap-6 sm:grid-cols-4">
+        {resumen.map((x) => (
+          <div key={x.l}>
+            <p className={`font-display text-2xl font-bold tabular-nums ${x.fuerte ? 'text-bosque' : 'text-tinta'}`}>{pesos(x.v)}</p>
+            <p className="text-[10px] uppercase tracking-[.14em] text-tenue">{x.l} · {x.n} cuenta{x.n === 1 ? '' : 's'}</p>
+          </div>
+        ))}
+      </div>
+      {conAvisos > 0 && (
+        <Aviso tono="ambar" className="mb-6">
+          {conAvisos === 1 ? 'Una cuenta tiene' : `${conAvisos} cuentas tienen`} algo que revisar antes de pagar (valor distinto al pactado,
+          datos de pago distintos a los de la ficha o persona nueva).{' '}
+          <button type="button" className="underline" onClick={() => { setSoloAvisos(!soloAvisos); setSel(new Set()) }}>{soloAvisos ? 'Ver todas' : 'Ver solo esas'}</button>
+        </Aviso>
+      )}
       <div className="mb-6 flex flex-wrap items-end gap-3">
         <Campo etiqueta="Mes" className="w-44"><input type="month" className={CAMPO} value={mes} onChange={(e) => { setMes(e.target.value); setSel(new Set()) }} /></Campo>
         <Campo etiqueta="Estado" className="w-44">
@@ -267,7 +297,7 @@ function Bandeja() {
       </div>
       {error && <Aviso tono="arcilla" className="mb-4">{error}</Aviso>}
       <Mensaje error={msg.error} ok={msg.ok} />
-      <Seccion titulo={`${cuentas.length} cuenta${cuentas.length === 1 ? '' : 's'} · ${pesos(total)}`} sub="El .zip lleva el PDF de cada cuenta, su planilla de seguridad social si la adjuntaron y una relación en CSV con los datos bancarios para el pago.">
+      <Seccion titulo={`${cuentas.length} cuenta${cuentas.length === 1 ? '' : 's'} · ${pesos(total)}`} sub="«PDF» descarga una sola. El .zip lleva el PDF de cada cuenta (las marcadas, o todas las del mes), su planilla de seguridad social si la adjuntaron y una relación en CSV con los datos bancarios, los avisos y el total.">
         {data === null ? <Vacio>Cargando…</Vacio> : cuentas.length === 0 ? <Vacio>No hay cuentas de cobro en este mes</Vacio> : (
           <div className="overflow-x-auto vidrio rounded-2xl">
             <table className="w-full">
@@ -289,16 +319,22 @@ function Bandeja() {
                       <td className={TD}>
                         <Link href={`/intranet/administrativa/personas/${c.persona_id}?tab=cuentas`} className="hover:underline">{p.nombres} {p.apellidos}</Link>
                         <span className="block text-[11px] text-tenue">{p.banco} · {p.numero_cuenta}</span>
+                        {c.origen === 'enlace' && <span className="block text-[11px] text-tenue">Por el enlace{p.celular ? ` · ${p.celular}` : ''}</span>}
                       </td>
                       <td className={`${TD} tabular-nums`}>{String(c.consecutivo).padStart(3, '0')}<span className="block text-[11px] text-tenue">{fechaLarga(c.fecha)}</span></td>
-                      <td className={`${TD} text-[12px]`}>{c.concepto}{c.observacion && c.estado === 'devuelta' && <span className="block text-red-700">{c.observacion}</span>}</td>
+                      <td className={`${TD} text-[12px]`}>{c.concepto}
+                        {c.proyecto && <span className="block text-[11px] text-tenue">{c.proyecto}</span>}
+                        {c.observacion && c.estado === 'devuelta' && <span className="block text-red-700">{c.observacion}</span>}
+                        {!['anulada', 'pagada'].includes(c.estado) && c.avisos?.map((a) => <span key={a} className="mt-1 block rounded-lg bg-ambar/20 px-2 py-1 text-[11.5px] text-tinta">{a}</span>)}
+                      </td>
                       <td className={`${TD} whitespace-nowrap text-right tabular-nums`}>{pesos(c.valor)}</td>
                       <td className={`${TD} whitespace-nowrap`}><MarcaEstado color={ESTADO_CUENTA[c.estado].color}>{ESTADO_CUENTA[c.estado].nombre}</MarcaEstado></td>
                       <td className={`${TD} whitespace-nowrap text-right`}>
                         <button type="button" className={b} onClick={async () => descargarBlob(await pdfCuentaCobro(c), nombreArchivoCuenta(c))}>PDF</button>
                         {c.soporte_planilla && <button type="button" className={b} onClick={() => abrirFirmadaCuenta(c.id)}>Planilla</button>}
                         {c.estado === 'radicada' && <button type="button" className={b} onClick={() => una(c, 'aprobar')}>Aprobar</button>}
-                        {['radicada', 'aprobada'].includes(c.estado) && <button type="button" className={b} onClick={() => una(c, 'devolver')}>Devolver</button>}
+                        {/* Por el enlace no hay a dónde devolverla: se anula con el motivo y se le avisa por teléfono. */}
+                        {['radicada', 'aprobada'].includes(c.estado) && c.origen !== 'enlace' && <button type="button" className={b} onClick={() => una(c, 'devolver')}>Devolver</button>}
                         {c.estado === 'aprobada' && <button type="button" className={b} onClick={() => una(c, 'pagar')}>Pagada</button>}
                         {['radicada', 'aprobada', 'devuelta'].includes(c.estado) && <button type="button" className={b} onClick={() => una(c, 'anular')}>Anular</button>}
                       </td>
@@ -342,9 +378,27 @@ function FormPlantillas({ inicial }: { inicial: ConfigTalento }) {
     pon('firmante_firma', url)
   }
 
+  const enlace = v.clave_enlace && typeof window !== 'undefined' ? `${window.location.origin}/cuenta-cobro?c=${v.clave_enlace}` : null
+  async function nuevaClave() {
+    if (!confirm('El enlace actual deja de funcionar y hay que mandar el nuevo a todos. ¿Cambiar la clave?')) return
+    try { const j = await enviar<{ config: ConfigTalento }>('/api/talento/config', 'PATCH', { nueva_clave: true }); setV((o) => ({ ...o, clave_enlace: j.config.clave_enlace })); setMsg({ ok: 'Clave cambiada. Comparta el enlace nuevo.' }) }
+    catch (e) { setMsg({ error: (e as Error).message }) }
+  }
+
   return (
     <div className="max-w-3xl">
       {(!v.nit || !v.firmante_nombre) && <Aviso tono="ambar" className="mb-6">Faltan el NIT y quién firma: sin ellos los certificados y las cuentas de cobro salen incompletos.</Aviso>}
+      <Seccion titulo="Enlace para pasar cuentas de cobro" sub="Para operarios y contratistas sin correo de la organización: llenan sus datos, firman con el dedo y la cuenta llega a la bandeja. Compártalo por WhatsApp; quien no tenga el enlace no puede enviar.">
+        {enlace ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <code className="min-w-0 flex-1 break-all rounded-xl bg-white/60 px-3 py-2.5 text-[12.5px] text-tinta">{enlace}</code>
+            <Boton variante="secundario" onClick={async () => { await navigator.clipboard.writeText(enlace); setMsg({ ok: 'Enlace copiado.' }) }}>Copiar</Boton>
+            <Boton variante="fantasma" onClick={nuevaClave}>Cambiar clave</Boton>
+          </div>
+        ) : (
+          <Aviso tono="ambar">Falta correr <code>docs/sql/migration_cuentas_cobro_enlace.sql</code> en Supabase para habilitar el enlace.</Aviso>
+        )}
+      </Seccion>
       <Seccion titulo="La organización" sub="Encabezan los certificados y las cuentas de cobro.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo etiqueta="Razón social"><input className={CAMPO} value={v.razon_social ?? ''} onChange={(e) => pon('razon_social', e.target.value)} /></Campo>

@@ -126,14 +126,21 @@ export interface DatosCuenta {
   persona: {
     nombres: string; apellidos: string; tipo_documento: string | null; numero_documento: string
     lugar_expedicion: string | null; direccion: string | null; municipio: string | null; celular: string | null
-    email: string; banco: string; tipo_cuenta: string | null; numero_cuenta: string; responsable_iva: boolean
+    email: string | null; banco: string; tipo_cuenta: string | null; numero_cuenta: string; responsable_iva: boolean
     firma: string | null
   }
+  /** Null cuando la cuenta llegó por el enlace y la persona no tiene contrato cargado. */
   contrato: { numero: string | null; objeto: string | null; cargo: string; proyecto: string | null
-    fecha_inicio: string; fecha_fin: string | null; valor_mensual: number | null }
+    fecha_inicio: string; fecha_fin: string | null; valor_mensual: number | null } | null
   organizacion: { razon_social: string | null; nit: string | null; direccion: string | null; ciudad: string | null
     texto_cuenta_cobro: string | null }
   radicada: string
+  /** Cuándo firmó con el dedo (las de antes del 2026-11-18 no lo traen). */
+  firmada?: string | null
+  /** Solo por el enlace: la ficha se creó con esta cuenta. */
+  persona_nueva?: boolean
+  /** Solo por el enlace: lo que escribió y no coincide con la ficha guardada. */
+  diferencias?: { campo: string; guardado: string; escrito: string }[]
 }
 
 export interface CuentaCobro {
@@ -155,6 +162,12 @@ export interface CuentaCobro {
   pagada_at: string | null
   radicada_por: string | null
   created_at: string
+  /** Desde migration_cuentas_cobro_enlace.sql */
+  origen?: 'intranet' | 'enlace'
+  proyecto?: string | null
+  municipio?: string | null
+  /** Los calcula la bandeja (GET /api/talento/cuentas): lo que hay que mirar antes de pagar. */
+  avisos?: string[]
 }
 
 export interface ConfigTalento {
@@ -168,6 +181,8 @@ export interface ConfigTalento {
   firmante_cargo: string | null
   firmante_firma: string | null
   texto_cuenta_cobro: string | null
+  /** La clave que va en el enlace público de cuentas de cobro. */
+  clave_enlace?: string | null
 }
 
 export interface Certificado {

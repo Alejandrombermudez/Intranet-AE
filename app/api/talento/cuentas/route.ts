@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { asegurarFicha, errorTalento, faltaMigracionTalento, sello, sesionTalento, subirArchivo, AVISO_MIGRACION_TALENTO, BUCKET_TALENTO } from '@/lib/talento-api'
+import { asegurarFicha, errorTalento, faltaMigracionTalento, sello, sesionTalento, subirArchivo, AVISO_MIGRACION_TALENTO, BUCKET_TALENTO, type SB } from '@/lib/talento-api'
+import { avisoValor } from '@/lib/cuenta-cobro-valor'
+import { TIPO_CUENTA, type CuentaCobro } from '@/lib/talento'
 
 /**
  * Cuentas de cobro.
@@ -26,7 +28,38 @@ export async function GET(req: NextRequest) {
     if (faltaMigracionTalento(error)) return NextResponse.json({ cuentas: [], faltaMigracion: true, aviso: AVISO_MIGRACION_TALENTO })
     return errorTalento(error)
   }
-  return NextResponse.json({ cuentas: data ?? [] })
+  return NextResponse.json({ cuentas: await conAvisos(r.s.supabase, (data ?? []) as CuentaCobro[]) })
+}
+
+const CAMPO_DIF: Record<string, string> = { nombres: 'nombres', apellidos: 'apellidos', banco: 'banco', numero_cuenta: 'número de cuenta', tipo_cuenta: 'tipo de cuenta' }
+
+/**
+ * Lo que talento humano debe mirar antes de pagar cada cuenta:
+ *   · el valor no cuadra con los honorarios del contrato (proporcional al
+ *     periodo) o, sin contrato, con la cuenta anterior de la misma persona;
+ *   · por el enlace escribió datos de pago distintos a los de su ficha;
+ *   · por el enlace llegó una persona que no estaba registrada.
+ */
+async function conAvisos(supabase: SB, cuentas: CuentaCobro[]): Promise<CuentaCobro[]> {
+  if (!cuentas.length) return cuentas
+  const personas = [...new Set(cuentas.map((c) => c.persona_id))]
+  const { data: historia } = await supabase.schema('people').from('cuentas_cobro')
+    .select('persona_id, consecutivo, valor, estado').in('persona_id', personas).neq('estado', 'anulada')
+  return cuentas.map((c) => {
+    const avisos: string[] = []
+    const anterior = (historia ?? [])
+      .filter((h) => h.persona_id === c.persona_id && h.consecutivo < c.consecutivo)
+      .sort((a, b) => b.consecutivo - a.consecutivo)[0]
+    const v = avisoValor(Number(c.valor), { desde: c.periodo_desde, hasta: c.periodo_hasta },
+      { mensual: c.datos.contrato?.valor_mensual ?? null, anterior: anterior ? Number(anterior.valor) : null })
+    if (v) avisos.push(v.texto)
+    for (const d of c.datos.diferencias ?? []) {
+      const t = (x: string) => (d.campo === 'tipo_cuenta' ? TIPO_CUENTA[x] ?? x : x)
+      avisos.push(`Escribió ${CAMPO_DIF[d.campo] ?? d.campo} «${t(d.escrito)}», distinto al de su ficha («${t(d.guardado)}»).`)
+    }
+    if (c.datos.persona_nueva) avisos.push('Persona nueva: se registró con esta cuenta. Revise sus datos.')
+    return { ...c, avisos }
+  })
 }
 
 export async function POST(req: NextRequest) {

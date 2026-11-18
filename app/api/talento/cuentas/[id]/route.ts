@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorTalento, esDeLaSesion, sesionTalento, urlFirmada } from '@/lib/talento-api'
 import type { CuentaCobro, EstadoCuenta } from '@/lib/talento'
+import { hoyColombia } from '@/lib/administrativa'
 
 /**
  * Una cuenta de cobro.
@@ -67,9 +68,13 @@ export async function PATCH(req: NextRequest, { params }: Contexto) {
       return NextResponse.json({ error: 'Completa en tu ficha el documento, el banco y el número de cuenta.' }, { status: 400 })
     }
     const fecha = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null)
+    const firma = typeof b?.firma === 'string' && /^data:image\/png;base64,/.test(b.firma) && b.firma.length <= 200000 ? b.firma : null
+    if (!firma && !duena.firma) return NextResponse.json({ error: 'Falta la firma.' }, { status: 400 })
+    const proyecto = typeof b?.proyecto === 'string' && b.proyecto.trim() ? b.proyecto.trim().slice(0, 200) : cuenta.proyecto ?? null
     cambios = {
       concepto, valor, periodo_desde: fecha(b?.periodo_desde), periodo_hasta: fecha(b?.periodo_hasta),
-      estado: 'radicada', fecha: new Date().toISOString().slice(0, 10),
+      estado: 'radicada', fecha: hoyColombia(),
+      ...('proyecto' in cuenta ? { proyecto } : {}),
       datos: {
         ...cuenta.datos,
         persona: {
@@ -77,9 +82,10 @@ export async function PATCH(req: NextRequest, { params }: Contexto) {
           numero_documento: duena.numero_documento, lugar_expedicion: duena.lugar_expedicion, direccion: duena.direccion,
           municipio: duena.municipio, celular: duena.celular, email: duena.email, banco: duena.banco,
           tipo_cuenta: duena.tipo_cuenta, numero_cuenta: duena.numero_cuenta, responsable_iva: duena.responsable_iva,
-          firma: duena.firma,
+          firma: firma ?? duena.firma,
         },
         radicada: new Date().toISOString(),
+        firmada: firma ? new Date().toISOString() : null,
       },
     }
   } else if (accion === 'anular' && esDuena && !r.s.rrhh) {

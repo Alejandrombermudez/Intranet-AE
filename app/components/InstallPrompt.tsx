@@ -1,5 +1,6 @@
 'use client'
 import { useState, useSyncExternalStore } from 'react'
+import { usePathname } from 'next/navigation'
 import { X } from 'lucide-react'
 
 interface DeviceInfo {
@@ -33,7 +34,10 @@ function getCachedSnapshot(): DeviceInfo {
 export default function InstallPrompt() {
   const deviceInfo = useSyncExternalStore(emptySubscribe, getCachedSnapshot, getServerSnapshot)
   const [isVisible, setIsVisible] = useState(true)
+  // El enlace público de cuentas de cobro no es la intranet: no se ofrece instalarla ahí.
+  const ruta = usePathname()
 
+  if (ruta?.startsWith('/cuenta-cobro')) return null
   if (!deviceInfo.isMobile || deviceInfo.isStandalone || !isVisible) return null
 
   return (

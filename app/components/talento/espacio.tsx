@@ -200,7 +200,7 @@ export function VistaEspacio({
           <SeccionCertificados certificados={exp.certificados} personaId={p.id} modo="persona"
             hayContratos={exp.contratos.some((c) => c.estado !== 'anulado')} onCambio={onRecargar} />
         )}
-        {tab === 'cuentas' && <SeccionCuentas cuentas={exp.cuentas} contratos={exp.contratos} persona={p} modo="persona" onCambio={onRecargar} />}
+        {tab === 'cuentas' && <SeccionCuentas cuentas={exp.cuentas} contratos={exp.contratos} persona={p} modo="persona" proyectos={proyectos} onCambio={onRecargar} />}
       </Contenido>
     </div>
   )

@@ -13,6 +13,16 @@
 
 -- (Nada pendiente de la app de campo.)
 
+-- ── PENDIENTE (2026-11-18)  migration_cuentas_cobro_enlace.sql ─────────────
+--             Enlace público /cuenta-cobro?c=<clave> para operarios y
+--             contratistas sin correo: people.personas.email deja de ser
+--             obligatorio, cuentas_cobro sin contrato (origen, proyecto,
+--             municipio), config_talento.clave_enlace y
+--             people.radicar_cuenta_enlace. Mi espacio: firma con el dedo.
+--             Probada dos veces en PGlite (13 casos). Sin correrla, el enlace
+--             responde «todavía no está habilitado» y Mi espacio sigue igual
+--             que antes (la firma con el dedo no se guarda).
+
 -- ════════════════════════════════════════════════════════════
 -- HISTORIAL — ya ejecutado en producción
 -- ════════════════════════════════════════════════════════════
