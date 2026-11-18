@@ -140,7 +140,6 @@
 .vh .evento b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .vh .evento span { display: block; opacity: .92; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vh .evento.mia { outline: 2px solid var(--tinta); outline-offset: -2px; }
-.vh .bloqueo { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(45deg, rgba(109,103,91,.12) 0 8px, transparent 8px 16px); display: flex; align-items: flex-start; justify-content: center; padding-top: 6px; font-size: 11px; color: var(--tenue); }
 .vh .ahora { position: absolute; left: 0; right: 0; border-top: 2px solid var(--arcilla); z-index: 3; pointer-events: none; }
 .vh .ahora::before { content: ''; position: absolute; left: -4px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--arcilla); }
 

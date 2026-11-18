@@ -46,8 +46,6 @@ export interface MiReserva {
   checkOutHecho: boolean
 }
 
-export const FOTON_ID = 'camioneta2'
-
 export async function llamar<T = unknown>(url: string, opciones?: RequestInit): Promise<T> {
   const res = await fetch(url, opciones)
   const json = await res.json().catch(() => ({}))

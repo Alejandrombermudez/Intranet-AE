@@ -1,13 +1,13 @@
 import type { Conductor } from './sesion'
 import { fleet } from './sesion'
-import { aInstante, diaSemanaBogota, diasDelRango, fechaBogota } from './horas'
-import { FOTON_ID, unirMotivo } from './cliente'
+import { fechaBogota } from './horas'
+import { unirMotivo } from './cliente'
 
 type Resultado = { ok: true; id: string } | { ok: false; status: number; error: string }
 
 /**
- * Crea una reserva con todas las reglas: horario válido y futuro, Foton libre lunes y martes
- * para uso interno, sin cruce con otra reserva y sin que alguien lo tenga tomado sin devolver.
+ * Crea una reserva con todas las reglas: horario válido y futuro y sin cruce con otra reserva.
+ * (La Foton dejó de estar bloqueada lunes y martes el 2026-11-18, a pedido del usuario.)
  * La usan el calendario (/api/vehiculos/reservas) y «Recepción» sin reserva (/api/vehiculos/tomar).
  */
 export async function crearReserva(
@@ -24,10 +24,6 @@ export async function crearReserva(
   const db = fleet()
   const { data: vehiculo } = await db.from('vehiculos').select('id, nombre').eq('id', datos.vehicleId).eq('activo', true).maybeSingle()
   if (!vehiculo) return { ok: false, status: 400, error: 'Elige un vehículo.' }
-
-  if (vehiculo.id === FOTON_ID && diasDelRango(ini, fin).some((d) => [1, 2].includes(diaSemanaBogota(aInstante(d, '12:00'))))) {
-    return { ok: false, status: 409, error: 'La Foton no se reserva los lunes ni los martes (uso interno).' }
-  }
 
   const { data: choques, error: eChoque } = await db
     .from('vehicle_reservations')

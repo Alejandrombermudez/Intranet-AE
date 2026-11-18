@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { aInstante, diaSemanaBogota, fechaCorta, fechaLarga, hoyBogota, hora12, horaBogota, lunesDe, mesYAnio, minutosDelDia, nombreDia, sumarDias } from '@/lib/vehiculos/horas'
-import { FOTON_ID, llamar, separarMotivo, type Reserva, type Vehiculo } from '@/lib/vehiculos/cliente'
+import { aInstante, fechaCorta, fechaLarga, hoyBogota, hora12, horaBogota, lunesDe, mesYAnio, minutosDelDia, nombreDia, sumarDias } from '@/lib/vehiculos/horas'
+import { llamar, separarMotivo, type Reserva, type Vehiculo } from '@/lib/vehiculos/cliente'
 
 const HORA_INI = 5
 const HORA_FIN = 21
@@ -172,13 +172,11 @@ export default function Calendario({
               const delVehiculo = reservas.filter((r) => (c.vehicleId ? r.vehicle_id === c.vehicleId : true))
               const segs = delVehiculo.map((r) => segmento(r, c.fecha)).filter((s): s is Seg => !!s)
               const posicionados = repartir(segs)
-              const fotonBloqueada = c.vehicleId === FOTON_ID && [1, 2].includes(diaSemanaBogota(aInstante(c.fecha, '12:00')))
               return (
                 <div key={c.clave} className="col" style={{ cursor: puedeReservar ? 'cell' : 'default' }} onClick={(e) => clic(e, c)}>
                   {Array.from({ length: (HORA_FIN - HORA_INI) * 2 }, (_, i) => (
                     <div key={i} className={`linea ${i % 2 ? 'media' : ''}`} style={{ top: (i * PX_HORA) / 2 }} />
                   ))}
-                  {fotonBloqueada && <div className="bloqueo">Uso interno</div>}
                   {c.fecha === hoy && minAhora >= HORA_INI * 60 && minAhora < HORA_FIN * 60 && (
                     <div className="ahora" style={{ top: top(minAhora) }} />
                   )}
