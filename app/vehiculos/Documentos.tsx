@@ -6,7 +6,7 @@ import { fechaCorta } from '@/lib/vehiculos/horas'
 export interface DocsVehiculo {
   nombre: string
   placa: string | null
-  tarjeta: string | null
+  tarjeta: Documento | null
   soat: Documento | null
   tecno: Documento | null
   soat_vence: string | null
@@ -23,19 +23,18 @@ function Vence({ fecha }: { fecha: string | null }) {
 
 /**
  * Los documentos del vehículo en una sola ventana, para mostrarlos en la vía desde el celular:
- * tarjeta de propiedad, SOAT y tecnomecánica (los dos últimos pueden ser foto o PDF).
+ * tarjeta de propiedad, SOAT y tecnomecánica (cada uno puede ser foto o PDF).
  */
 export default function Documentos({ v, onCerrar }: { v: DocsVehiculo; onCerrar: () => void }) {
   const [imagen, setImagen] = useState<{ titulo: string; url: string } | null>(null)
 
-  const abrir = (titulo: string, doc: Documento | string | null) => {
-    if (!doc) return
-    const d = typeof doc === 'string' ? { url: doc, pdf: false } : doc
+  const abrir = (titulo: string, d: Documento | null) => {
+    if (!d) return
     if (d.pdf) window.open(d.url, '_blank', 'noopener')
     else setImagen({ titulo, url: d.url })
   }
 
-  const filas: { titulo: string; doc: Documento | string | null; vence?: string | null }[] = [
+  const filas: { titulo: string; doc: Documento | null; vence?: string | null }[] = [
     { titulo: 'Tarjeta de propiedad', doc: v.tarjeta },
     { titulo: 'SOAT', doc: v.soat, vence: v.soat_vence },
     { titulo: 'Tecnomecánica', doc: v.tecno, vence: v.tecnomecanica_vence },

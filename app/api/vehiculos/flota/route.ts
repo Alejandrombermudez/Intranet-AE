@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { documentosExtra, enlaceFirmado, exigirConductor, fleet } from '@/lib/vehiculos/sesion'
+import { documento, documentosExtra, enlaceFirmado, exigirConductor, fleet } from '@/lib/vehiculos/sesion'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,7 +24,7 @@ export async function GET() {
     id: v.id, nombre: v.nombre, corto: v.corto, placa: v.placa, tipo: v.tipo, color: v.color,
     soat_vence: v.soat_vence, tecnomecanica_vence: v.tecnomecanica_vence,
     foto: await enlaceFirmado(v.foto_path),
-    tarjeta: await enlaceFirmado(v.tarjeta_path),
+    tarjeta: await documento(v.tarjeta_path),
     soat_doc: extra.soat, tecno_doc: extra.tecno,
   }}))
   return NextResponse.json({ vehiculos })

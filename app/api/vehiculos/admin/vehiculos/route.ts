@@ -23,8 +23,10 @@ export async function PATCH(req: NextRequest) {
 
 /**
  * POST /api/vehiculos/admin/vehiculos (multipart: id, cual, archivo)
- *   cual = foto | tarjeta  → imagen; queda en la columna foto_path / tarjeta_path
+ *   cual = foto            → imagen; columna foto_path
+ *   cual = tarjeta         → imagen o PDF; columna tarjeta_path
  *   cual = soat | tecno    → imagen o PDF; sin columna, el más reciente `<id>/<cual>-<ms>.<ext>`
+ * El navegador ya los manda comprimidos (Admin.tsx, con lib/comprimir-imagen y lib/comprimir-pdf).
  * Todo en el bucket privado «flota». Cada subida lleva su propio nombre y la anterior se borra,
  * para que ningún celular siga mostrando una copia vieja.
  */
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
   }
   if (archivo.size > 3_500_000) return NextResponse.json({ error: 'El archivo pesa demasiado (máximo 3,5 MB).' }, { status: 413 })
   const esPdf = archivo.type === 'application/pdf'
-  if (esPdf && !['soat', 'tecno'].includes(cual)) return NextResponse.json({ error: 'Para esto sube una foto.' }, { status: 400 })
+  if (esPdf && cual === 'foto') return NextResponse.json({ error: 'Para la foto del vehículo sube una imagen.' }, { status: 400 })
 
   const db = fleet()
   const { data: v } = await db.from('vehiculos').select('id, foto_path, tarjeta_path').eq('id', id).maybeSingle()

@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { enviar, llamar, type Vehiculo } from '@/lib/vehiculos/cliente'
 import { fechaBogota, fechaCorta, hora12, horaBogota } from '@/lib/vehiculos/horas'
-import { comprimir } from './Inspeccion'
+import { comprimirImagen } from '@/lib/comprimir-imagen'
+import { aligerarDocumento, esPdf } from '@/lib/comprimir-pdf'
 
 interface Fila { id: string; nombre: string; email: string | null; esAdmin: boolean; activo: boolean; pin: 'sin' | 'inicial' | 'propio'; bloqueado: boolean }
 
@@ -146,10 +147,14 @@ function Vehiculos({ vehiculos, onCambio }: { vehiculos: Vehiculo[]; onCambio: (
       const fd = new FormData()
       fd.append('id', v.id)
       fd.append('cual', cual)
-      // La tarjeta se deja más grande para que se lea la letra menuda.
-      // Los PDF van tal cual; las fotos se reducen (los documentos más grandes, para que se lea la letra menuda).
-      if (archivo.type === 'application/pdf') fd.append('archivo', archivo, `${cual}.pdf`)
-      else fd.append('archivo', await comprimir(archivo, cual === 'foto' ? 1280 : 2000, 0.85), `${cual}.jpg`)
+      // Todo se comprime en el celular o el computador antes de subirlo, para que no pese en el
+      // almacenamiento: la foto del vehículo a ~250 KB; los documentos con la misma vara que usa
+      // jurídica para las cédulas (fotos a ~500 KB y 1600 px, que se leen bien; en los PDF se
+      // recomprimen las fotos escaneadas que llevan dentro, sin tocar el texto).
+      const pdf = esPdf(archivo)
+      const listo = cual === 'foto' ? await comprimirImagen(archivo, 250_000) : (await aligerarDocumento(archivo)).archivo
+      if (listo.size > 3_500_000) throw new Error('El archivo sigue pesando más de 3,5 MB. Escanéalo de nuevo o sube una foto.')
+      fd.append('archivo', new File([listo], `${cual}.${pdf ? 'pdf' : 'jpg'}`, { type: pdf ? 'application/pdf' : 'image/jpeg' }))
       const res = await fetch('/api/vehiculos/admin/vehiculos', { method: 'POST', body: fd })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(json.error || 'No se pudo subir.')
@@ -189,7 +194,7 @@ function Vehiculos({ vehiculos, onCambio }: { vehiculos: Vehiculo[]; onCambio: (
                   return (
                     <label key={cual} className="btn suave chico" style={{ cursor: 'pointer' }}>
                       {subiendo === `${v.id}:${cual}` ? 'Subiendo…' : `${hay ? 'Cambiar' : 'Subir'} ${NOMBRE_ARCHIVO[cual]}`}
-                      <input type="file" accept={cual === 'soat' || cual === 'tecno' ? 'image/*,application/pdf' : 'image/*'} hidden
+                      <input type="file" accept={cual === 'foto' ? 'image/*' : 'image/*,application/pdf'} hidden
                         onChange={(e) => { subir(v, cual, e.target.files?.[0]); e.target.value = '' }} />
                     </label>
                   )

@@ -110,6 +110,12 @@ export async function enlaceFirmado(ruta: string | null | undefined): Promise<st
 
 export interface Documento { url: string; pdf: boolean }
 
+/** Documento con columna propia (la tarjeta de propiedad): foto o PDF según la extensión. */
+export async function documento(ruta: string | null | undefined): Promise<Documento | null> {
+  const url = await enlaceFirmado(ruta)
+  return url ? { url, pdf: /\.pdf$/i.test(ruta ?? '') } : null
+}
+
 /**
  * SOAT y tecnomecánica del vehículo (foto o PDF). No tienen columna: son el archivo más reciente
  * `<id>/soat-<ms>.<ext>` y `<id>/tecno-<ms>.<ext>` del bucket privado. Enlaces firmados de 1 hora.

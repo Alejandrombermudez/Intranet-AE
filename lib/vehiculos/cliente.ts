@@ -19,7 +19,7 @@ export interface Vehiculo {
   tipo: 'carro' | 'camioneta' | 'moto'
   color: string
   foto: string | null      // enlace firmado, vence en 1 hora
-  tarjeta: string | null   // enlace firmado, vence en 1 hora
+  tarjeta: Documento | null  // foto o PDF de la tarjeta de propiedad (enlace firmado, 1 hora)
   soat_vence: string | null
   tecnomecanica_vence: string | null
   soat_doc: Documento | null   // foto o PDF del SOAT

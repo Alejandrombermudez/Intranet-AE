@@ -5,29 +5,9 @@ import {
   type Categorias, type ClaveCategoria,
 } from '@/lib/vehiculos/inspeccion'
 import { enviar, type MiReserva, type Vehiculo } from '@/lib/vehiculos/cliente'
+import { comprimirImagen } from '@/lib/comprimir-imagen'
 
 type Paso = 'terminos' | ClaveCategoria | 'fotos'
-
-/** Reduce la foto en el celular antes de subirla (≈ 300 KB en vez de varios MB). */
-export async function comprimir(archivo: File, ancho = 1280, calidad = 0.82): Promise<Blob> {
-  const url = URL.createObjectURL(archivo)
-  try {
-    const img = await new Promise<HTMLImageElement>((ok, mal) => {
-      const i = new Image()
-      i.onload = () => ok(i)
-      i.onerror = () => mal(new Error('No pude leer esa foto.'))
-      i.src = url
-    })
-    const escala = Math.min(1, ancho / img.width)
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.round(img.width * escala)
-    canvas.height = Math.round(img.height * escala)
-    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
-    return await new Promise<Blob>((ok, mal) => canvas.toBlob((b) => (b ? ok(b) : mal(new Error('No pude preparar la foto.'))), 'image/jpeg', calidad))
-  } finally {
-    URL.revokeObjectURL(url)
-  }
-}
 
 export default function Inspeccion({
   vehiculo, reserva, tipo, onSalir, onHecho,
@@ -67,7 +47,7 @@ export default function Inspeccion({
   const elegirFoto = async (slot: string, archivo: File | undefined) => {
     if (!archivo) return
     try {
-      const blob = await comprimir(archivo)
+      const blob = await comprimirImagen(archivo, 250_000)
       setFotos((f) => {
         if (f[slot]) URL.revokeObjectURL(f[slot].vista)
         return { ...f, [slot]: { blob, vista: URL.createObjectURL(blob) } }
