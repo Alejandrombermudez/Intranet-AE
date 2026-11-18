@@ -25,7 +25,7 @@ const PERSONALES = ['tipo_documento', 'numero_documento', 'lugar_expedicion', 'n
   'direccion', 'municipio', 'correo', 'banco', 'tipo_cuenta', 'numero_cuenta', 'proyecto'] as const
 type Clave = typeof PERSONALES[number] | 'concepto' | 'periodo_desde' | 'periodo_hasta'
 const OBLIGATORIOS: Clave[] = ['nombres', 'apellidos', 'numero_documento', 'lugar_expedicion', 'celular', 'direccion',
-  'municipio', 'concepto', 'proyecto', 'banco', 'tipo_cuenta', 'numero_cuenta']
+  'municipio', 'correo', 'concepto', 'proyecto', 'banco', 'tipo_cuenta', 'numero_cuenta']
 
 const CAMPO = 'w-full rounded-xl border border-linea bg-white px-3.5 py-3 text-[16px] text-tinta outline-none transition focus:border-bosque focus:ring-2 focus:ring-bosque/15'
 const hoyISO = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
@@ -37,7 +37,6 @@ export default function Pagina() {
 function CuentaCobroEnlace() {
   const clave = useSearchParams().get('c')
   const [org, setOrg] = useState<{ razon_social: string | null; nit: string | null } | null>(null)
-  const [proyectos, setProyectos] = useState<string[]>([])
   const [errorEnlace, setErrorEnlace] = useState<string | null>(null)
 
   useEffect(() => {
@@ -45,7 +44,7 @@ function CuentaCobroEnlace() {
     fetch(`/api/cuenta-cobro?c=${encodeURIComponent(clave)}`).then(async (r) => {
       const j = await r.json().catch(() => ({}))
       if (!r.ok) { setErrorEnlace(j.error ?? 'No se pudo abrir el formulario.'); return }
-      setOrg(j.organizacion); setProyectos(j.proyectos ?? [])
+      setOrg(j.organizacion)
     }).catch(() => setErrorEnlace('Sin conexión. Revise los datos o el wifi e intente de nuevo.'))
   }, [clave])
 
@@ -64,14 +63,14 @@ function CuentaCobroEnlace() {
         ) : !org ? (
           <p className="py-10 text-center text-[13px] text-tenue">Cargando…</p>
         ) : (
-          <Formulario clave={clave!} org={org} proyectos={proyectos} />
+          <Formulario clave={clave!} org={org} />
         )}
       </div>
     </div>
   )
 }
 
-function Formulario({ clave, org, proyectos }: { clave: string; org: { razon_social: string | null; nit: string | null }; proyectos: string[] }) {
+function Formulario({ clave, org }: { clave: string; org: { razon_social: string | null; nit: string | null } }) {
   const mes = mesDe(hoyISO())
   const [v, setV] = useState<Record<Clave, string>>(() => ({
     tipo_documento: 'CC', numero_documento: '', lugar_expedicion: '', nombres: '', apellidos: '', celular: '',
@@ -191,7 +190,7 @@ function Formulario({ clave, org, proyectos }: { clave: string; org: { razon_soc
         {campo('direccion', 'Dirección', { autoComplete: 'street-address' })}
         <div className="grid grid-cols-2 gap-3">
           {campo('municipio', 'Municipio', { placeholder: 'Florencia', autoComplete: 'address-level2' })}
-          {campo('correo', 'Correo', { type: 'email', inputMode: 'email', autoComplete: 'email' }, true)}
+          {campo('correo', 'Correo', { type: 'email', inputMode: 'email', autoComplete: 'email' })}
         </div>
       </Bloque>
 
@@ -210,20 +209,7 @@ function Formulario({ clave, org, proyectos }: { clave: string; org: { razon_soc
           <textarea className={`${CAMPO} min-h-24${mal('concepto')}`} value={v.concepto} onChange={(e) => pon('concepto', e.target.value)}
             placeholder="Ej. Prestación de servicios de apoyo en vivero durante el mes de noviembre de 2026" />
         </Etiqueta>
-        <Etiqueta texto="Para el proyecto" campo="proyecto">
-          {proyectos.length ? (
-            <select className={CAMPO + mal('proyecto')} value={proyectos.includes(v.proyecto) || !v.proyecto ? v.proyecto : '__otro'}
-              onChange={(e) => pon('proyecto', e.target.value === '__otro' ? ' ' : e.target.value)}>
-              <option value="">Elija el proyecto</option>
-              {proyectos.map((p) => <option key={p}>{p}</option>)}
-              <option value="__otro">Otro</option>
-            </select>
-          ) : null}
-          {(!proyectos.length || (v.proyecto && !proyectos.includes(v.proyecto))) && (
-            <input className={`${CAMPO} mt-2${mal('proyecto')}`} placeholder="Nombre del proyecto" value={v.proyecto.trimStart()}
-              onChange={(e) => pon('proyecto', e.target.value || ' ')} />
-          )}
-        </Etiqueta>
+        {campo('proyecto', 'Para el proyecto', { placeholder: 'Nombre del proyecto' })}
         <div className="grid grid-cols-2 gap-3">
           {campo('periodo_desde', 'Periodo desde', { type: 'date' })}
           {campo('periodo_hasta', 'Hasta', { type: 'date' })}
