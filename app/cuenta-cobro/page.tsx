@@ -25,7 +25,7 @@ const PERSONALES = ['tipo_documento', 'numero_documento', 'lugar_expedicion', 'n
   'direccion', 'municipio', 'correo', 'banco', 'tipo_cuenta', 'numero_cuenta', 'proyecto'] as const
 type Clave = typeof PERSONALES[number] | 'concepto' | 'periodo_desde' | 'periodo_hasta'
 const OBLIGATORIOS: Clave[] = ['nombres', 'apellidos', 'numero_documento', 'lugar_expedicion', 'celular', 'direccion',
-  'municipio', 'correo', 'concepto', 'proyecto', 'banco', 'tipo_cuenta', 'numero_cuenta']
+  'municipio', 'correo', 'concepto', 'banco', 'tipo_cuenta', 'numero_cuenta']
 
 const CAMPO = 'w-full rounded-xl border border-linea bg-white px-3.5 py-3 text-[16px] text-tinta outline-none transition focus:border-bosque focus:ring-2 focus:ring-bosque/15'
 const hoyISO = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
@@ -54,7 +54,7 @@ function CuentaCobroEnlace() {
         <header className="mb-5">
           <p className="text-[10.5px] font-medium uppercase tracking-[.2em] text-musgo">Amazonía Emprende</p>
           <h1 className="mt-1 font-titulo text-[1.9rem] font-semibold leading-tight text-bosque">Cuenta de cobro</h1>
-          <p className="mt-1 text-[13.5px] text-suave">Llene sus datos, firme con el dedo y envíela. Le llega a talento humano y usted se queda con el PDF.</p>
+          <p className="mt-1 text-[13.5px] text-suave">Llene sus datos, firme con el dedo y envíela: le llega directo a talento humano. Si quiere, al final puede guardar una copia en PDF.</p>
         </header>
         {!clave || errorEnlace ? (
           <div className="rounded-2xl border border-red-600/40 bg-white px-4 py-4 text-[14px] text-red-700 sin-vidrio">
@@ -209,7 +209,7 @@ function Formulario({ clave, org }: { clave: string; org: { razon_social: string
           <textarea className={`${CAMPO} min-h-24${mal('concepto')}`} value={v.concepto} onChange={(e) => pon('concepto', e.target.value)}
             placeholder="Ej. Prestación de servicios de apoyo en vivero durante el mes de noviembre de 2026" />
         </Etiqueta>
-        {campo('proyecto', 'Para el proyecto', { placeholder: 'Nombre del proyecto' })}
+        {campo('proyecto', 'Para el proyecto', { placeholder: 'Si no lo sabe, déjelo en blanco' }, true)}
         <div className="grid grid-cols-2 gap-3">
           {campo('periodo_desde', 'Periodo desde', { type: 'date' })}
           {campo('periodo_hasta', 'Hasta', { type: 'date' })}
@@ -274,7 +274,7 @@ function Enviada({ cuenta, pdf, onOtra }: { cuenta: CuentaCobro; pdf: Blob; onOt
       <span className="grid h-12 w-12 place-items-center rounded-full bg-bosque text-hueso"><Check size={24} /></span>
       <h2 className="mt-4 font-titulo text-[1.5rem] font-semibold text-tinta">Cuenta enviada</h2>
       <p className="mt-1 text-[14px] text-suave">
-        La cuenta de cobro N.º {String(cuenta.consecutivo).padStart(3, '0')} llegó a talento humano. Guarde el PDF por si se lo piden.
+        La cuenta de cobro N.º {String(cuenta.consecutivo).padStart(3, '0')} ya llegó a talento humano: no tiene que mandarla por otro lado. Si quiere una copia para usted, descárguela aquí.
       </p>
       <div className="mt-5 grid gap-3">
         {puedeCompartir && (

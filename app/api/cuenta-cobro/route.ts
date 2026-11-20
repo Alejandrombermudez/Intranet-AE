@@ -7,10 +7,11 @@ import { BUCKET_TALENTO, sello, subirArchivo } from '@/lib/talento-api'
  * ─────────────────────────────────────────────────────────────────
  * Para operarios y contratistas sin correo corporativo: no hay sesión. Lo que
  * protege es la clave del enlace (people.config_talento.clave_enlace), que
- * talento humano comparte y puede cambiar en Plantillas.
+ * talento humano comparte y puede cambiar en Administrativa → Configuración.
  *
  *   GET  ?c=       → si la clave sirve: a quién se le cobra. Nada más: ni datos de
- *                    personas ni la lista de proyectos (el proyecto se escribe libre).
+ *                    personas ni la lista de proyectos (el proyecto se escribe libre y es
+ *                    opcional: si viene vacío, talento humano lo pone en la bandeja).
  *   POST multipart: c, datos (JSON), planilla? → people.radicar_cuenta_enlace.
  *                    La persona se busca o se crea por su cédula; lo guardado
  *                    no se sobrescribe (las diferencias las ve la bandeja).
@@ -67,7 +68,6 @@ export async function POST(req: NextRequest) {
   for (const k of TEXTOS) p[k] = typeof b[k] === 'string' ? (b[k] as string).trim().slice(0, k === 'concepto' ? 1500 : 200) : null
   for (const k of ['periodo_desde', 'periodo_hasta'] as const) if (p[k] && !/^\d{4}-\d{2}-\d{2}$/.test(String(p[k]))) p[k] = null
   if (!p.correo || !/^\S+@\S+\.\S+$/.test(String(p.correo))) return NextResponse.json({ error: p.correo ? 'El correo no es válido.' : 'Escriba su correo.' }, { status: 400 })
-  if (!p.proyecto) return NextResponse.json({ error: 'Escriba el proyecto.' }, { status: 400 })
   const valor = Number(b.valor)
   if (!Number.isFinite(valor) || valor <= 0 || valor > 1e10) return NextResponse.json({ error: 'El valor no es válido.' }, { status: 400 })
   const firma = typeof b.firma === 'string' ? b.firma : ''

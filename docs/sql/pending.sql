@@ -13,7 +13,11 @@
 
 -- (Nada pendiente de la app de campo.)
 
--- ── PENDIENTE (2026-11-18)  migration_cuentas_cobro_enlace.sql ─────────────
+-- ════════════════════════════════════════════════════════════
+-- HISTORIAL — ya ejecutado en producción
+-- ════════════════════════════════════════════════════════════
+
+-- ── HECHO (2026-11-20, verificado por REST)  migration_cuentas_cobro_enlace.sql ─────────────
 --             Enlace público /cuenta-cobro?c=<clave> para operarios y
 --             contratistas sin correo: people.personas.email deja de ser
 --             obligatorio, cuentas_cobro sin contrato (origen, proyecto,
@@ -22,10 +26,8 @@
 --             Probada dos veces en PGlite (13 casos). Sin correrla, el enlace
 --             responde «todavía no está habilitado» y Mi espacio sigue igual
 --             que antes (la firma con el dedo no se guarda).
-
--- ════════════════════════════════════════════════════════════
--- HISTORIAL — ya ejecutado en producción
--- ════════════════════════════════════════════════════════════
+--             Verificado: config_talento.clave_enlace existe y el 19-nov
+--             entraron dos cuentas con origen = 'enlace'.
 
 -- ── HECHO (2026-11-13)  migration_vista_campo_fuente.sql ────────────────────
 --             Verificado por REST con la llave anon: core.v_predios_campo trae

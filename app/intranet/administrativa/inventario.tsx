@@ -23,7 +23,7 @@ const COLOR_ESTADO: Record<EstadoMovimiento, string> = {
   anulado: 'var(--color-tenue)',
 }
 
-export default function Inventario({ cat, recargar }: { cat: Catalogo; recargar: () => Promise<void> }) {
+export default function Inventario({ cat, recargar, veTotales = true }: { cat: Catalogo; recargar: () => Promise<void>; veTotales?: boolean }) {
   const [filtro, setFiltro] = useState<{ bodega: string; insumo: string; tipo: string }>({ bodega: '', insumo: '', tipo: '' })
   const [ventana, setVentana] = useState<'repartir' | 'ajustar' | null>(null)
   const [soloConSaldo, setSoloConSaldo] = useState(true)
@@ -139,7 +139,7 @@ export default function Inventario({ cat, recargar }: { cat: Catalogo; recargar:
                   <th className={TH}>Insumo</th>
                   {bodegas.map((b) => <th key={b.id} className={`${TH} text-right`}>{b.nombre}</th>)}
                   <th className={`${TH} text-right`}>Total</th>
-                  <th className={`${TH} text-right`}>Valor</th>
+                  {veTotales && <th className={`${TH} text-right`}>Valor</th>}
                 </tr>
               </thead>
               <tbody>
@@ -159,7 +159,7 @@ export default function Inventario({ cat, recargar }: { cat: Catalogo; recargar:
                       )
                     })}
                     <td className={`${TD} text-right`}><Saldo n={total} fuerte /></td>
-                    <td className={`${TD} whitespace-nowrap text-right tabular-nums text-suave`}>{valor ? pesos(valor) : '—'}</td>
+                    {veTotales && <td className={`${TD} whitespace-nowrap text-right tabular-nums text-suave`}>{valor ? pesos(valor) : '—'}</td>}
                   </tr>
                 ))}
               </tbody>

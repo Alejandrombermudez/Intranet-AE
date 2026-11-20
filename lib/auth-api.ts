@@ -43,7 +43,7 @@ export const PUEDE = {
   /** Módulo RAS: familias, conservación, fotos de árboles y del catálogo. */
   ras:        (p: PerfilSesion) => p.is_admin || p.department === 'RAS',
   /** Módulo administrativo y financiero (compras, inventario, bodegas) y estadísticas del hub. */
-  financiero: (p: PerfilSesion) => p.is_admin || p.department === 'Financiero',
+  financiero: (p: PerfilSesion) => p.is_admin || p.department === 'Financiero' || p.department === 'Logística',
   /**
    * Talento humano: fichas, contratos, salarios, cuentas bancarias y cuentas de
    * cobro de TODAS las personas. Más estrecho que `financiero` a propósito: ser

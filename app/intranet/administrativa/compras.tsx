@@ -28,7 +28,7 @@ function rangoFechas(r: Rango): { desde?: string; hasta?: string } {
   return {}
 }
 
-export default function Compras({ cat }: { cat: Catalogo }) {
+export default function Compras({ cat, veTotales = true }: { cat: Catalogo; veTotales?: boolean }) {
   const [rango, setRango] = useState<Rango>('anio')
   const [abierta, setAbierta] = useState<string | null>(null)
   const [verAnuladas, setVerAnuladas] = useState(false)
@@ -91,13 +91,13 @@ export default function Compras({ cat }: { cat: Catalogo }) {
 
       {faltan.length > 0 && (
         <Aviso tono="ambar" className="mb-8"
-          titulo={`${faltan.length} factura${faltan.length === 1 ? '' : 's'} sin documento soporte (${pesos(faltan.reduce((s, f) => s + Number(f.total), 0))})`}>
+          titulo={`${faltan.length} factura${faltan.length === 1 ? '' : 's'} sin documento soporte${veTotales ? ` (${pesos(faltan.reduce((s, f) => s + Number(f.total), 0))})` : ''}`}>
           {faltan.map((f) => `${f.proveedor?.razon_social ?? '—'} ${f.numero}`).join(' · ')}.
           {' '}Cuentan en el gasto y en el inventario, pero no tienen el papel que las respalda. Se adjunta abriendo la factura.
         </Aviso>
       )}
 
-      {facturas && vigentes.length > 0 && (
+      {veTotales && facturas && vigentes.length > 0 && (
         <div className="mb-10 grid gap-8 md:grid-cols-3">
           <div>
             <p className="text-[10px] uppercase tracking-[.16em] text-tenue">Total comprado</p>

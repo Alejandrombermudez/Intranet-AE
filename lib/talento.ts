@@ -222,6 +222,21 @@ export const MODALIDAD: Record<string, string> = {
   practica: 'Convenio de práctica',
 }
 
+/**
+ * El «tipo de contrato» que elige talento humano al cargarlo: una sola lista
+ * que fija a la vez la modalidad y la vinculación (2026-11-20; antes eran dos
+ * listas y el contrato nuevo arrancaba en «Contratista», así se cargaron mal
+ * contratos laborales a término indefinido).
+ */
+export const TIPOS_CONTRATO: { modalidad: string; vinculacion: Vinculacion; nombre: string }[] = [
+  { modalidad: 'termino_indefinido', vinculacion: 'planta', nombre: 'Laboral a término indefinido' },
+  { modalidad: 'termino_fijo', vinculacion: 'planta', nombre: 'Laboral a término fijo (definido)' },
+  { modalidad: 'obra_labor', vinculacion: 'planta', nombre: 'Laboral por obra o labor' },
+  { modalidad: 'prestacion_servicios', vinculacion: 'contratista', nombre: 'Prestación de servicios (contratista)' },
+  { modalidad: 'aprendizaje', vinculacion: 'aprendiz', nombre: 'Contrato de aprendizaje (SENA)' },
+  { modalidad: 'practica', vinculacion: 'practicante', nombre: 'Convenio de práctica' },
+]
+
 /** Qué modalidades tienen sentido para cada vinculación. */
 export const MODALIDADES_DE: Record<Vinculacion, string[]> = {
   planta: ['termino_indefinido', 'termino_fijo', 'obra_labor'],

@@ -34,7 +34,7 @@ interface Registro {
   costo_mano_obra: number
 }
 
-export default function AppCampo({ cat, recargar }: { cat: Catalogo; recargar: () => Promise<void> }) {
+export default function AppCampo({ cat, recargar, veTotales = true }: { cat: Catalogo; recargar: () => Promise<void>; veTotales?: boolean }) {
   const [editando, setEditando] = useState<Partial<TituloCampo> | null>(null)
   const { data: registros, error } = useCarga<Registro[]>(
     '/api/administrativa/actividades', (j) => (j.registros as Registro[]) ?? [], 'No se pudieron leer los registros de campo.')
@@ -102,8 +102,10 @@ export default function AppCampo({ cat, recargar }: { cat: Catalogo; recargar: (
               <span><b className="font-display text-xl tabular-nums">{totales.n}</b> <span className="text-tenue">registros</span></span>
               <span><b className="font-display text-xl tabular-nums">{cantidad(totales.jornales)}</b> <span className="text-tenue">jornales</span></span>
               <span><b className="font-display text-xl tabular-nums">{totales.jornales ? cantidad(totales.nucleos / totales.jornales) : '—'}</b> <span className="text-tenue">núcleos por jornal</span></span>
-              <span><b className="font-display text-xl tabular-nums">{pesos(totales.mano)}</b> <span className="text-tenue">mano de obra</span></span>
-              <span><b className="font-display text-xl tabular-nums">{pesos(totales.insumos)}</b> <span className="text-tenue">insumos</span></span>
+              {veTotales && <>
+                <span><b className="font-display text-xl tabular-nums">{pesos(totales.mano)}</b> <span className="text-tenue">mano de obra</span></span>
+                <span><b className="font-display text-xl tabular-nums">{pesos(totales.insumos)}</b> <span className="text-tenue">insumos</span></span>
+              </>}
             </div>
             <div className="overflow-x-auto vidrio rounded-2xl">
               <table className="w-full">

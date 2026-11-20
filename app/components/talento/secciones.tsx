@@ -11,7 +11,7 @@ import { Aviso, Boton, MarcaEstado, Vacio } from '@/app/components/marca'
 import { fetchConSesion } from '@/lib/fetch-sesion'
 import { pesosEnLetras } from '@/lib/numero-letras'
 import {
-  ESTADO_CUENTA, MODALIDAD, MODALIDADES_DE, TIPOS_DOCUMENTO_ARCHIVO, VINCULACION, contratoVigente, fechaLarga, mesDe, pesos,
+  ESTADO_CUENTA, MODALIDAD, MODALIDADES_DE, TIPOS_CONTRATO, TIPOS_DOCUMENTO_ARCHIVO, VINCULACION, contratoVigente, fechaLarga, mesDe, pesos,
   type Certificado, type Contrato, type CuentaCobro, type DocumentoPersona, type Persona, type Vinculacion,
 } from '@/lib/talento'
 import { descargarBlob, nombreArchivoCertificado, nombreArchivoCuenta, pdfCertificadoLaboral, pdfCuentaCobro } from '@/lib/talento-pdf'
@@ -108,7 +108,7 @@ export function SeccionContratos({ contratos, personaId, modo, proyectos, onCamb
   return (
     <div>
       {modo === 'rrhh' && (
-        <div className="mb-6"><Boton icono={<Plus size={13} />} onClick={() => setEditando({ vinculacion: 'contratista', fecha_inicio: hoy() })}>Registrar contrato</Boton></div>
+        <div className="mb-6"><Boton icono={<Plus size={13} />} onClick={() => setEditando({ fecha_inicio: hoy() })}>Registrar contrato</Boton></div>
       )}
       {contratos.length === 0 ? (
         <Vacio>{modo === 'persona' ? 'Talento humano todavía no ha cargado tus contratos' : 'Sin contratos'}</Vacio>
@@ -151,14 +151,16 @@ export function SeccionContratos({ contratos, personaId, modo, proyectos, onCamb
 function EditarContrato({ inicial, personaId, proyectos, onCerrar, onListo }: {
   inicial: Partial<Contrato>; personaId: string; proyectos: { codigo: string; nombre: string }[]; onCerrar: () => void; onListo: () => void
 }) {
-  const [v, setV] = useState<Record<string, unknown>>({ ...inicial, modalidad: inicial.modalidad ?? MODALIDADES_DE[(inicial.vinculacion ?? 'contratista') as Vinculacion][0] })
+  // Un contrato nuevo no trae tipo: se elige siempre (antes arrancaba en «Contratista»).
+  const [v, setV] = useState<Record<string, unknown>>({ ...inicial, modalidad: inicial.modalidad ?? (inicial.vinculacion ? MODALIDADES_DE[inicial.vinculacion][0] : null) })
   const [archivo, setArchivo] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
-  const vin = (v.vinculacion as Vinculacion) ?? 'contratista'
+  const vin = (v.vinculacion as Vinculacion | undefined) ?? 'planta'
   const pon = (k: string, x: unknown) => setV((o) => ({ ...o, [k]: x }))
 
   async function guardar(extra: Record<string, unknown> = {}) {
+    if (!v.vinculacion || !v.modalidad) { setError('Elija el tipo de contrato.'); return }
     setOcupado(true); setError(null)
     const form = new FormData()
     const campos = ['vinculacion', 'modalidad', 'numero', 'cargo', 'objeto', 'proyecto', 'fecha_inicio', 'fecha_fin', 'valor_mensual', 'valor_total', 'supervisor', 'notas']
@@ -181,15 +183,21 @@ function EditarContrato({ inicial, personaId, proyectos, onCerrar, onListo }: {
   return (
     <Ventana titulo={inicial.id ? 'Editar contrato' : 'Registrar contrato'} onCerrar={onCerrar} ancho="max-w-3xl">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Campo etiqueta="Vinculación">
-          <select className={CAMPO} value={vin} onChange={(e) => { const x = e.target.value as Vinculacion; pon('vinculacion', x); pon('modalidad', MODALIDADES_DE[x][0]) }}>
-            {(Object.keys(VINCULACION) as Vinculacion[]).map((k) => <option key={k} value={k}>{VINCULACION[k]}</option>)}
+        <Campo etiqueta="Tipo de contrato" className="sm:col-span-2">
+          <select className={`${CAMPO}${!v.modalidad ? ' text-tenue' : ''}`} value={(v.modalidad as string) ?? ''}
+            onChange={(e) => {
+              const t = TIPOS_CONTRATO.find((x) => x.modalidad === e.target.value)
+              pon('modalidad', t?.modalidad ?? null); pon('vinculacion', t?.vinculacion ?? null)
+              if (t?.modalidad === 'termino_indefinido') pon('fecha_fin', null)
+            }}>
+            <option value="">— Elija el tipo de contrato —</option>
+            {TIPOS_CONTRATO.map((t) => <option key={t.modalidad} value={t.modalidad}>{t.nombre}</option>)}
           </select>
-        </Campo>
-        <Campo etiqueta="Modalidad">
-          <select className={CAMPO} value={(v.modalidad as string) ?? ''} onChange={(e) => pon('modalidad', e.target.value)}>
-            {MODALIDADES_DE[vin].map((m) => <option key={m} value={m}>{MODALIDAD[m]}</option>)}
-          </select>
+          <span className="mt-1 block text-[11px] text-tenue">
+            {v.vinculacion === 'contratista'
+              ? 'Contratista: pasa cuentas de cobro desde «Mi espacio».'
+              : v.vinculacion ? `${VINCULACION[v.vinculacion as Vinculacion]}: no pasa cuentas de cobro.` : 'Define si la persona es de planta o contratista.'}
+          </span>
         </Campo>
         <Campo etiqueta={vin === 'contratista' ? 'Rol' : 'Cargo'}><input className={CAMPO} value={(v.cargo as string) ?? ''} onChange={(e) => pon('cargo', e.target.value)} /></Campo>
         <Campo etiqueta="Número del contrato"><input className={CAMPO} value={(v.numero as string) ?? ''} onChange={(e) => pon('numero', e.target.value)} /></Campo>

@@ -11,7 +11,7 @@
  */
 import { MARCA } from '@/lib/expediente-formato'
 import { fechaLarga } from '@/lib/talento'
-import { MARGEN, UTIL, nuevoDoc, parrafo, plantilla, rgb, rotulo } from '@/lib/talento-pdf'
+import { MARGEN, UTIL, fondoMembrete, membreteJPG, nuevoDoc, parrafo, pintarMembrete, plantilla, rgb, rotulo } from '@/lib/talento-pdf'
 import { CLASES, TIPOS_ACTA, num, type Acta } from '@/lib/salidas'
 
 export interface OrganizacionActa {
@@ -71,9 +71,13 @@ export async function pdfActa(a: Pick<Acta, 'numero' | 'tipo' | 'fecha' | 'datos
   // Los elementos.
   rotulo(doc, 'Elementos', y)
   const { default: autoTable } = await import('jspdf-autotable')
+  // Hoja membrete precargada: la tabla pinta sus hojas nuevas sin esperar.
+  const membrete = await membreteJPG()
   autoTable(doc, {
     startY: y + 3,
-    margin: { left: MARGEN, right: MARGEN, bottom: 30 },
+    margin: { left: MARGEN, right: MARGEN, bottom: 30, top: 40 },
+    // Desde la 2.ª hoja de la tabla, la membrete de fondo antes de pintar las filas.
+    willDrawPage: (h) => { if (membrete && h.pageNumber > 1) pintarMembrete(doc, membrete) },
     head: [['#', 'Elemento', 'Clase', 'Unidad', 'Cantidad']],
     body: d.items.map((i, k) => [String(k + 1), i.nombre, CLASES[i.clase]?.nombre ?? i.clase, i.unidad, num(i.cantidad)]),
     theme: 'plain',
@@ -94,7 +98,7 @@ export async function pdfActa(a: Pick<Acta, 'numero' | 'tipo' | 'fecha' | 'datos
   if (a.notas) { y += 3; y = parrafo(doc, `Observaciones: ${a.notas}`, y, { tam: 8.8, interlinea: 4.4 }) }
 
   // Firmas. Si la tabla fue larga, pasan a una hoja nueva.
-  if (y > 222) { doc.addPage(); y = 40 }
+  if (y > 222) { doc.addPage(); await fondoMembrete(doc); y = 44 }
   const yf = Math.max(y + 16, 224)
   const firmaDe = (x: number, rol: string, nombre: string | null, extra?: string | null) => {
     doc.setDrawColor(...rgb(MARCA.tinta)); doc.setLineWidth(0.3)

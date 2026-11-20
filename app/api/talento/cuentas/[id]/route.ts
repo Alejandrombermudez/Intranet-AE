@@ -14,7 +14,8 @@ import { hoyColombia } from '@/lib/administrativa'
  *                  vuelve a radicada y toma de nuevo sus datos de la ficha (por si
  *                  la devolvieron por una cuenta bancaria equivocada)
  *     Talento humano:
- *       aprobar  — radicada → aprobada
+ *       aprobar  — radicada → aprobada; exige proyecto (por el enlace es opcional)
+ *       proyecto — {proyecto}: lo pone o lo corrige mientras no esté pagada ni anulada
  *       devolver — radicada/aprobada → devuelta, con observación
  *       pagar    — aprobada → pagada, con fecha
  *       anular   — cualquiera menos pagada, con observación
@@ -91,8 +92,16 @@ export async function PATCH(req: NextRequest, { params }: Contexto) {
   } else if (accion === 'anular' && esDuena && !r.s.rrhh) {
     if (!['radicada', 'devuelta'].includes(cuenta.estado)) return NextResponse.json({ error: 'Ya fue aprobada: pídele a talento humano que la anule.' }, { status: 409 })
     cambios = { estado: 'anulada', observacion: observacion ?? 'Anulada por quien la radicó.' }
+  } else if (r.s.rrhh && accion === 'proyecto') {
+    if (['pagada', 'anulada'].includes(cuenta.estado)) return NextResponse.json({ error: 'La cuenta ya está cerrada.' }, { status: 409 })
+    const proyecto = typeof b?.proyecto === 'string' ? b.proyecto.trim().slice(0, 200) : ''
+    if (!proyecto) return NextResponse.json({ error: 'Escribe el proyecto.' }, { status: 400 })
+    cambios = { proyecto }
   } else if (r.s.rrhh && accion in PASOS_RRHH) {
     const paso = PASOS_RRHH[accion]
+    if (accion === 'aprobar' && !cuenta.proyecto?.trim()) {
+      return NextResponse.json({ error: `La cuenta N.º ${cuenta.consecutivo} no tiene proyecto: pónselo antes de aprobarla.` }, { status: 400 })
+    }
     if (!paso.desde.includes(cuenta.estado)) return NextResponse.json({ error: `No se puede ${accion} una cuenta ${cuenta.estado}.` }, { status: 409 })
     if ((accion === 'devolver' || accion === 'anular') && !observacion) return NextResponse.json({ error: 'Escribe el motivo: lo ve la persona.' }, { status: 400 })
     cambios = { estado: paso.a, revisada_por: r.s.email, revisada_at: new Date().toISOString() }

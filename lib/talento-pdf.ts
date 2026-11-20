@@ -5,12 +5,16 @@
  * (`cuentas_cobro.datos`, `certificados.datos`): el mismo registro produce
  * siempre el mismo documento, aunque la ficha de la persona cambie después.
  *
- * UNA SOLA PLANTILLA para todos los documentos (`plantilla()`): banda verde
- * bosque con filete ámbar, el isotipo y la organización a la izquierda, el
- * nombre del documento y su número a la derecha, la huella en marca de agua y
- * el pie en hueso con «Inspirar · Nutrir · Actuar» y los datos de contacto. Un
+ * UNA SOLA PLANTILLA para todos los documentos (`plantilla()`). Desde el
+ * 2026-11-20 va sobre la **hoja membrete** oficial (`public/membrete-ae.jpg`,
+ * sacada de «Hoja Membrete AE.docx»: banda salvia con el logo arriba, la huella
+ * de fondo y el pie con «Llevamos la restauración a la acción» y la web). Encima
+ * van la razón social y el NIT, el nombre del documento y su número, y abajo la
+ * línea legal y el contacto. Sin la imagen (pruebas en Node, o si no carga) se
+ * dibuja la plantilla anterior: banda verde bosque, isotipo y pie hueso. Un
  * documento nuevo (paz y salvo, constancia…) usa la misma y solo escribe su
- * cuerpo. Tipografía estándar (Helvetica): el PDF no depende de fuentes externas.
+ * cuerpo; si pasa de una hoja, cada hoja nueva lleva `fondoMembrete()`.
+ * Tipografía estándar (Helvetica): el PDF no depende de fuentes externas.
  */
 import { MARCA } from '@/lib/expediente-formato'
 import { fechaEnLetras, pesosEnLetras } from '@/lib/numero-letras'
@@ -24,7 +28,8 @@ export type Doc = import('jspdf').jsPDF
 
 export const ANCHO = 215.9, ALTO = 279.4, MARGEN = 25
 export const UTIL = ANCHO - 2 * MARGEN
-export const ALTO_PIE = 16
+/** Lo que ocupa el pie de la hoja membrete (banda salvia): nada se escribe más abajo. */
+export const ALTO_PIE = 22
 export const rgb = (hex: string): [number, number, number] =>
   [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
 
@@ -57,6 +62,32 @@ async function isotipoPNG(color: string): Promise<string | null> {
   }
 }
 
+// ─── La hoja membrete ─────────────────────────────────────────────────────────
+
+let membrete: Promise<string | null> | null = null
+/** La imagen de la hoja membrete (data URL), cargada una sola vez. */
+export function membreteJPG(): Promise<string | null> {
+  if (typeof window === 'undefined') return Promise.resolve(null)
+  membrete ??= fetch('/membrete-ae.jpg')
+    .then((r) => (r.ok ? r.blob() : null))
+    .then((b) => b && new Promise<string>((ok, mal) => { const f = new FileReader(); f.onload = () => ok(String(f.result)); f.onerror = mal; f.readAsDataURL(b) }))
+    .catch(() => { membrete = null; return null })
+  return membrete
+}
+
+/** Pinta la hoja membrete ya cargada en la hoja actual (síncrono: sirve en los ganchos de autoTable). */
+export function pintarMembrete(doc: Doc, img: string) {
+  doc.addImage(img, 'JPEG', 0, 0, ANCHO, ALTO, 'membrete', 'FAST')
+}
+
+/** Pinta la hoja membrete de fondo en la hoja actual. Devuelve si la pudo poner. */
+export async function fondoMembrete(doc: Doc): Promise<boolean> {
+  const img = await membreteJPG()
+  if (!img) return false
+  pintarMembrete(doc, img)
+  return true
+}
+
 // ─── La plantilla ─────────────────────────────────────────────────────────────
 
 interface Organizacion {
@@ -75,6 +106,7 @@ export async function plantilla(doc: Doc, { org, tipo, referencia, legal }: {
   org: Organizacion; tipo: string; referencia: string; legal: string
 }): Promise<number> {
   const razon = org.razon_social || 'Amazonía Emprende'
+  if (await fondoMembrete(doc)) return encabezadoMembrete(doc, razon, { org, tipo, referencia, legal })
   const iso = await isotipoPNG(MARCA.bosque)
 
   // Marca de agua: la huella grande, casi transparente, abajo a la derecha.
@@ -145,6 +177,57 @@ export async function plantilla(doc: Doc, { org, tipo, referencia, legal }: {
   return 44
 }
 
+/**
+ * Lo que va encima de la hoja membrete: bajo la banda del logo, la razón social
+ * y el NIT a la izquierda y el documento y su número a la derecha; sobre la
+ * banda del pie, la línea legal y el contacto. La banda superior llega a ~31 mm
+ * en el margen izquierdo, por eso el encabezado arranca en 39.
+ */
+function encabezadoMembrete(doc: Doc, razon: string, { org, tipo, referencia, legal }: {
+  org: Organizacion; tipo: string; referencia: string; legal: string
+}): number {
+  const Y = 39
+  const RAZON = razon.toUpperCase()
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5)
+  const libre = UTIL - anchoEspaciado(doc, tipo.toUpperCase(), 1) - 8
+  doc.setTextColor(...rgb(MARCA.bosque))
+  let yNit = Y + 4.5
+  const formas: [number, number][] = [[10, 0.5], [9, 0.3], [8.5, 0.15], [8, 0.1]]
+  const cabe = formas.find(([t, e]) => { doc.setFontSize(t); return anchoEspaciado(doc, RAZON, e) <= libre })
+  if (cabe) {
+    doc.setFontSize(cabe[0]); doc.text(RAZON, MARGEN, Y, { charSpace: cabe[1] })
+  } else {
+    doc.setFontSize(8.5)
+    const lineas: string[] = doc.splitTextToSize(RAZON, libre)
+    lineas.slice(0, 2).forEach((l, i) => doc.text(l, MARGEN, Y - 2 + i * 3.8))
+    yNit = Y + 6
+  }
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...rgb(MARCA.oliva))
+  doc.text(org.nit ? `NIT ${org.nit}` : 'NIT por registrar', MARGEN, yNit)
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...rgb(MARCA.musgo))
+  aLaDerecha(doc, tipo.toUpperCase(), Y - 0.5, 1)
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...rgb(MARCA.tinta))
+  doc.text(referencia, ANCHO - MARGEN, Y + 4.5, { align: 'right' })
+
+  doc.setDrawColor(...rgb(MARCA.taupe)); doc.setLineWidth(0.2)
+  doc.line(MARGEN, yNit + 3.5, ANCHO - MARGEN, yNit + 3.5)
+
+  // Pie: el contacto justo encima de la banda salvia y, sobre él, la línea legal.
+  // La ciudad sola no es contacto: la línea sale cuando hay dirección, teléfono o correo.
+  const contacto = org.direccion || org.telefono || org.correo
+    ? [org.direccion, org.ciudad, org.telefono, org.correo].filter(Boolean).join('  ·  ') : ''
+  const yContacto = ALTO - ALTO_PIE + 2
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...rgb(MARCA.oliva))
+  if (contacto) doc.text(contacto, MARGEN, yContacto)
+  if (legal) {
+    doc.setFontSize(7)
+    const l: string[] = doc.splitTextToSize(legal, UTIL)
+    doc.text(l, MARGEN, yContacto - (contacto ? 4.5 : 0) - (l.length - 1) * 3)
+  }
+  return yNit + 12
+}
+
 /** Párrafo justificado; devuelve la Y donde termina. */
 export function parrafo(doc: Doc, texto: string, y: number, { tam = 10.5, negrita = false, interlinea = 5.2 } = {}): number {
   doc.setFont('helvetica', negrita ? 'bold' : 'normal'); doc.setFontSize(tam); doc.setTextColor(...rgb(MARCA.tinta))
@@ -212,15 +295,16 @@ export async function pdfCuentaCobro(c: Pick<CuentaCobro, 'consecutivo' | 'fecha
   })
   const nombre = `${p.nombres} ${p.apellidos}`.toUpperCase()
 
+  // Título y, en la misma línea a la derecha, el lugar y la fecha.
   doc.setFont('helvetica', 'bold'); doc.setFontSize(21); doc.setTextColor(...rgb(MARCA.bosque))
   doc.text('Cuenta de cobro', MARGEN, y)
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...rgb(MARCA.tinta))
-  doc.text(`${c.municipio || o.ciudad || 'Florencia'}, ${fechaLarga(c.fecha)}`, MARGEN, y + 7)
+  doc.text(`${c.municipio || o.ciudad || 'Florencia'}, ${fechaLarga(c.fecha)}`, ANCHO - MARGEN, y, { align: 'right' })
 
-  y += 21; rotulo(doc, o.razon_social || 'Amazonía Emprende', y)
+  y += 12; rotulo(doc, o.razon_social || 'Amazonía Emprende', y)
   y = parrafo(doc, o.nit ? `NIT ${o.nit}` : 'NIT por registrar', y + 5, { tam: 10 })
 
-  y += 7; rotulo(doc, 'Debe a', y)
+  y += 6; rotulo(doc, 'Debe a', y)
   y = parrafo(doc, nombre, y + 5.5, { negrita: true, tam: 11 })
   y = parrafo(doc, documentoDe(p), y, { tam: 10 })
 
@@ -233,7 +317,7 @@ export async function pdfCuentaCobro(c: Pick<CuentaCobro, 'consecutivo' | 'fecha
   doc.text(pesos(c.valor), ANCHO - MARGEN, y + 7, { align: 'right' })
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...rgb(MARCA.oliva))
   doc.text(doc.splitTextToSize(pesosEnLetras(c.valor), UTIL - 4), MARGEN, y + 13)
-  y += 26
+  y += 24
 
   rotulo(doc, 'Por concepto de', y)
   const contrato = !k ? '' : k.numero ? `, según el contrato de prestación de servicios N.º ${k.numero}` : ', según el contrato de prestación de servicios'
@@ -241,9 +325,9 @@ export async function pdfCuentaCobro(c: Pick<CuentaCobro, 'consecutivo' | 'fecha
   y = parrafo(doc, `${c.concepto.trim().replace(/\.$/, '')}${contrato}${periodo}.`, y + 5.5)
 
   const proyecto = c.proyecto
-  if (proyecto) { y += 6; rotulo(doc, 'Para el proyecto', y); y = parrafo(doc, proyecto, y + 5.5) }
+  if (proyecto) { y += 5; rotulo(doc, 'Para el proyecto', y); y = parrafo(doc, proyecto, y + 5.5) }
 
-  y += 6; rotulo(doc, 'Favor consignar en', y)
+  y += 5; rotulo(doc, 'Favor consignar en', y)
   const tipoCta = p.tipo_cuenta === 'deposito_electronico' ? 'de depósito electrónico' : TIPO_CUENTA[p.tipo_cuenta ?? '']?.toLowerCase() ?? ''
   y = parrafo(doc, `Cuenta ${tipoCta} N.º ${p.numero_cuenta} de ${p.banco}, a nombre de ${nombre}.`.replace(/\s+/g, ' '), y + 5.5)
 
@@ -256,7 +340,8 @@ export async function pdfCuentaCobro(c: Pick<CuentaCobro, 'consecutivo' | 'fecha
   // El bloque de firma ocupa ~46 mm: «Atentamente», la firma, cuatro líneas y
   // «Firmado electrónicamente». Si no cabe sobre la línea legal del pie, va a otra hoja.
   y = Math.max(y + 5, 185)
-  if (y > ALTO - ALTO_PIE - 53) {
+  // La firma ocupa ~46 mm y debe terminar antes de la línea legal (~250 mm con contacto).
+  if (y > ALTO - ALTO_PIE - 54) {
     // Concepto muy largo: la firma pasa a una segunda hoja con la misma plantilla.
     doc.addPage()
     y = (await plantilla(doc, { org: o, tipo: 'Cuenta de cobro', referencia: `${numero} · hoja 2`, legal: '' })) + 10

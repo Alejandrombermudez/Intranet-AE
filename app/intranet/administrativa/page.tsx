@@ -1,6 +1,6 @@
 'use client'
 import { useMemo, useState } from 'react'
-import { Boxes, FileText, Package, ShieldCheck, Smartphone, Tent, Users } from 'lucide-react'
+import { Boxes, Car, FileText, Package, Settings, ShieldCheck, Smartphone, Tent, Users } from 'lucide-react'
 import { Aviso, Boton, Cabecera, Cargando, Contenido, Pestanas, type Pestana } from '@/app/components/marca'
 import { pesos } from '@/lib/administrativa'
 import { useAccesoFinanciero, useCatalogo } from './comun'
@@ -9,30 +9,36 @@ import Inventario from './inventario'
 import SalidasCampo from './salidas'
 import CatalogoInsumos from './catalogo'
 import AppCampo from './campo'
-import Talento from './talento'
+import Talento, { Configuracion } from './talento'
 
 /**
  * MÓDULO ADMINISTRATIVO Y FINANCIERO
  * ──────────────────────────────────
  * Lo hacen las mismas personas —administrativa, talento humano y logística son
- * un solo equipo—, así que es un solo módulo con un solo departamento
- * (`Financiero` en people.user_profiles) y pestañas por tarea:
+ * un solo equipo—. Arriba van pocos botones, uno por área (2026-11-20, a pedido
+ * del usuario: siete pestañas sueltas confundían):
  *
- *   Compras     facturas electrónicas DIAN → gasto e inventario
- *   Inventario  saldo por bodega, repartir a los proyectos, kardex
- *   Salidas a campo  entrega, consumo, devolución y cierre de materiales, herramientas y EPP, con actas
- *   App de campo  quién entra a la app de actividades y qué registró
- *   Catálogo    insumos y bodegas
- *   Tratamiento de datos  lo que ya tenía Financiero en el tablero
- *   Talento humano  fichas, contratos, certificados y cuentas de cobro (solo Financiero y Ejecutivo)
+ *   Inventario y compras  todo lo de bodega, con sus pestañas adentro:
+ *       Compras             facturas electrónicas DIAN → gasto e inventario
+ *       Inventario          saldo por bodega, repartir a los proyectos, kardex
+ *       Salidas a campo     entrega, consumo, devolución y cierre, con actas
+ *       App de campo        quién entra a la app de actividades y qué registró
+ *       Elementos y bodegas el catálogo
+ *   Talento humano        fichas, contratos, certificados y cuentas de cobro (Financiero y Ejecutivo)
+ *   Vehículos             /vehiculos, la app aparte
+ *   Tratamiento de datos  lo que ya tenía Financiero en el tablero (no Logística)
+ *   Configuración         razón social, NIT, quién firma y su firma, enlace de cuentas de cobro (como Talento humano)
+ *
+ * Logística (Katys) ve solo Inventario y compras —sin los consolidados en pesos— y Vehículos.
  */
-type Tab = 'compras' | 'inventario' | 'salidas' | 'campo' | 'catalogo' | 'talento'
-const TABS: Tab[] = ['compras', 'inventario', 'salidas', 'campo', 'catalogo', 'talento']
+type Tab = 'compras' | 'inventario' | 'salidas' | 'campo' | 'catalogo' | 'talento' | 'config'
+const TABS: Tab[] = ['compras', 'inventario', 'salidas', 'campo', 'catalogo', 'talento', 'config']
 
 export default function AdministrativaPage() {
-  const { listo, perfil } = useAccesoFinanciero()
+  const { listo, perfil, veTotales } = useAccesoFinanciero()
   // Talento humano ve datos personales y salarios: solo Financiero y Ejecutivo (PUEDE.talentoHumano).
   const veTalento = perfil?.department === 'Financiero' || perfil?.department === 'Ejecutivo'
+  const veDatos = !!perfil && (perfil.is_admin || perfil.department === 'Financiero')
   const { cat, cargando, error, recargar } = useCatalogo(listo)
   // La pestaña va en la dirección (?tab=…) para volver al mismo sitio al recargar.
   // En el servidor no hay dirección: arranca en Compras, y mientras se verifica el
@@ -48,6 +54,9 @@ export default function AdministrativaPage() {
     u.searchParams.set('tab', t)
     window.history.replaceState(null, '', u.toString())
   }
+  // Quien no ve talento humano y llega con ?tab=talento cae en Compras.
+  const vista: Tab = (tab === 'talento' || tab === 'config') && !veTalento ? 'compras' : tab
+  const enBodega = vista !== 'talento' && vista !== 'config'
 
   const cifras = useMemo(() => {
     const costo = new Map(cat.insumos.map((i) => [i.id, Number(i.costo_promedio) || 0]))
@@ -65,15 +74,21 @@ export default function AdministrativaPage() {
 
   if (!listo || cargando) return <Cargando texto="Abriendo el módulo…" />
 
+  // Arriba: un botón por área. Las de bodega van adentro de «Inventario y compras».
   const pestanas: Pestana[] = [
-    { id: 'compras', label: 'Compras', icono: <FileText size={13} />, activa: tab === 'compras', onClick: () => cambiar('compras') },
-    { id: 'inventario', label: 'Inventario', icono: <Boxes size={13} />, activa: tab === 'inventario', onClick: () => cambiar('inventario') },
-    { id: 'salidas', label: 'Salidas a campo', icono: <Tent size={13} />, activa: tab === 'salidas', onClick: () => cambiar('salidas') },
-    { id: 'campo', label: 'App de campo', icono: <Smartphone size={13} />, activa: tab === 'campo', onClick: () => cambiar('campo') },
-    { id: 'catalogo', label: 'Elementos y bodegas', icono: <Package size={13} />, activa: tab === 'catalogo', onClick: () => cambiar('catalogo') },
-    ...(veTalento ? [{ id: 'talento', label: 'Talento humano', icono: <Users size={13} />, activa: tab === 'talento', onClick: () => cambiar('talento') }] : []),
+    { id: 'bodega', label: 'Inventario y compras', icono: <Boxes size={13} />, activa: enBodega, onClick: () => { if (!enBodega) cambiar('compras') } },
+    ...(veTalento ? [{ id: 'talento', label: 'Talento humano', icono: <Users size={13} />, activa: vista === 'talento', onClick: () => cambiar('talento') }] : []),
+    { id: 'vehiculos', label: 'Vehículos', icono: <Car size={13} />, href: '/vehiculos' },
     // Lo que el departamento ya tenía en el tablero general de la intranet.
-    { id: 'flota', label: 'Tratamiento de datos', icono: <ShieldCheck size={13} />, href: '/intranet?modulo=financiero' },
+    ...(veDatos ? [{ id: 'datos', label: 'Tratamiento de datos', icono: <ShieldCheck size={13} />, href: '/intranet?modulo=financiero' }] : []),
+    ...(veTalento ? [{ id: 'config', label: 'Configuración', icono: <Settings size={13} />, activa: vista === 'config', onClick: () => cambiar('config') }] : []),
+  ]
+  const deBodega: Pestana[] = [
+    { id: 'compras', label: 'Compras', icono: <FileText size={13} />, activa: vista === 'compras', onClick: () => cambiar('compras') },
+    { id: 'inventario', label: 'Inventario', icono: <Boxes size={13} />, activa: vista === 'inventario', onClick: () => cambiar('inventario') },
+    { id: 'salidas', label: 'Salidas a campo', icono: <Tent size={13} />, activa: vista === 'salidas', onClick: () => cambiar('salidas') },
+    { id: 'campo', label: 'App de campo', icono: <Smartphone size={13} />, activa: vista === 'campo', onClick: () => cambiar('campo') },
+    { id: 'catalogo', label: 'Elementos y bodegas', icono: <Package size={13} />, activa: vista === 'catalogo', onClick: () => cambiar('catalogo') },
   ]
 
   return (
@@ -82,32 +97,36 @@ export default function AdministrativaPage() {
         ancho="amplio"
         volver={{ href: '/intranet', label: 'Intranet' }}
         modulo="Administrativa y financiera"
-        titulo={tab === 'talento' ? 'Talento humano' : 'Compras e inventario'}
-        descripcion={tab === 'talento'
+        titulo={vista === 'talento' ? 'Talento humano' : vista === 'config' ? 'Configuración' : 'Inventario y compras'}
+        descripcion={vista === 'config'
+          ? 'Los datos de la organización y quién firma: con ellos salen los certificados, las cuentas de cobro y las actas, todos en la hoja membrete.'
+          : vista === 'talento'
           ? 'La ficha de cada persona, sus contratos de planta o de prestación de servicios, los certificados laborales y las cuentas de cobro de los contratistas.'
           : 'La factura electrónica entra como gasto e inventario; el inventario se reparte a las bodegas de cada proyecto y la app de campo descuenta lo que se gasta en los núcleos.'}
-        cifras={cat.faltaMigracion || tab === 'talento' ? undefined : cifras}
-        acciones={tab === 'compras' && !cat.faltaMigracion
+        cifras={cat.faltaMigracion || !enBodega || !veTotales ? undefined : cifras}
+        acciones={vista === 'compras' && !cat.faltaMigracion
           ? <Boton variante="luz" href="/intranet/administrativa/facturas/nueva" icono={<FileText size={13} />}>Subir factura</Boton>
           : undefined}
         pie={<Pestanas tono="oscuro" items={pestanas} />}
       />
       <Contenido ancho="amplio">
-        {cat.faltaMigracion && tab !== 'talento' && (
+        {enBodega && <div className="mb-8"><Pestanas items={deBodega} /></div>}
+        {cat.faltaMigracion && enBodega && (
           <Aviso tono="ambar" titulo="El módulo todavía no tiene dónde guardar" className="mb-8">
             {cat.aviso}
           </Aviso>
         )}
         {error && <Aviso tono="arcilla" className="mb-8">{error}</Aviso>}
 
-        {tab === 'talento' && veTalento && <Talento />}
+        {vista === 'talento' && <Talento />}
+        {vista === 'config' && <Configuracion />}
         {!cat.faltaMigracion && (
           <>
-            {tab === 'compras' && <Compras cat={cat} />}
-            {tab === 'inventario' && <Inventario cat={cat} recargar={recargar} />}
-            {tab === 'salidas' && <SalidasCampo cat={cat} recargar={recargar} />}
-            {tab === 'campo' && <AppCampo cat={cat} recargar={recargar} />}
-            {tab === 'catalogo' && <CatalogoInsumos cat={cat} recargar={recargar} />}
+            {vista === 'compras' && <Compras cat={cat} veTotales={veTotales} />}
+            {vista === 'inventario' && <Inventario cat={cat} recargar={recargar} veTotales={veTotales} />}
+            {vista === 'salidas' && <SalidasCampo cat={cat} recargar={recargar} />}
+            {vista === 'campo' && <AppCampo cat={cat} recargar={recargar} veTotales={veTotales} />}
+            {vista === 'catalogo' && <CatalogoInsumos cat={cat} recargar={recargar} />}
           </>
         )}
       </Contenido>

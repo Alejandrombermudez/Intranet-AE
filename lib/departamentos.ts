@@ -89,6 +89,16 @@ export const DEPARTAMENTOS: Departamento[] = [
     ruta: '/intranet/administrativa',
     que: 'Compras con factura electrónica, inventario y bodegas por proyecto, accesos de la app de campo, talento humano y tratamiento de datos.',
   },
+  {
+    // La parte operativa del mismo equipo (2026-11-20, Katys): entra al mismo
+    // módulo pero solo a «Inventario y compras» —facturas, bodegas, salidas a
+    // campo— y a Vehículos. No ve talento humano ni tratamiento de datos, ni los
+    // consolidados en pesos (total comprado, valor en bodegas, costo de campo).
+    id: 'Logística',
+    nombre: 'Logística',
+    ruta: '/intranet/administrativa',
+    que: 'Carga facturas, mueve el inventario entre bodegas y lleva las salidas a campo y los vehículos.',
+  },
 ]
 
 /** Solo los nombres guardados, para el selector de la tabla de usuarios. */

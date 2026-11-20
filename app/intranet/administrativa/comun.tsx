@@ -17,9 +17,13 @@ export const TH = 'px-3 py-3 text-left text-[10.5px] font-medium uppercase track
 export const TD = 'px-3 py-2.5 align-top text-[12.5px] text-tinta'
 
 /**
- * Quién entra: administradores y el departamento Financiero (María Fernanda,
- * Katys…). La regla real está en el servidor (PUEDE.financiero); esto solo
- * evita mostrar una pantalla vacía a quien no puede.
+ * Quién entra: administradores, el departamento Financiero (María Fernanda,
+ * Rocío) y Logística (Katys). La regla real está en el servidor
+ * (PUEDE.financiero); esto solo evita mostrar una pantalla vacía a quien no puede.
+ *
+ * Logística no ve los consolidados en pesos (`veTotales`): total comprado,
+ * valor en bodegas, costo de lo hecho en campo. Sí ve el valor de cada factura,
+ * que es lo que carga.
  */
 export function useAccesoFinanciero() {
   const router = useRouter()
@@ -33,13 +37,14 @@ export function useAccesoFinanciero() {
       if (!session?.access_token) { router.push('/'); return }
       const r = await fetch('/api/users/me', { headers: { Authorization: `Bearer ${session.access_token}` } })
       const p = r.ok ? await r.json() : null
-      if (!p || !(p.is_admin || p.department === 'Financiero')) { router.push('/intranet'); return }
+      if (!p || !(p.is_admin || p.department === 'Financiero' || p.department === 'Logística')) { router.push('/intranet'); return }
       if (vivo) { setPerfil(p); setListo(true) }
     })()
     return () => { vivo = false }
   }, [router])
 
-  return { listo, perfil }
+  const veTotales = !!perfil && (perfil.is_admin || perfil.department !== 'Logística')
+  return { listo, perfil, veTotales }
 }
 
 export interface Catalogo {
