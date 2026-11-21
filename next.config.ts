@@ -6,6 +6,8 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
   swcMinify: true,
+  // Los entregables (PDF para compartir por enlace) no van a la caché de cada celular de la intranet.
+  publicExcludes: ["!noprecache/**/*", "!entregables/**/*"],
   disable: process.env.NODE_ENV === "development", // Desactivar en localhost para que no moleste
   workboxOptions: {
     disableDevLogs: true,
