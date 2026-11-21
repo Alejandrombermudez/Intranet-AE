@@ -115,7 +115,11 @@ export default function Fenologia({ datos }: { datos: FenologiaPublica | null })
               <span className="mx-1 hidden h-6 w-px bg-linea sm:block" />
               <select value={predio} onChange={(e) => setPredio(e.target.value)} aria-label="Predio" className={SELECT}>
                 <option value="">Todos los predios ({predios.length})</option>
-                {predios.map((p) => <option key={p}>{p}</option>)}
+                {[...agrupar(predios, (p) => datos.arboles.find((a) => a.predio === p && a.vereda)?.vereda ?? 'Sin vereda')]
+                  .sort((a, b) => a[0].localeCompare(b[0], 'es'))
+                  .map(([v, ps]) => (
+                    <optgroup key={v} label={v}>{ps.map((p) => <option key={p}>{p}</option>)}</optgroup>
+                  ))}
               </select>
               {predio && <button onClick={() => setPredio('')} className="px-1 text-[12.5px] text-suave underline hover:text-bosque">Quitar filtro</button>}
             </div>
@@ -127,7 +131,7 @@ export default function Fenologia({ datos }: { datos: FenologiaPublica | null })
 
             <p className="mt-10 border-t border-linea pt-4 text-[12px] leading-relaxed text-suave">
               Datos preliminares: {c.rondas.length} meses de monitoreo ({datos.periodo}) en {c.zona}. Un mes sin monitoreo no quiere decir que la especie no tenga flor o fruto en ese mes;
-              con más años de datos el calendario se completa. Los predios se muestran sin el nombre de sus dueños. Fuente: monitoreo fenológico de la Red de Árboles Semilleros, Amazonía Emprende.
+              con más años de datos el calendario se completa. Fuente: monitoreo fenológico de la Red de Árboles Semilleros, Amazonía Emprende.
             </p>
           </>
         )}
@@ -309,6 +313,7 @@ function Predios({ c, abrir, filtrar }: { c: Ctx; abrir: (e: string) => void; fi
       const g = c.climaDe(base.length ? base.map(clave) : ms.map(clave))
       return {
         predio: p,
+        vereda: base.find((a) => a.vereda)?.vereda ?? null,
         arboles: base.length || new Set(ms.map((m) => m.codigo)).size,
         especies: new Set([...base.map(especieDe), ...ms.map(especieDe)]).size,
         porRonda: c.rondas.map((r) => new Set(ms.filter((m) => m.ronda === r).map((m) => m.codigo)).size),
@@ -317,7 +322,7 @@ function Predios({ c, abrir, filtrar }: { c: Ctx; abrir: (e: string) => void; fi
         lluvia: g ? lluviaAnual(g.meses) : null,
         ms, base,
       }
-    }).sort((a, b) => a.predio.localeCompare(b.predio, 'es', { numeric: true }))
+    }).sort((a, b) => (a.vereda ?? '').localeCompare(b.vereda ?? '', 'es') || a.predio.localeCompare(b.predio, 'es', { numeric: true }))
   }, [c, ultima])
 
   return (
@@ -346,6 +351,7 @@ function Predios({ c, abrir, filtrar }: { c: Ctx; abrir: (e: string) => void; fi
                     <span className="inline-flex items-center gap-1.5 font-medium text-tinta">
                       {abierto === p.predio ? <ChevronDown size={14} /> : <ChevronRight size={14} />}{p.predio}
                     </span>
+                    {p.vereda && <span className="block pl-5 text-[11.5px] text-suave">{p.vereda}</span>}
                   </td>
                   <td className="px-3 py-2.5 tabular-nums">{p.arboles}</td>
                   <td className="px-3 py-2.5 tabular-nums">{p.especies}</td>
