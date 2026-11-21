@@ -1,41 +1,33 @@
 /**
  * FENOLOGÍA PÚBLICA — los datos de /entregables/fenologia.
  *
- * Solo resúmenes por especie y el clima promedio de la zona: ningún predio,
- * coordenada, monitor, foto ni observación sale de aquí, porque la página no
- * pide sesión. Se arma en el servidor con la service_role y se guarda en caché
- * 6 horas (la base cambia por rondas mensuales). El clima de cada especie se
- * calcula aquí y no en el navegador: así no viajan las coordenadas de los árboles.
+ * La página no pide sesión, así que aquí se recorta lo sensible ANTES de que
+ * salga del servidor:
+ *  - el predio no va con su nombre (que es el de la familia) sino con una
+ *    etiqueta neutra «Vereda · predio N», salvo que se cambie NOMBRE_PREDIO;
+ *  - nada de coordenadas, monitores, fotos ni observaciones;
+ *  - el clima va por celda de Open-Meteo con sus árboles, sin lat/lon.
+ * Con eso el navegador hace los mismos cálculos que /intranet/ras/fenologia
+ * (lib/fenologia.ts), incluido el filtro por predio. Caché de 6 horas.
  */
 import { unstable_cache } from 'next/cache'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { climaPorArbol, type ArbolUbicable } from '@/lib/clima-abierto'
-import {
-  COLUMNAS_FASE, agrupar, climaPonderado, especieDe, etiquetaRonda, indiceCeldas, mesDe, resumenEspecies,
-  type MesClima, type Monitoreo, type ResumenEspecie,
-} from '@/lib/fenologia'
+import { COLUMNAS_FASE, etiquetaRonda, type Arbol, type MesClima, type Monitoreo } from '@/lib/fenologia'
 
-/** Clima donde están los árboles de un grupo, como lo calcula la intranet (climaPonderado). */
-export type ClimaGrupoPublico = { meses: MesClima[]; celdas: number; arboles: number }
+/**
+ * Cómo se muestra el predio en la página pública. 'neutro' = «Alto Consaya · predio 3».
+ * 'nombre' = el nombre real del predio (el de la familia): solo con su autorización.
+ */
+const NOMBRE_PREDIO = 'neutro' as 'neutro' | 'nombre'
 
-export type EspeciePublica = Omit<ResumenEspecie, 'predios'> & {
-  nPredios: number
-  /** Rondas en que se monitoreó la especie ('YYYY-MM'), para el pie de figura. */
-  rondasLista: string[]
-  clima: ClimaGrupoPublico | null
-}
+export type CeldaPublica = { id: string; normal: MesClima[]; arboles: string[] }
 
 export type FenologiaPublica = {
-  especies: EspeciePublica[]
-  /** Meses (0–11) con al menos una ronda. */
-  meses: number[]
+  monitoreos: Monitoreo[]
+  arboles: Arbol[]
+  clima: { periodo: string; celdas: CeldaPublica[] } | null
   periodo: string
-  rondas: number
-  arboles: number
-  monitoreos: number
-  predios: number
-  zonas: string[]
-  clima: (ClimaGrupoPublico & { periodo: string }) | null
   actualizado: string
 }
 
@@ -43,62 +35,60 @@ const COLS = ['nucleo', 'codigo', 'predio', 'ronda', 'nombre_comun', 'nombre_cie
 
 async function armar(): Promise<FenologiaPublica> {
   const ras = createServerSupabaseClient().schema('ras')
-  const ms: Monitoreo[] = []
+  const crudos: Record<string, unknown>[] = []
   for (let desde = 0; ; desde += 1000) {
     const { data, error } = await ras.from('monitoreos_semilleros').select(COLS)
       .eq('eliminado', false).order('ronda').order('codigo').range(desde, desde + 999)
     if (error) throw new Error(error.message)
-    ms.push(...((data ?? []) as unknown as Monitoreo[]))
+    crudos.push(...((data ?? []) as unknown as Record<string, unknown>[]))
     if (!data || data.length < 1000) break
   }
+  const base = await ras.from('arboles_monitoreo')
+    .select('nucleo,codigo,predio,vereda,nombre_comun,nombre_cientifico,familia,latitud,longitud,dap_cm,altura_m')
+    .eq('activo', true).order('codigo').range(0, 4999)
+  const arbolesBase = (base.error ? [] : base.data ?? []) as (Arbol & ArbolUbicable)[]
 
-  const rondas = [...new Set(ms.map((m) => m.ronda))].sort()
-  const clave = (x: { nucleo: string; codigo: string }) => `${x.nucleo}|${x.codigo}`
-  const porEspecie = agrupar(ms, especieDe)
+  // Etiqueta de cada predio: por vereda, numerados en orden alfabético del nombre.
+  const vereda = new Map<string, string | null>()
+  for (const a of arbolesBase) if (!vereda.get(`${a.nucleo}|${a.predio}`)) vereda.set(`${a.nucleo}|${a.predio}`, a.vereda)
+  for (const m of crudos) { const k = `${m.nucleo}|${m.predio}`; if (!vereda.has(k)) vereda.set(k, null) }
+  const porVereda = new Map<string, string[]>()
+  for (const [k, v] of vereda) porVereda.set(v ?? '', [...(porVereda.get(v ?? '') ?? []), k])
+  const etiqueta = new Map<string, string>()
+  for (const [v, ks] of porVereda) {
+    ks.sort((a, b) => a.localeCompare(b, 'es')).forEach((k, i) => {
+      const nombre = k.split('|').slice(1).join('|')
+      etiqueta.set(k, NOMBRE_PREDIO === 'nombre' ? nombre : v ? `${v} · predio ${i + 1}` : `Predio ${i + 1}`)
+    })
+  }
+  const predioDe = (x: { nucleo: unknown; predio: unknown }) => etiqueta.get(`${x.nucleo}|${x.predio}`) ?? 'Predio'
 
-  // Clima: el mismo cálculo de la ficha de la intranet — promedio de las celdas
-  // de Open-Meteo donde están los árboles (los de la base y los monitoreados).
+  const monitoreos = crudos.map((m) => ({
+    ...m, predio: predioDe(m as { nucleo: string; predio: string }),
+    id: '', fecha: '', en_base: true, estado_fitosanitario: null, observaciones: null,
+    vio_animal: null, animales: null, monitor: null, origen: 'app',
+  })) as unknown as Monitoreo[]
+
+  const arboles: Arbol[] = arbolesBase.map((a) => ({
+    nucleo: a.nucleo, codigo: a.codigo, predio: predioDe(a), vereda: a.vereda,
+    nombre_comun: a.nombre_comun, nombre_cientifico: a.nombre_cientifico, familia: a.familia,
+    latitud: null, longitud: null, dap_cm: a.dap_cm, altura_m: a.altura_m, protocolo: null,
+  }))
+
   let clima: FenologiaPublica['clima'] = null
-  let climaDe: (claves: Iterable<string>) => ClimaGrupoPublico | null = () => null
   try {
-    const { data } = await ras.from('arboles_monitoreo')
-      .select('nucleo,codigo,predio,latitud,longitud,nombre_comun,nombre_cientifico').eq('activo', true).range(0, 4999)
-    const arboles = (data ?? []) as (ArbolUbicable & { nombre_comun: string | null; nombre_cientifico: string | null })[]
-    const c = await climaPorArbol(arboles)
-    const indice = indiceCeldas(c)
-    climaDe = (claves) => {
-      const g = climaPonderado(indice, claves)
-      return g ? { meses: g.meses, celdas: g.celdas.length, arboles: g.arboles } : null
-    }
-    for (const a of arboles) porEspecie.get(especieDe(a))?.push({ nucleo: a.nucleo, codigo: a.codigo } as Monitoreo)
-    const g = climaDe(new Set(ms.map(clave)))
-    if (g) clima = { ...g, periodo: c.periodo }
+    const c = await climaPorArbol(arbolesBase)
+    clima = { periodo: c.periodo, celdas: c.celdas.map((x, i) => ({ id: String(i), normal: x.normal, arboles: x.arboles })) }
   } catch {
     // Sin clima la página sigue: los calendarios no dependen de él.
   }
 
-  const especies: EspeciePublica[] = resumenEspecies(ms).map(({ predios, ...e }) => {
-    const propios = ms.filter((m) => especieDe(m) === e.especie)
-    return {
-      ...e,
-      nPredios: predios.length,
-      rondasLista: [...new Set(propios.map((m) => m.ronda))].sort(),
-      clima: climaDe(new Set((porEspecie.get(e.especie) ?? []).map(clave))),
-    }
-  })
-
+  const rondas = [...new Set(monitoreos.map((m) => m.ronda))].sort()
   return {
-    especies,
-    meses: [...new Set(ms.map((m) => mesDe(m) - 1))].sort((a, b) => a - b),
+    monitoreos, arboles, clima,
     periodo: rondas.length ? `${etiquetaRonda(rondas[0])} a ${etiquetaRonda(rondas[rondas.length - 1])}` : '',
-    rondas: rondas.length,
-    arboles: new Set(ms.map((m) => `${m.nucleo}|${m.codigo}`)).size,
-    monitoreos: ms.length,
-    predios: new Set(ms.map((m) => `${m.nucleo}|${m.predio}`)).size,
-    zonas: [...new Set(ms.map((m) => m.nucleo))].sort(),
-    clima,
     actualizado: new Date().toISOString(),
   }
 }
 
-export const fenologiaPublica = unstable_cache(armar, ['fenologia-publica-v2'], { revalidate: 6 * 3600 })
+export const fenologiaPublica = unstable_cache(armar, ['fenologia-publica-v3'], { revalidate: 6 * 3600 })
