@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomInt } from 'crypto'
 import { asegurarFicha, errorTalento, esDeLaSesion, sesionTalento } from '@/lib/talento-api'
-import type { DatosCertificado } from '@/lib/talento'
+import { faltasCertificado, type DatosCertificado } from '@/lib/talento'
 
 /**
+ * GET  /api/talento/certificados?persona_id=   → { faltan: string[] }
+ *      Qué impide expedirlo (`faltasCertificado`); vacío = listo.
  * POST /api/talento/certificados   { incluye_salario, dirigido_a, persona_id? }
+ *      Se niega con la misma lista si falta algo (firmas, ficha o contratos).
  *
  * Expide un certificado laboral: la persona el suyo; talento humano el de
  * cualquiera (persona_id). Arma la foto fija (persona, contratos no anulados,
@@ -14,39 +17,58 @@ import type { DatosCertificado } from '@/lib/talento'
 const LETRAS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 const codigo = () => 'AE-' + Array.from({ length: 8 }, (_, i) => (i === 4 ? '-' : '') + LETRAS[randomInt(LETRAS.length)]).join('')
 
+type Sesion = Extract<Awaited<ReturnType<typeof sesionTalento>>, { ok: true }>['s']
+
+/** La persona (la propia, o la que pide talento humano) y lo que hace falta para certificarla. */
+async function leer(s: Sesion, pedida: unknown) {
+  const db = s.supabase.schema('people')
+  let personaId = typeof pedida === 'string' ? pedida : ''
+  if (!personaId) {
+    const { persona, error } = await asegurarFicha(s)
+    if (error || !persona) return { respuesta: errorTalento(error ?? { message: 'No se pudo abrir tu ficha.' }) }
+    personaId = persona.id
+  } else if (!(await esDeLaSesion(s, personaId))) {
+    return { respuesta: NextResponse.json({ error: 'No puedes expedir certificados de otra persona.' }, { status: 403 }) }
+  }
+  const [per, cons, org] = await Promise.all([
+    db.from('personas').select('nombres, apellidos, tipo_documento, numero_documento, lugar_expedicion, sexo').eq('id', personaId).single(),
+    db.from('contratos').select('vinculacion, modalidad, numero, cargo, objeto, fecha_inicio, fecha_fin, valor_mensual, estado, fecha_terminacion, archivo')
+      .eq('persona_id', personaId).neq('estado', 'anulado').order('fecha_inicio', { ascending: false }),
+    db.from('config_talento').select('*').eq('id', 1).maybeSingle(),
+  ])
+  const err = [per, cons, org].find((x) => x.error)?.error
+  if (err) return { respuesta: errorTalento(err) }
+  return { personaId, per: per.data, cons: cons.data ?? [], org: org.data, faltan: faltasCertificado(per.data, cons.data ?? [], org.data) }
+}
+
+export async function GET(req: NextRequest) {
+  const r = await sesionTalento(req)
+  if (!r.ok) return r.respuesta
+  const x = await leer(r.s, req.nextUrl.searchParams.get('persona_id') || null)
+  if ('respuesta' in x) return x.respuesta
+  return NextResponse.json({ faltan: x.faltan })
+}
+
 export async function POST(req: NextRequest) {
   const r = await sesionTalento(req)
   if (!r.ok) return r.respuesta
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const db = r.s.supabase.schema('people')
 
-  let personaId = typeof b?.persona_id === 'string' ? b.persona_id : ''
-  if (!personaId) {
-    const { persona, error } = await asegurarFicha(r.s)
-    if (error || !persona) return errorTalento(error ?? { message: 'No se pudo abrir tu ficha.' })
-    personaId = persona.id
-  } else if (!(await esDeLaSesion(r.s, personaId))) {
-    return NextResponse.json({ error: 'No puedes expedir certificados de otra persona.' }, { status: 403 })
+  const x = await leer(r.s, b?.persona_id)
+  if ('respuesta' in x) return x.respuesta
+  const { personaId, per, cons, org, faltan } = x
+  if (faltan.length) {
+    return NextResponse.json({ error: `Todavía no se puede expedir el certificado. Falta: ${faltan.join(' ')}`, faltan }, { status: 400 })
   }
 
-  const [per, cons, org] = await Promise.all([
-    db.from('personas').select('nombres, apellidos, tipo_documento, numero_documento, lugar_expedicion, sexo').eq('id', personaId).single(),
-    db.from('contratos').select('vinculacion, modalidad, numero, cargo, objeto, fecha_inicio, fecha_fin, valor_mensual, estado, fecha_terminacion')
-      .eq('persona_id', personaId).neq('estado', 'anulado').order('fecha_inicio', { ascending: false }),
-    db.from('config_talento').select('*').eq('id', 1).maybeSingle(),
-  ])
-  const err = [per, cons, org].find((x) => x.error)?.error
-  if (err) return errorTalento(err)
-  if (!per.data?.nombres || !per.data.apellidos || !per.data.numero_documento) {
-    return NextResponse.json({ error: 'Para certificar hacen falta en la ficha los nombres, apellidos y número de documento.' }, { status: 400 })
-  }
-  if (!cons.data?.length) return NextResponse.json({ error: 'No hay contratos registrados para certificar. Talento humano los carga.' }, { status: 400 })
-
-  const { updated_by: _u, updated_at: _a, id: _i, ...organizacion } = (org.data ?? {}) as Record<string, unknown>
-  void _u; void _a; void _i
+  const { updated_by: _u, updated_at: _a, id: _i, clave_enlace: _c, ...organizacion } = (org ?? {}) as Record<string, unknown>
+  void _u; void _a; void _i; void _c
+  // El archivo del contrato no va en la foto fija del certificado.
+  const contratos = cons.map(({ archivo: _f, ...k }) => { void _f; return k })
   const datos: DatosCertificado = {
-    persona: per.data as DatosCertificado['persona'],
-    contratos: cons.data as DatosCertificado['contratos'],
+    persona: per as DatosCertificado['persona'],
+    contratos: contratos as DatosCertificado['contratos'],
     organizacion: organizacion as unknown as DatosCertificado['organizacion'],
     expedido: new Date().toISOString(),
   }

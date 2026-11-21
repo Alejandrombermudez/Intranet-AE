@@ -5,7 +5,7 @@
  * 'persona') y la ficha que ve talento humano (modo 'rrhh'). Lo que cambia
  * entre los dos modos son los botones, no la información.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Download, FileText, Pencil, Plus, Trash2, Upload, X } from 'lucide-react'
 import { Aviso, Boton, MarcaEstado, Vacio } from '@/app/components/marca'
 import { fetchConSesion } from '@/lib/fetch-sesion'
@@ -249,6 +249,16 @@ export function SeccionCertificados({ certificados, personaId, modo, hayContrato
   const [dirigido, setDirigido] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
+  // Lo que impide expedirlo (firmas, ficha, contratos): mientras haya algo, el botón no se habilita.
+  const [faltan, setFaltan] = useState<string[] | null>(null)
+  useEffect(() => {
+    let vivo = true
+    fetchConSesion(`/api/talento/certificados${modo === 'rrhh' ? `?persona_id=${personaId}` : ''}`)
+      .then((r) => r.json()).then((j) => { if (vivo) setFaltan(Array.isArray(j.faltan) ? j.faltan : []) })
+      .catch(() => { if (vivo) setFaltan([]) }) // sin respuesta: decide el servidor al generar
+    return () => { vivo = false }
+  }, [modo, personaId, hayContratos])
+  const listo = faltan !== null && faltan.length === 0
 
   async function expedir() {
     setOcupado(true); setError(null)
@@ -278,7 +288,15 @@ export function SeccionCertificados({ certificados, personaId, modo, hayContrato
               <input type="checkbox" checked={salario} onChange={(e) => setSalario(e.target.checked)} /> Incluir el salario u honorarios
             </label>
           </div>
-          <div className="mt-4"><Boton disabled={ocupado} icono={<FileText size={13} />} onClick={expedir}>{ocupado ? 'Generando…' : 'Generar certificado'}</Boton></div>
+          {faltan && faltan.length > 0 && (
+            <Aviso tono="ambar" className="mt-4" titulo="Todavía no se puede generar">
+              {modo === 'persona' ? 'Talento humano tiene que completar:' : 'Falta completar:'}
+              <ul className="mt-1.5 list-disc space-y-0.5 pl-5">{faltan.map((f) => <li key={f}>{f}</li>)}</ul>
+            </Aviso>
+          )}
+          <div className="mt-4"><Boton disabled={ocupado || !listo} icono={<FileText size={13} />} onClick={expedir}>
+            {ocupado ? 'Generando…' : faltan === null ? 'Revisando…' : 'Generar certificado'}
+          </Boton></div>
           <Mensaje error={error} />
         </div>
       )}

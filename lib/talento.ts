@@ -237,6 +237,33 @@ export const TIPOS_CONTRATO: { modalidad: string; vinculacion: Vinculacion; nomb
   { modalidad: 'practica', vinculacion: 'practicante', nombre: 'Convenio de práctica' },
 ]
 
+/**
+ * Qué impide expedir un certificado laboral (2026-11-20). Vacío = se puede.
+ * La usan el servidor (rechaza) y la pantalla (deshabilita el botón y lo lista).
+ *   - la organización: razón social, NIT y quién firma, con su firma cargada
+ *     (Administrativa → Configuración);
+ *   - la ficha: nombres, apellidos y documento;
+ *   - los contratos que el certificado cita (todos los no anulados): al menos
+ *     uno, con su PDF firmado cargado.
+ */
+export function faltasCertificado(
+  persona: { nombres?: string | null; apellidos?: string | null; numero_documento?: string | null } | null,
+  contratos: { estado: string; archivo?: string | null; cargo?: string | null; fecha_inicio?: string | null }[],
+  org: { razon_social?: string | null; nit?: string | null; firmante_nombre?: string | null; firmante_cargo?: string | null; firmante_firma?: string | null } | null,
+): string[] {
+  const f: string[] = []
+  const lleno = (x: string | null | undefined) => !!x?.trim()
+  if (!lleno(org?.razon_social) || !lleno(org?.nit)) f.push('La razón social y el NIT de la organización (Administrativa → Configuración).')
+  if (!lleno(org?.firmante_nombre) || !lleno(org?.firmante_cargo)) f.push('El nombre y el cargo de quien firma por la organización (Administrativa → Configuración).')
+  if (!org?.firmante_firma) f.push('La firma de quien firma por la organización (Administrativa → Configuración).')
+  if (!lleno(persona?.nombres) || !lleno(persona?.apellidos) || !lleno(persona?.numero_documento)) f.push('Los nombres, apellidos y número de documento en la ficha de la persona.')
+  const vigentes = contratos.filter((c) => c.estado !== 'anulado')
+  if (!vigentes.length) f.push('Un contrato registrado (talento humano lo carga en la ficha).')
+  const sinPdf = vigentes.filter((c) => !c.archivo)
+  if (sinPdf.length) f.push(sinPdf.length === 1 ? 'El PDF firmado del contrato (talento humano lo sube en «Contratos»).' : `El PDF firmado de ${sinPdf.length} contratos (talento humano los sube en «Contratos»).`)
+  return f
+}
+
 /** Qué modalidades tienen sentido para cada vinculación. */
 export const MODALIDADES_DE: Record<Vinculacion, string[]> = {
   planta: ['termino_indefinido', 'termino_fijo', 'obra_labor'],
