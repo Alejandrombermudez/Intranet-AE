@@ -4,17 +4,26 @@
  * Solo resúmenes por especie y el clima promedio de la zona: ningún predio,
  * coordenada, monitor, foto ni observación sale de aquí, porque la página no
  * pide sesión. Se arma en el servidor con la service_role y se guarda en caché
- * 6 horas (la base cambia por rondas mensuales).
+ * 6 horas (la base cambia por rondas mensuales). El clima de cada especie se
+ * calcula aquí y no en el navegador: así no viajan las coordenadas de los árboles.
  */
 import { unstable_cache } from 'next/cache'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { climaPorArbol, type ArbolUbicable } from '@/lib/clima-abierto'
 import {
-  COLUMNAS_FASE, climaPonderado, etiquetaRonda, mesDe, resumenEspecies,
+  COLUMNAS_FASE, agrupar, climaPonderado, especieDe, etiquetaRonda, indiceCeldas, mesDe, resumenEspecies,
   type MesClima, type Monitoreo, type ResumenEspecie,
 } from '@/lib/fenologia'
 
-export type EspeciePublica = Omit<ResumenEspecie, 'predios'> & { nPredios: number }
+/** Clima donde están los árboles de un grupo, como lo calcula la intranet (climaPonderado). */
+export type ClimaGrupoPublico = { meses: MesClima[]; celdas: number; arboles: number }
+
+export type EspeciePublica = Omit<ResumenEspecie, 'predios'> & {
+  nPredios: number
+  /** Rondas en que se monitoreó la especie ('YYYY-MM'), para el pie de figura. */
+  rondasLista: string[]
+  clima: ClimaGrupoPublico | null
+}
 
 export type FenologiaPublica = {
   especies: EspeciePublica[]
@@ -26,7 +35,7 @@ export type FenologiaPublica = {
   monitoreos: number
   predios: number
   zonas: string[]
-  clima: { meses: MesClima[]; periodo: string } | null
+  clima: (ClimaGrupoPublico & { periodo: string }) | null
   actualizado: string
 }
 
@@ -44,19 +53,39 @@ async function armar(): Promise<FenologiaPublica> {
   }
 
   const rondas = [...new Set(ms.map((m) => m.ronda))].sort()
-  const especies: EspeciePublica[] = resumenEspecies(ms).map(({ predios, ...e }) => ({ ...e, nPredios: predios.length }))
+  const clave = (x: { nucleo: string; codigo: string }) => `${x.nucleo}|${x.codigo}`
+  const porEspecie = agrupar(ms, especieDe)
 
+  // Clima: el mismo cálculo de la ficha de la intranet — promedio de las celdas
+  // de Open-Meteo donde están los árboles (los de la base y los monitoreados).
   let clima: FenologiaPublica['clima'] = null
+  let climaDe: (claves: Iterable<string>) => ClimaGrupoPublico | null = () => null
   try {
-    const { data } = await ras.from('arboles_monitoreo').select('nucleo,codigo,predio,latitud,longitud').eq('activo', true).range(0, 4999)
-    const arboles = (data ?? []) as ArbolUbicable[]
+    const { data } = await ras.from('arboles_monitoreo')
+      .select('nucleo,codigo,predio,latitud,longitud,nombre_comun,nombre_cientifico').eq('activo', true).range(0, 4999)
+    const arboles = (data ?? []) as (ArbolUbicable & { nombre_comun: string | null; nombre_cientifico: string | null })[]
     const c = await climaPorArbol(arboles)
-    const indice = new Map(c.celdas.flatMap((celda) => celda.arboles.map((k) => [k, celda] as const)))
-    const g = climaPonderado(indice, new Set(ms.map((m) => `${m.nucleo}|${m.codigo}`)))
-    if (g) clima = { meses: g.meses, periodo: c.periodo }
+    const indice = indiceCeldas(c)
+    climaDe = (claves) => {
+      const g = climaPonderado(indice, claves)
+      return g ? { meses: g.meses, celdas: g.celdas.length, arboles: g.arboles } : null
+    }
+    for (const a of arboles) porEspecie.get(especieDe(a))?.push({ nucleo: a.nucleo, codigo: a.codigo } as Monitoreo)
+    const g = climaDe(new Set(ms.map(clave)))
+    if (g) clima = { ...g, periodo: c.periodo }
   } catch {
     // Sin clima la página sigue: los calendarios no dependen de él.
   }
+
+  const especies: EspeciePublica[] = resumenEspecies(ms).map(({ predios, ...e }) => {
+    const propios = ms.filter((m) => especieDe(m) === e.especie)
+    return {
+      ...e,
+      nPredios: predios.length,
+      rondasLista: [...new Set(propios.map((m) => m.ronda))].sort(),
+      clima: climaDe(new Set((porEspecie.get(e.especie) ?? []).map(clave))),
+    }
+  })
 
   return {
     especies,
@@ -72,4 +101,4 @@ async function armar(): Promise<FenologiaPublica> {
   }
 }
 
-export const fenologiaPublica = unstable_cache(armar, ['fenologia-publica-v1'], { revalidate: 6 * 3600 })
+export const fenologiaPublica = unstable_cache(armar, ['fenologia-publica-v2'], { revalidate: 6 * 3600 })

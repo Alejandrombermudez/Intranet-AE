@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { CalendarioCircular, Climograma, TiraMeses } from '@/app/intranet/ras/fenologia/graficos'
-import { COLOR, MESES, MESES_LARGOS, mesesLluviosos, type ResumenEspecie } from '@/lib/fenologia'
+import { COLOR, MESES, MESES_LARGOS, etiquetaRonda, mesesLluviosos, type ResumenEspecie } from '@/lib/fenologia'
 import type { EspeciePublica, FenologiaPublica } from '@/lib/fenologia-publica'
 
 type Seccion = 'especies' | 'mes' | 'clima'
@@ -237,6 +237,11 @@ function Ficha({ e, d, cerrar }: { e: EspeciePublica; d: FenologiaPublica; cerra
   const meses = (xs: number[]) => xs.length ? xs.map((i) => MESES_LARGOS[i]).join(', ') : 'ninguno todavía'
   const flor = e.flor.flatMap((c, i) => (c && c.media > 0 ? [i] : []))
   const resumen = { ...e, predios: [] } as ResumenEspecie
+  // Igual que la ficha de la intranet (VistaFicha): clima en el círculo, sin intensidad, mismo pie.
+  const clima = e.clima?.meses ?? null
+  const pie = `Monitoreo fenológico RAS – ${d.zonas.join(', ')}: ${e.arboles} árbol(es), ${e.rondas} ronda(s) (${e.rondasLista.map(etiquetaRonda).join(', ')}).` +
+    `${e.preliminar ? ' Calendario preliminar.' : ''}` +
+    (e.clima && d.clima ? ` Clima: Open-Meteo (reanálisis ERA5 / ECMWF IFS, CC BY 4.0), promedio ${d.clima.periodo}, ponderado por árbol en ${e.clima.celdas} celda(s) de ~7 km (${e.clima.arboles} árboles).` : '')
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={cerrar}>
@@ -251,12 +256,13 @@ function Ficha({ e, d, cerrar }: { e: EspeciePublica; d: FenologiaPublica; cerra
         </div>
 
         <div className="grid gap-5 md:grid-cols-[1.2fr_1fr] md:items-center">
-          <CalendarioCircular e={resumen} intensidad clima={null} />
+          <CalendarioCircular e={resumen} intensidad={false} clima={clima} pie={pie} />
           <dl className="space-y-3 text-[14px]">
             <Dato t="Meses con flor">{meses(flor)}</Dato>
             <Dato t="Meses con fruto maduro">{meses(e.ventana)}</Dato>
             {e.pico !== null && <Dato t="Mejor mes para recolectar">{MESES_LARGOS[e.pico]}</Dato>}
             <Dato t="Árboles monitoreados">{e.arboles} en {e.nPredios} {e.nPredios === 1 ? 'predio' : 'predios'}</Dato>
+            {clima && <Dato t="Lluvia anual donde están sus árboles">{n(Math.round(clima.reduce((s, m) => s + (m.precip_mm ?? 0), 0)))} mm</Dato>}
             {e.preliminar && <p className="text-[12.5px] text-suave">Dato preliminar: pocos árboles o menos de un año de monitoreo.</p>}
           </dl>
         </div>
