@@ -13,10 +13,13 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronRight, X } from 'lucide-react'
 import { CalendarioCircular, Climograma, MapaCalor, TiraMeses } from '@/app/intranet/ras/fenologia/graficos'
 import {
-  COLOR, MESES, MESES_LARGOS, agrupar, celdasMes, climaPonderado, especieDe, etiquetaRonda, mesDe,
+  COLOR, FENOFASES, MESES, MESES_LARGOS, NOMBRE_SERIE, agrupar, celdasMes, climaPonderado, especieDe, etiquetaRonda, mesDe,
   mesesLluviosos, resumenEspecies, valor,
-  type Arbol, type CeldaClima, type Monitoreo, type ResumenEspecie,
+  type Arbol, type CeldaClima, type Monitoreo, type ResumenEspecie, type Serie,
 } from '@/lib/fenologia'
+
+/** Las del mapa de calor de la intranet: los dos grupos y las nueve fenofases. */
+const SERIES_CALOR: Serie[] = ['flor', 'fruto', ...FENOFASES.map((f) => f.k)]
 import type { FenologiaPublica } from '@/lib/fenologia-publica'
 
 type Seccion = 'especies' | 'mes' | 'predios' | 'clima'
@@ -182,6 +185,8 @@ function Especies({ c, abrir }: { c: Ctx; abrir: (e: string) => void }) {
   const [q, setQ] = useState('')
   const [todas, setTodas] = useState(false)
   const [ver, setVer] = useState<'lista' | 'calor'>('lista')
+  const [series, setSeries] = useState<Serie[]>(['flor', 'fruto'])
+  const alternar = (s: Serie) => setSeries((x) => x.includes(s) ? x.filter((y) => y !== s) : x.length >= 4 ? x : [...x, s])
   const lista = useMemo(() => {
     const t = sinTildes(q.trim())
     return c.especies.filter((e) => (todas || activa(e)) && (!t || sinTildes([e.especie, ...e.comunes, e.familia ?? ''].join(' ')).includes(t)))
@@ -202,14 +207,35 @@ function Especies({ c, abrir }: { c: Ctx; abrir: (e: string) => void }) {
       {lista.length === 0 ? (
         <p className="py-8 text-center text-[14px] text-suave">Ninguna especie con ese nombre.</p>
       ) : ver === 'calor' ? (
-        <div className="rounded-2xl border border-linea p-2 sm:p-3">
-          <MapaCalor meses={c.meses} pie={c.pie}
-            filas={lista.map((e) => ({ especie: e.especie, n: e.arboles }))}
-            paneles={(['flor', 'fruto'] as const).map((s) => ({
-              titulo: s === 'flor' ? 'Floración' : 'Fructificación',
-              celdas: lista.map((e) => celdasMes(c.porEspecie.get(e.especie) ?? [], s)),
-            }))} />
-        </div>
+        <>
+          {/* Como en la intranet: se agregan y se quitan fases, hasta cuatro paneles. */}
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            {SERIES_CALOR.map((s) => {
+              const on = series.includes(s)
+              return (
+                <button key={s} onClick={() => alternar(s)} aria-pressed={on}
+                  className={`rounded-full border px-3 py-1 text-[12.5px] transition ${on
+                    ? 'border-tinta bg-[#fff] font-medium text-tinta hover:border-bosque hover:bg-bosque hover:text-white'
+                    : 'border-linea bg-[#fff] text-suave hover:border-bosque hover:bg-bosque hover:text-white'}`}>
+                  {on && '✓ '}{NOMBRE_SERIE[s]}
+                </button>
+              )
+            })}
+            <span className="ml-1 text-[12px] text-suave">hasta cuatro</span>
+          </div>
+          {series.length === 0 ? (
+            <p className="py-8 text-center text-[14px] text-suave">Elija al menos una fase.</p>
+          ) : (
+            <div className="rounded-2xl border border-linea p-2 sm:p-3">
+              <MapaCalor meses={c.meses} pie={c.pie}
+                filas={lista.map((e) => ({ especie: e.especie, n: e.arboles }))}
+                paneles={series.map((s) => ({
+                  titulo: NOMBRE_SERIE[s],
+                  celdas: lista.map((e) => celdasMes(c.porEspecie.get(e.especie) ?? [], s)),
+                }))} />
+            </div>
+          )}
+        </>
       ) : (
         <>
           <div className="mb-3"><Leyenda /></div>
