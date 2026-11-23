@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { registrarAcceso } from '@/lib/registro-acceso'
 import { AUTH_TIMEOUT_MS } from '@/lib/types'
+import { VOLVER_VEHICULOS } from '@/lib/vehiculos/cliente'
 import { XCircle, Home, RefreshCw, Loader2 } from 'lucide-react'
 import { Boton, Rotulo } from '@/app/components/marca'
 
@@ -124,6 +125,11 @@ function AuthCallbackContent() {
       const s = sessionStorage.getItem('ae:siguiente')
       sessionStorage.removeItem('ae:siguiente')
       if (s && /^\/(intranet\/|vehiculos(?:$|[/?]))[\w\-/?=&]*$/.test(s)) destino = s
+      // Respaldo de /vehiculos: si la app instalada perdió el sessionStorage al pasar por
+      // Microsoft, no puede caer en la intranet. Vale 15 minutos desde que tocó «Entrar».
+      const v = JSON.parse(localStorage.getItem(VOLVER_VEHICULOS) ?? 'null') as { ruta?: string; t?: number } | null
+      localStorage.removeItem(VOLVER_VEHICULOS)
+      if (!s && v?.ruta && Date.now() - (v.t ?? 0) < 15 * 60_000 && /^\/vehiculos(?:$|[/?])[\w\-/?=&]*$/.test(v.ruta)) destino = v.ruta
     } catch { /* sin storage: al inicio */ }
     const t = setTimeout(() => router.push(destino), MS_ANTES_DE_ENTRAR)
     return () => clearTimeout(t)
@@ -138,6 +144,16 @@ function AuthCallbackContent() {
       onSaludoListo={useCallback(() => setSaludoListo(true), [])}
     />
   )
+}
+
+/** «Volver al inicio»: si se vino de /vehiculos, regresa allá; desde vehículos no se llega a la intranet. */
+function volverAlInicio() {
+  let destino = '/'
+  try {
+    const s = sessionStorage.getItem('ae:siguiente') ?? ''
+    if (s.startsWith('/vehiculos') || localStorage.getItem(VOLVER_VEHICULOS)) destino = '/vehiculos'
+  } catch { /* sin storage: al inicio */ }
+  window.location.assign(destino)
 }
 
 /**
@@ -231,7 +247,7 @@ function Bienvenida({
               {error}
             </p>
             <div className="flex flex-col gap-2.5 sm:flex-row">
-              <Boton href="/" icono={<Home size={15} />} className="flex-1">
+              <Boton onClick={volverAlInicio} icono={<Home size={15} />} className="flex-1">
                 Volver al inicio
               </Boton>
               <Boton

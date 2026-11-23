@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { enviar, type Persona, type Yo } from '@/lib/vehiculos/cliente'
+import { enviar, VOLVER_VEHICULOS, type Persona, type Yo } from '@/lib/vehiculos/cliente'
 
 export const SIN_AUTO_MICROSOFT = 'vh:sin-auto-microsoft'
 
@@ -26,7 +26,9 @@ export default function Ingreso({ personas, qr, onEntro }: { personas: Persona[]
   const conMicrosoft = async () => {
     setYendoMs(true)
     try {
-      sessionStorage.setItem('ae:siguiente', qr ? `/vehiculos?qr=${encodeURIComponent(qr)}` : '/vehiculos')
+      const ruta = qr ? `/vehiculos?qr=${encodeURIComponent(qr)}` : '/vehiculos'
+      sessionStorage.setItem('ae:siguiente', ruta)
+      localStorage.setItem(VOLVER_VEHICULOS, JSON.stringify({ ruta, t: Date.now() }))
       localStorage.removeItem(SIN_AUTO_MICROSOFT)
     } catch { /* sin storage: vuelve al inicio de la intranet */ }
     const { error: e } = await supabase.auth.signInWithOAuth({

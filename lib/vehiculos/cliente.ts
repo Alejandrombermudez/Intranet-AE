@@ -1,5 +1,11 @@
 // Tipos y llamadas que usa la pantalla /vehiculos en el navegador.
 
+/**
+ * Respaldo en localStorage de a dónde volver después de Microsoft. /auth/callback lo lee si el
+ * sessionStorage se perdió (pasa en la app instalada): así nunca cae en la intranet.
+ */
+export const VOLVER_VEHICULOS = 'vh:volver'
+
 export interface Yo {
   id: string
   nombre: string

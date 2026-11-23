@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import { ArrowRight, LogOut, ChevronDown, Loader2 } from 'lucide-react'
 import { Firma } from '@/app/components/marca'
+import { VOLVER_VEHICULOS } from '@/lib/vehiculos/cliente'
 
 // ─── Fotos de portada (slideshow automático) ──────────────────────────────────
 
@@ -126,6 +127,8 @@ export default function LandingPage() {
   const handleMicrosoftLogin = async () => {
     setLoading(true)
     setMsg('')
+    // Se entra a la intranet: que un ingreso a medias desde /vehiculos no lleve allá.
+    try { localStorage.removeItem(VOLVER_VEHICULOS) } catch { /* sin storage: nada que quitar */ }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'azure',
       options: {

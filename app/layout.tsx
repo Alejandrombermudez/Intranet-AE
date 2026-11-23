@@ -1,9 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Geist_Mono, Poppins } from "next/font/google";
 import "./globals.css";
-import InstallPrompt from "./components/InstallPrompt";
-import RegistroAcceso from "./components/RegistroAcceso";
-import BotonActualizar from "./components/BotonActualizar";
+import ExtrasIntranet from "./components/ExtrasIntranet";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -55,9 +53,7 @@ export default function RootLayout({
         className={`${geistMono.variable} ${poppins.variable} ${fraunces.variable} antialiased`}
       >
         {children}
-        <InstallPrompt />
-        <BotonActualizar />
-        <RegistroAcceso />
+        <ExtrasIntranet />
       </body>
     </html>
   );
