@@ -78,6 +78,21 @@ export function quitarSesion(res: NextResponse) {
   res.cookies.set(COOKIE, '', { path: '/', maxAge: 0 })
 }
 
+/**
+ * ¿Ya se envió la recepción (fotos y formulario) de esta reserva? Tener `tomado_at` no basta:
+ * se marca al elegir el vehículo o leer el QR, antes de llenar el formulario, y la persona
+ * puede salirse sin enviarlo. Sin recepción enviada no hay devolución.
+ */
+export async function recepcionHecha(reservaId: string): Promise<boolean> {
+  const { count } = await fleet()
+    .from('vehicle_inspections')
+    .select('id', { count: 'exact', head: true })
+    .eq('reservation_id', reservaId)
+    .eq('inspection_type', 'recepcion')
+    .not('submitted_at', 'is', null)
+  return (count ?? 0) > 0
+}
+
 /** Quién llama. Se relee de la base en cada pedido: si lo desactivan, deja de entrar. */
 export async function conductorActual(): Promise<Conductor | null> {
   const jar = await cookies()

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { documento, documentosExtra, enlaceFirmado, exigirConductor, fleet } from '@/lib/vehiculos/sesion'
+import { documento, documentosExtra, enlaceFirmado, exigirConductor, fleet, recepcionHecha } from '@/lib/vehiculos/sesion'
 import { fechaBogota } from '@/lib/vehiculos/horas'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +11,8 @@ export const dynamic = 'force-dynamic'
  *   reservado  → otra persona lo reservó para este momento
  *   ocupado    → otra persona lo tomó y no lo ha devuelto
  *   enUso      → lo tengo yo (toca devolverlo)
- * Y `miEnUso`: el vehículo que tengo ahora, para que el botón principal diga «Devolución».
+ * Y `miEnUso`: el vehículo que tengo ahora, para que el botón principal diga «Devolución» (o
+ * «Recepción» si todavía no envié la recepción: `recepcionHecha`).
  */
 export async function GET() {
   const s = await exigirConductor()
@@ -51,6 +52,7 @@ export async function GET() {
   return NextResponse.json({
     vehiculos: lista,
     miEnUso: mio && v ? {
+      recepcionHecha: await recepcionHecha(mio.id),
       reserva: { id: mio.id, vehicle_id: mio.vehicle_id, start_at: mio.start_at, end_at: mio.end_at, purpose: mio.purpose, tomado_at: mio.tomado_at, devuelto_at: null },
       vehiculo: {
         id: v.id, nombre: v.nombre, placa: v.placa, tarjeta: await documento(v.tarjeta_path),

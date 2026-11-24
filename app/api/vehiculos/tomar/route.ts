@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { exigirConductor, fleet } from '@/lib/vehiculos/sesion'
+import { exigirConductor, fleet, recepcionHecha } from '@/lib/vehiculos/sesion'
 import { aInstante, fechaBogota } from '@/lib/vehiculos/horas'
 import { crearReserva, enManosDeOtro } from '@/lib/vehiculos/reservar'
 
@@ -10,7 +10,8 @@ const FECHA = /^\d{4}-\d{2}-\d{2}$/
  * POST /api/vehiculos/tomar { vehiculoId, hasta?: {fecha, hora}, actividad? }
  * Lo que pasa al elegir el vehículo en «Recepción» o al leer su QR.
  *
- * - Si tengo ese vehículo tomado y sin devolver → toca la devolución.
+ * - Si tengo ese vehículo tomado y sin devolver → toca la devolución; pero si nunca envié la
+ *   recepción (me salí del formulario), primero la recepción.
  * - Si alguien más lo tiene sin devolver → no se puede.
  * - Si tengo una reserva de hoy sin tomar → queda registrada YA la hora (tomado_at) y sigue la recepción.
  * - Si no tengo reserva → «sin-reserva»; si además llegan `hasta` y `actividad`, se reserva desde
@@ -37,7 +38,10 @@ export async function POST(req: NextRequest) {
     .is('devuelto_at', null)
     .order('tomado_at', { ascending: false })
     .limit(1)
-  if (enUso?.length) return NextResponse.json({ accion: 'devolucion', vehiculo, reserva: enUso[0] })
+  if (enUso?.length) {
+    const accion = (await recepcionHecha(enUso[0].id)) ? 'devolucion' : 'recepcion'
+    return NextResponse.json({ accion, vehiculo, reserva: enUso[0] })
+  }
 
   const otro = await enManosDeOtro(vehiculoId, s.yo.id)
   if (otro) return NextResponse.json({ error: `${vehiculo.nombre} lo tiene ${otro} y todavía no lo ha devuelto.` }, { status: 409 })

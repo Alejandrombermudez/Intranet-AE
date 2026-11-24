@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { BUCKET_INSPECCION, exigirConductor, fleet, storage } from '@/lib/vehiculos/sesion'
+import { BUCKET_INSPECCION, exigirConductor, fleet, recepcionHecha, storage } from '@/lib/vehiculos/sesion'
 import { CATEGORIAS, FOTOS, type ClaveCategoria } from '@/lib/vehiculos/inspeccion'
 import { fechaBogota } from '@/lib/vehiculos/horas'
 
@@ -42,7 +42,9 @@ export async function POST(req: NextRequest) {
   if (tipo === 'recepcion' && fechaBogota(new Date()) < fechaBogota(r.start_at)) {
     return NextResponse.json({ error: 'La recepción se hace desde el día de la reserva.' }, { status: 409 })
   }
-  if (tipo === 'devolucion' && !r.tomado_at) return NextResponse.json({ error: 'Primero haz la recepción de esta reserva.' }, { status: 409 })
+  if (tipo === 'devolucion' && (!r.tomado_at || !(await recepcionHecha(r.id)))) {
+    return NextResponse.json({ error: 'Primero haz la recepción de este vehículo: fotos y formulario.' }, { status: 409 })
+  }
 
   const fila: Record<string, unknown> = {
     reservation_id: reservaId,

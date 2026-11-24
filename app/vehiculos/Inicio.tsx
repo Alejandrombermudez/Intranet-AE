@@ -31,8 +31,11 @@ export default function Inicio({
   useEffect(cargar, [cargar, recarga])
 
   const hoy = hoyBogota()
-  const paraRecibir = (lista ?? []).filter((r) => !r.tomado_at && !r.checkInHecho && fechaBogota(r.start_at) <= hoy && new Date(r.end_at).getTime() > ahora)
-  const paraEntregar = (lista ?? []).filter((r) => (r.tomado_at || r.checkInHecho) && !r.devuelto_at && !r.checkOutHecho)
+  // La recepción cuenta cuando se envió el formulario (checkInHecho), no cuando se marcó la hora
+  // de tomarlo: quien se salió del formulario la tiene pendiente, y sin ella no hay devolución.
+  const paraRecibir = (lista ?? []).filter((r) => !r.checkInHecho && !r.devuelto_at
+    && (!!r.tomado_at || (fechaBogota(r.start_at) <= hoy && new Date(r.end_at).getTime() > ahora)))
+  const paraEntregar = (lista ?? []).filter((r) => r.checkInHecho && !r.devuelto_at && !r.checkOutHecho)
 
   const accion = (tipo: Tipo) => {
     setAviso('')

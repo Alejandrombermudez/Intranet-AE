@@ -23,7 +23,7 @@ interface Disponible {
 interface FilaReserva { id: string; vehicle_id: string; start_at: string; end_at: string; purpose: string | null; tomado_at: string | null; devuelto_at: string | null }
 interface Estado {
   vehiculos: Disponible[]
-  miEnUso: { reserva: FilaReserva; vehiculo: DocsVehiculo & { id: string } } | null
+  miEnUso: { reserva: FilaReserva; vehiculo: DocsVehiculo & { id: string }; recepcionHecha: boolean } | null
 }
 type Tomar =
   | { accion: Tipo; vehiculo: { id: string; nombre: string }; reserva: FilaReserva }
@@ -211,7 +211,13 @@ export default function Simple({
       <p className="saludo">Hola, {nombre.split(' ')[0]}</p>
       {error && <div className="aviso error" style={{ width: '100%' }}>{error}</div>}
 
-      {enUso ? (
+      {enUso && !enUso.recepcionHecha ? (
+        // Tomó el vehículo (eligió o leyó el QR) pero no envió la recepción: primero eso.
+        <button className="principal recibir" onClick={() => onInspeccion(aMiReserva(enUso.reserva), 'recepcion')}>
+          Recepción
+          <small>Falta la recepción de {enUso.vehiculo.nombre}: fotos y formulario</small>
+        </button>
+      ) : enUso ? (
         <>
           <button className="principal entregar" onClick={() => onInspeccion(aMiReserva(enUso.reserva), 'devolucion')}>
             Devolución
