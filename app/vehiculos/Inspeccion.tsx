@@ -5,7 +5,8 @@ import {
   type Categorias, type ClaveCategoria,
 } from '@/lib/vehiculos/inspeccion'
 import { enviar, type MiReserva, type Vehiculo } from '@/lib/vehiculos/cliente'
-import { comprimirImagen } from '@/lib/comprimir-imagen'
+import { fotoLiviana } from '@/lib/vehiculos/foto'
+import { borrarBorrador, claveBorrador, guardarBorrador, leerBorrador } from '@/lib/vehiculos/borrador'
 
 type Paso = 'terminos' | ClaveCategoria | 'fotos'
 
@@ -37,17 +38,67 @@ export default function Inspeccion({
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [terminado, setTerminado] = useState(false)
+  const [procesando, setProcesando] = useState<string | null>(null)
+  // Sin «capture»: deja elegir fotos ya tomadas. Para celulares donde abrir la cámara desde aquí
+  // deja a Chrome sin memoria: se toman con la cámara normal y se eligen de la galería.
+  const [galeria, setGaleria] = useState(false)
   const entradas = useRef<Record<string, HTMLInputElement | null>>({})
+  const [cargado, setCargado] = useState(false)
+  const [aviso, setAviso] = useState('')
+  const clave = claveBorrador(reserva.id, tipo)
 
   useEffect(() => { window.scrollTo({ top: 0 }) }, [i])
+
+  // Si Android cerró la app (pasa al abrir la cámara con poca memoria), se sigue donde iba.
+  useEffect(() => {
+    let vivo = true
+    leerBorrador(clave).then((b) => {
+      if (!vivo) return
+      if (b) {
+        setI(Math.min(b.paso, pasos.length - 1))
+        if (b.aceptados?.length) setAceptados(b.aceptados)
+        setCats(b.cats as Categorias)
+        setKm(b.km)
+        setFotos(Object.fromEntries(Object.entries(b.fotos ?? {}).map(([k, blob]) => [k, { blob, vista: URL.createObjectURL(blob) }])))
+        if (b.camara) {
+          setGaleria(true)
+          setAviso('El celular cerró la app al abrir la cámara (le faltó memoria). Lo que habías llenado y las fotos ya tomadas se guardaron. '
+            + 'Toma las fotos que faltan con la cámara del celular y elígelas de la galería.')
+        } else {
+          setAviso('Seguimos donde ibas.')
+        }
+      }
+      setCargado(true)
+    })
+    return () => { vivo = false }
+  }, [clave, pasos.length])
+
+  const borrador = (camara = false) => ({
+    paso: i, aceptados, cats, km, camara,
+    fotos: Object.fromEntries(Object.entries(fotos).map(([k, f]) => [k, f.blob])),
+  })
+
+  // Guardar a medida que se llena (después de leer el borrador, para no pisarlo con el formulario vacío).
+  useEffect(() => {
+    if (!cargado || terminado) return
+    guardarBorrador(clave, borrador())
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- borrador() se arma con estos mismos valores
+  }, [cargado, terminado, clave, i, aceptados, cats, km, fotos])
+
+  const abrirFoto = (slot: string) => {
+    // Con la cámara se marca el borrador: si Android cierra la app mientras está abierta, al volver se sabe.
+    if (!galeria) guardarBorrador(clave, borrador(true))
+    entradas.current[slot]?.click()
+  }
 
   const cambiarCat = (k: ClaveCategoria, d: Partial<Categorias[ClaveCategoria]>) =>
     setCats((c) => ({ ...c, [k]: { ...c[k], ...d } }))
 
   const elegirFoto = async (slot: string, archivo: File | undefined) => {
     if (!archivo) return
+    setProcesando(slot)
     try {
-      const blob = await comprimirImagen(archivo, 250_000)
+      const blob = await fotoLiviana(archivo)
       setFotos((f) => {
         if (f[slot]) URL.revokeObjectURL(f[slot].vista)
         return { ...f, [slot]: { blob, vista: URL.createObjectURL(blob) } }
@@ -55,6 +106,8 @@ export default function Inspeccion({
       setError('')
     } catch (e) {
       setError((e as Error).message)
+    } finally {
+      setProcesando(null)
     }
   }
 
@@ -88,6 +141,7 @@ export default function Inspeccion({
         reservaId: reserva.id, tipo, categorias: cats, fotos: urls, kilometraje: Number(km),
       })
       setTerminado(true)
+      borrarBorrador(clave)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -123,6 +177,8 @@ export default function Inspeccion({
       </div>
       <p className="tenue" style={{ margin: '8px 0 0' }}>{vehiculo?.nombre}</p>
       <div className="progreso"><div style={{ width: `${((i + 1) / pasos.length) * 100}%` }} /></div>
+
+      {aviso && <div className="aviso recordatorio" style={{ marginTop: 12 }}>{aviso}</div>}
 
       {paso === 'terminos' && (
         <div>
@@ -184,10 +240,13 @@ export default function Inspeccion({
               const foto = fotos[f.clave]
               return (
                 <div key={f.clave}>
-                  <input ref={(el) => { entradas.current[f.clave] = el }} type="file" accept="image/*" capture="environment" hidden
+                  <input ref={(el) => { entradas.current[f.clave] = el }} type="file" accept="image/*" capture={galeria ? undefined : 'environment'} hidden
                     onChange={(e) => { elegirFoto(f.clave, e.target.files?.[0]); e.target.value = '' }} />
-                  <button className={`foto-slot ${foto ? 'lista' : ''}`} style={{ width: '100%', cursor: 'pointer' }} onClick={() => entradas.current[f.clave]?.click()}>
-                    {foto ? (
+                  <button className={`foto-slot ${foto ? 'lista' : ''}`} style={{ width: '100%', cursor: 'pointer' }} disabled={!!procesando}
+                    onClick={() => abrirFoto(f.clave)}>
+                    {procesando === f.clave ? (
+                      <b>Preparando la foto…</b>
+                    ) : foto ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={foto.vista} alt={f.etiqueta} />
                     ) : (
@@ -198,6 +257,11 @@ export default function Inspeccion({
               )
             })}
           </div>
+          <p className="tenue" style={{ marginTop: 10 }}>
+            {galeria
+              ? <>Elige las fotos de la galería. <button className="enlace" onClick={() => setGaleria(false)}>Volver a usar la cámara</button></>
+              : <>¿Se cierra la app o sale «Sin memoria» al tomar las fotos? Tómalas con la cámara del celular y <button className="enlace" onClick={() => setGaleria(true)}>elígelas de la galería</button>.</>}
+          </p>
         </div>
       )}
 
