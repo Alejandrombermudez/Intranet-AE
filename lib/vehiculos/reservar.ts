@@ -55,6 +55,26 @@ export async function crearReserva(
   return { ok: true, id: data.id }
 }
 
+/**
+ * ¿Hay una reserva de otra persona antes de la mía que todavía no termina? Con reserva se puede
+ * tomar el vehículo desde temprano el mismo día, pero no encima del turno de otro: si Luis lo
+ * reservó de 8 a 12 y yo de 2 a 5, a las 9 no lo puedo tomar. Cuenta mientras no haya terminado
+ * su horario ni lo haya devuelto (si lo devuelve antes, queda libre).
+ */
+export async function reservaDeOtroAntes(vehiculoId: string, yoId: string, miInicio: string): Promise<{ quien: string; hasta: string } | null> {
+  const { data } = await fleet()
+    .from('vehicle_reservations')
+    .select('user_name, end_at')
+    .eq('vehicle_id', vehiculoId)
+    .or(`conductor_id.is.null,conductor_id.neq.${yoId}`)
+    .is('devuelto_at', null)
+    .lt('start_at', miInicio)
+    .gt('end_at', new Date().toISOString())
+    .order('end_at', { ascending: false })
+    .limit(1)
+  return data?.[0] ? { quien: data[0].user_name, hasta: data[0].end_at } : null
+}
+
 /** ¿Alguien más lo tiene tomado y no lo ha devuelto? Devuelve su nombre. */
 export async function enManosDeOtro(vehiculoId: string, yoId: string): Promise<string | null> {
   const { data } = await fleet()

@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic'
 /**
  * GET /api/vehiculos/disponibles — para «Recepción»: cada vehículo con su estado ahora mismo.
  *   mio        → tengo reserva de hoy sin tomar (se toma con esa reserva)
+ *   reservado  → también si tengo reserva más tarde pero antes va el turno de otra persona (miaDesde)
  *   libre      → nadie lo tiene ni lo reservó para este momento (libreHasta: la próxima reserva)
  *   reservado  → otra persona lo reservó para este momento
  *   ocupado    → otra persona lo tomó y no lo ha devuelto
@@ -26,7 +27,7 @@ export async function GET() {
     db.from('vehicle_reservations').select('id, vehicle_id, conductor_id, user_name, tomado_at, end_at, start_at, purpose, devuelto_at')
       .not('tomado_at', 'is', null).is('devuelto_at', null),
     db.from('vehicle_reservations').select('id, vehicle_id, conductor_id, user_name, start_at, end_at, tomado_at')
-      .gt('end_at', ahora).is('tomado_at', null).order('start_at'),
+      .gt('end_at', ahora).is('devuelto_at', null).order('start_at'),
   ])
   if (!vehiculos) return NextResponse.json({ error: 'No se pudieron leer los vehículos.' }, { status: 500 })
 
@@ -38,9 +39,14 @@ export async function GET() {
         ? { ...base, estado: 'enUso', desde: enMano.tomado_at }
         : { ...base, estado: 'ocupado', quien: enMano.user_name, desde: enMano.tomado_at }
     }
-    const delVehiculo = (futuras ?? []).filter((r) => r.vehicle_id === v.id)
+    const delVehiculo = (futuras ?? []).filter((r) => r.vehicle_id === v.id && !r.tomado_at)
     const mia = delVehiculo.find((r) => r.conductor_id === s.yo.id && fechaBogota(r.start_at) <= hoy)
-    if (mia) return { ...base, estado: 'mio', hasta: mia.end_at }
+    if (mia) {
+      // El mismo criterio que /api/vehiculos/tomar (reservaDeOtroAntes): no encima del turno de otro.
+      const antes = delVehiculo.filter((r) => r.conductor_id !== s.yo.id && r.start_at < mia.start_at).sort((a, b) => b.end_at.localeCompare(a.end_at))[0]
+      if (antes) return { ...base, estado: 'reservado', quien: antes.user_name, hasta: antes.end_at, miaDesde: mia.start_at }
+      return { ...base, estado: 'mio', hasta: mia.end_at }
+    }
     const ahoraMismo = delVehiculo.find((r) => r.start_at <= ahora)
     if (ahoraMismo) return { ...base, estado: 'reservado', quien: ahoraMismo.user_name, hasta: ahoraMismo.end_at }
     const proxima = delVehiculo.find((r) => r.start_at > ahora)

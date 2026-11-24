@@ -18,7 +18,7 @@ type Tipo = 'recepcion' | 'devolucion'
 interface Disponible {
   id: string; nombre: string; corto: string; placa: string | null; color: string; foto: string | null
   estado: 'mio' | 'libre' | 'reservado' | 'ocupado' | 'enUso'
-  quien?: string; desde?: string; hasta?: string; libreHasta?: string | null; proximo?: string | null
+  quien?: string; desde?: string; hasta?: string; libreHasta?: string | null; proximo?: string | null; miaDesde?: string
 }
 interface FilaReserva { id: string; vehicle_id: string; start_at: string; end_at: string; purpose: string | null; tomado_at: string | null; devuelto_at: string | null }
 interface Estado {
@@ -186,6 +186,7 @@ export default function Simple({
             const puede = v.estado === 'mio' || v.estado === 'libre'
             const detalle = v.estado === 'mio' ? `Tu reserva, hasta ${cuandoCorto(v.hasta!)}`
               : v.estado === 'libre' ? (v.libreHasta ? `Libre hasta ${fechaBogota(v.libreHasta) === hoyBogota() ? '' : fechaCorta(fechaBogota(v.libreHasta)) + ' · '}${hora12(horaBogota(v.libreHasta))}` : 'Libre')
+              : v.estado === 'reservado' && v.miaDesde ? `Reservado por ${v.quien} hasta las ${hora12(horaBogota(v.hasta!))} · tu reserva es desde las ${hora12(horaBogota(v.miaDesde))}`
               : v.estado === 'reservado' ? `Reservado por ${v.quien} hasta el ${cuandoCorto(v.hasta!)}`
               : v.estado === 'ocupado' ? `Lo tiene ${v.quien}`
               : 'Lo tienes tú'

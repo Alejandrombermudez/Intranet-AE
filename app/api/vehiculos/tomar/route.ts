@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirConductor, fleet, recepcionHecha } from '@/lib/vehiculos/sesion'
-import { aInstante, fechaBogota } from '@/lib/vehiculos/horas'
-import { crearReserva, enManosDeOtro } from '@/lib/vehiculos/reservar'
+import { aInstante, fechaBogota, hora12, horaBogota } from '@/lib/vehiculos/horas'
+import { crearReserva, enManosDeOtro, reservaDeOtroAntes } from '@/lib/vehiculos/reservar'
 
 const HORA = /^\d{2}:\d{2}$/
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
@@ -13,7 +13,8 @@ const FECHA = /^\d{4}-\d{2}-\d{2}$/
  * - Si tengo ese vehículo tomado y sin devolver → toca la devolución; pero si nunca envié la
  *   recepción (me salí del formulario), primero la recepción.
  * - Si alguien más lo tiene sin devolver → no se puede.
- * - Si tengo una reserva de hoy sin tomar → queda registrada YA la hora (tomado_at) y sigue la recepción.
+ * - Si tengo una reserva de hoy sin tomar → queda registrada YA la hora (tomado_at) y sigue la recepción,
+ *   salvo que otra persona lo tenga reservado antes de mi hora y su turno no haya terminado.
  * - Si no tengo reserva → «sin-reserva»; si además llegan `hasta` y `actividad`, se reserva desde
  *   ahora hasta esa hora y se toma de una vez.
  */
@@ -56,6 +57,17 @@ export async function POST(req: NextRequest) {
     .gt('end_at', new Date().toISOString())
     .order('start_at')
   let reserva = (mias ?? []).find((r) => fechaBogota(r.start_at) <= hoy)
+
+  if (reserva) {
+    const antes = await reservaDeOtroAntes(vehiculoId, s.yo.id, reserva.start_at)
+    if (antes) {
+      const hasta = hora12(horaBogota(antes.hasta))
+      return NextResponse.json(
+        { error: `${vehiculo.nombre} lo tiene reservado ${antes.quien} hasta las ${hasta}. Lo puedes tomar desde esa hora (o antes, si lo devuelve).` },
+        { status: 409 },
+      )
+    }
+  }
 
   if (!reserva) {
     const hasta = b?.hasta
