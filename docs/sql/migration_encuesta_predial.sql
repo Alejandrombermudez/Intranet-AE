@@ -55,7 +55,7 @@ ALTER TABLE siembra.familias
 ALTER TABLE siembra.familias
   ADD COLUMN IF NOT EXISTS ha_total               NUMERIC,
   ADD COLUMN IF NOT EXISTS valor_comercial_ha     NUMERIC,
-  ADD COLUMN IF NOT EXISTS tendencia_area         TEXT,   -- incrementado/disminuido
+  ADD COLUMN IF NOT EXISTS tendencia_area         TEXT,   -- incrementado/mantenido/disminuido
   ADD COLUMN IF NOT EXISTS cambio_area_ha         NUMERIC,
   ADD COLUMN IF NOT EXISTS intencion_vender       BOOLEAN,
   ADD COLUMN IF NOT EXISTS causas_venta           TEXT[],
